@@ -846,15 +846,14 @@ impl Shell {
             })
             .collect();
         let focused = self.worktree_focus.get(&project).cloned();
+        // A folder of checkouts lists its followed checkout's worktrees.
+        let checkout = self
+            .nested
+            .read(cx)
+            .target(&project)
+            .map_or_else(|| project.clone(), str::to_owned);
         let view = cx.new(|cx| {
-            WorktreeSwitcher::new(
-                project.clone(),
-                focused,
-                sessions,
-                ids,
-                self.store.clone(),
-                cx,
-            )
+            WorktreeSwitcher::new(checkout, focused, sessions, ids, self.store.clone(), cx)
         });
         let observed_project = project.clone();
         let events = cx.subscribe_in(&view, window, move |this, _, event: &Event, window, cx| {

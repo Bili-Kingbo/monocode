@@ -136,6 +136,74 @@ pub fn diff_stats(cwd: &Path) -> Result<DiffStats, String> {
     Ok(diff_stats_for(&expand_home(cwd)))
 }
 
+/// A checkout directly inside a folder that is not one itself, such as a
+/// workspace folder holding several projects.
+#[derive(Serialize, Deserialize, Clone, Debug, Default, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct NestedRepo {
+    pub path: String,
+    pub name: String,
+    pub branch: Option<String>,
+    pub stats: DiffStats,
+}
+
+/// The checkouts one level inside `cwd` when `cwd` is not in a checkout
+/// itself, by name, with their branch and uncommitted line counts. Hidden
+/// folders are skipped, and a remote folder has none.
+pub fn nested_repos(cwd: &Path) -> Vec<NestedRepo> {
+    if remote_workspace::is_remote(cwd) {
+        return Vec::new();
+    }
+    let root = expand_home(cwd);
+    if git_is_work_tree(&root) {
+        return Vec::new();
+    }
+    read_nested_repos(&root)
+}
+
+fn nested_repo_paths(root: &Path) -> Vec<std::path::PathBuf> {
+    let Ok(entries) = std::fs::read_dir(root) else {
+        return Vec::new();
+    };
+    let mut paths: Vec<std::path::PathBuf> = entries
+        .flatten()
+        .filter(|entry| !entry.file_name().to_string_lossy().starts_with('.'))
+        .map(|entry| entry.path())
+        .filter(|path| path.is_dir() && path.join(".git").exists())
+        .collect();
+    paths.sort_by_key(|path| {
+        path.file_name()
+            .map(|name| name.to_string_lossy().to_lowercase())
+    });
+    paths
+}
+
+fn read_nested_repos(root: &Path) -> Vec<NestedRepo> {
+    let paths = nested_repo_paths(root);
+    // Each checkout costs a few Git processes; read several side by side.
+    let mut repos = Vec::with_capacity(paths.len());
+    for chunk in paths.chunks(8) {
+        std::thread::scope(|scope| {
+            let reads: Vec<_> = chunk
+                .iter()
+                .map(|path| {
+                    scope.spawn(move || NestedRepo {
+                        path: path.to_string_lossy().into_owned(),
+                        name: path
+                            .file_name()
+                            .map(|name| name.to_string_lossy().into_owned())
+                            .unwrap_or_default(),
+                        branch: git_branch(path),
+                        stats: checkout_stats_for(path),
+                    })
+                })
+                .collect();
+            repos.extend(reads.into_iter().filter_map(|read| read.join().ok()));
+        });
+    }
+    repos
+}
+
 /// Changed files under `cwd` (paths relative to it), with per-file line counts,
 /// status, and branch/upstream synchronization metadata.
 pub fn diff_index(cwd: &Path) -> Result<DiffIndex, String> {
@@ -428,6 +496,20 @@ pub fn pr_create(
 }
 
 fn diff_stats_for(root: &Path) -> DiffStats {
+    if !git_is_work_tree(root) {
+        // A folder of checkouts counts every checkout's changes.
+        return read_nested_repos(root)
+            .into_iter()
+            .fold(DiffStats::default(), |sum, repo| DiffStats {
+                files: sum.files + repo.stats.files,
+                additions: sum.additions + repo.stats.additions,
+                deletions: sum.deletions + repo.stats.deletions,
+            });
+    }
+    checkout_stats_for(root)
+}
+
+fn checkout_stats_for(root: &Path) -> DiffStats {
     if !git_is_work_tree(root) {
         return DiffStats::default();
     }

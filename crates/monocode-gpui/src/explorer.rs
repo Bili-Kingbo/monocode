@@ -378,12 +378,12 @@ impl Explorer {
             if !self.sync_project(cx) {
                 self.refresh_loaded(cx);
             }
-        } else if self.git.read(cx).root != self.cwd {
+        } else if self.git.read(cx).folder != self.cwd {
             // Keep the hidden tree intact; rebuild it when Files is shown.
         }
     }
     fn sync_project(&mut self, cx: &mut Context<Self>) -> bool {
-        let root = self.git.read(cx).root.clone();
+        let root = self.git.read(cx).folder.clone();
         if root == self.cwd {
             return false;
         }

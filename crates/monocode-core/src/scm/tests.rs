@@ -145,6 +145,50 @@ fn diff_stats_are_zero_outside_a_repo() {
 }
 
 #[test]
+fn nested_repos_list_checkouts_one_level_inside_a_plain_folder() {
+    let dir = tmp();
+    let root = dir.path();
+    for name in ["web", "Api", ".hidden"] {
+        std::fs::create_dir(root.join(name)).unwrap();
+        assert!(init_git_commit(&root.join(name), &[("a.txt", "one\n")]));
+    }
+    std::fs::create_dir_all(root.join("docs/inner")).unwrap();
+    assert!(init_git_commit(
+        &root.join("docs/inner"),
+        &[("a.txt", "one\n")]
+    ));
+    std::fs::write(root.join("web/a.txt"), "one\ntwo\n").unwrap();
+    assert!(git(&root.join("Api"), &["checkout", "-q", "-b", "feature"]));
+
+    let repos = nested_repos(root);
+    let names: Vec<&str> = repos.iter().map(|r| r.name.as_str()).collect();
+    assert_eq!(names, ["Api", "web"]);
+    assert_eq!(repos[0].branch.as_deref(), Some("feature"));
+    assert_eq!(repos[0].stats, DiffStats::default());
+    assert_eq!(repos[1].branch.as_deref(), Some("main"));
+    assert_eq!(
+        repos[1].stats,
+        DiffStats {
+            files: 1,
+            additions: 1,
+            deletions: 0,
+        }
+    );
+    // The folder's own stats add up its checkouts.
+    assert_eq!(diff_stats(root).unwrap(), repos[1].stats);
+}
+
+#[test]
+fn nested_repos_are_empty_inside_a_checkout() {
+    let dir = tmp();
+    let root = dir.path();
+    assert!(init_git_commit(root, &[("a.txt", "one\n")]));
+    std::fs::create_dir(root.join("vendor")).unwrap();
+    assert!(init_git_commit(&root.join("vendor"), &[("b.txt", "two\n")]));
+    assert!(nested_repos(root).is_empty());
+}
+
+#[test]
 fn diff_stats_count_unstaged_and_untracked() {
     let dir = tmp();
     let dir = dir.path();
