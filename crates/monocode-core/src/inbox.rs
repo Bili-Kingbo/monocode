@@ -119,17 +119,18 @@ impl Item {
     pub fn updated_ms(&self) -> i64 {
         timestamp_ms(&self.updated_at)
     }
+    /// Compared as English; shown through `i18n::tl`.
     pub fn status(&self) -> &'static str {
         if self.state.eq_ignore_ascii_case("merged") {
-            "Merged"
+            crate::n!("Merged")
         } else if matches!(
             self.state.to_lowercase().as_str(),
             "closed" | "done" | "resolved" | "removed" | "completed"
         ) || matches!(self.state_type.as_str(), "completed" | "canceled" | "done")
         {
-            "Closed"
+            crate::n!("Closed")
         } else if self.draft {
-            "Draft"
+            crate::n!("Draft")
         } else {
             "Open"
         }

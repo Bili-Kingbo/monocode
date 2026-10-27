@@ -1,5 +1,6 @@
 //! The sidebar's session grouping: sessionFolders.ts, sessionReminders.ts and
 //! sessionWorkItem.ts's URL parsing, without their storage.
+use crate::i18n::t;
 use chrono::{Datelike, Duration, NaiveDateTime, NaiveTime};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
@@ -69,7 +70,7 @@ impl Groups {
             return None;
         }
         self.remove_sessions(&ids);
-        let name = self.unique_name("New folder");
+        let name = self.unique_name(t("New folder"));
         self.folders.insert(
             0,
             Folder {
@@ -266,27 +267,32 @@ pub fn reminder_presets(now: NaiveDateTime) -> Vec<(&'static str, String, bool)>
     vec![
         (
             REMINDER_PRESETS[0],
-            format!("In 1 hour ({})", clock(REMINDER_PRESETS[0])),
+            crate::tr!("In 1 hour ({time})", time = clock(REMINDER_PRESETS[0])),
             true,
         ),
         (
             REMINDER_PRESETS[1],
-            format!("In 3 hours ({})", clock(REMINDER_PRESETS[1])),
+            crate::tr!("In 3 hours ({time})", time = clock(REMINDER_PRESETS[1])),
             true,
         ),
         (
             REMINDER_PRESETS[2],
-            "This evening (18:00)".into(),
+            t("This evening (18:00)").into(),
             reminder_at(REMINDER_PRESETS[2], now).is_some(),
         ),
-        (REMINDER_PRESETS[3], "Tomorrow (9:00)".into(), true),
-        (REMINDER_PRESETS[4], "Next week (Mon 9:00)".into(), true),
+        (REMINDER_PRESETS[3], t("Tomorrow (9:00)").into(), true),
+        (REMINDER_PRESETS[4], t("Next week (Mon 9:00)").into(), true),
     ]
 }
 
 /// formatReminderTime: "Mon, Oct 19, 15:00".
 pub fn format_reminder(at: NaiveDateTime) -> String {
-    at.format("%a, %b %-d, %-H:%M").to_string()
+    crate::tr!(
+        "{weekday}, {date}, {time}",
+        weekday = crate::time::short_weekday(at.weekday()),
+        date = at.format(t("%b %-d")),
+        time = at.format("%-H:%M"),
+    )
 }
 
 /// session.ts's `LinkedWorkItem`.

@@ -16,11 +16,12 @@ pub enum TimeFilter {
     Month,
 }
 impl TimeFilter {
+    /// Value, id and label; the label is shown through `i18n::tl`.
     pub const OPTIONS: [(Self, &'static str, &'static str); 4] = [
-        (Self::All, "all", "All time"),
-        (Self::Today, "today", "Today"),
-        (Self::Week, "7d", "Last 7 days"),
-        (Self::Month, "30d", "Last 30 days"),
+        (Self::All, "all", crate::n!("All time")),
+        (Self::Today, "today", crate::n!("Today")),
+        (Self::Week, "7d", crate::n!("Last 7 days")),
+        (Self::Month, "30d", crate::n!("Last 30 days")),
     ];
     pub fn start(self, now: u64) -> u64 {
         match self {

@@ -1,4 +1,22 @@
 //! Sidebar.tsx's relative session time, shared with native session chrome.
+use crate::i18n::{t, tl};
+
+/// chrono's `%a` names, Sunday first, shown through `tl`.
+const SHORT_WEEKDAYS: [&str; 7] = [
+    crate::n!("Sun"),
+    crate::n!("Mon"),
+    crate::n!("Tue"),
+    crate::n!("Wed"),
+    crate::n!("Thu"),
+    crate::n!("Fri"),
+    crate::n!("Sat"),
+];
+
+/// chrono's `%a`, in the interface language.
+pub fn short_weekday(day: chrono::Weekday) -> &'static str {
+    tl(SHORT_WEEKDAYS[day.num_days_from_sunday() as usize])
+}
+
 pub fn now_ms() -> u64 {
     std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -12,28 +30,28 @@ pub fn relative(value: u64, now: u64) -> String {
     }
     let seconds = now.saturating_sub(value).saturating_add(500) / 1_000;
     if seconds < 60 {
-        return "now".into();
+        return t("now").into();
     }
     let minutes = seconds / 60;
     if minutes < 60 {
-        return format!("{minutes}m");
+        return crate::tr!("{minutes}m", minutes = minutes);
     }
     let hours = minutes / 60;
     if hours < 24 {
         return if minutes.is_multiple_of(60) {
-            format!("{hours}h")
+            crate::tr!("{hours}h", hours = hours)
         } else {
-            format!("{hours}h {}m", minutes % 60)
+            crate::tr!("{hours}h {minutes}m", hours = hours, minutes = minutes % 60)
         };
     }
     let days = hours / 24;
     if days < 7 {
-        return format!("{days}d");
+        return crate::tr!("{days}d", days = days);
     }
     i64::try_from(value)
         .ok()
         .and_then(chrono::DateTime::from_timestamp_millis)
-        .map(|date| date.format("%b %-d").to_string())
+        .map(|date| date.format(t("%b %-d")).to_string())
         .unwrap_or_default()
 }
 
