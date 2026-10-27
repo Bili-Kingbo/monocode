@@ -70,7 +70,7 @@ impl Shell {
             .clone()
             .unwrap_or_else(|| conversation.summary.cwd.clone());
         if self.orchestrations.values().any(|run| run.cwd == cwd) {
-            self.error = Some("An orchestration is already using this checkout.".into());
+            self.error = Some(t("An orchestration is already using this checkout.").into());
             cx.notify();
             return;
         }
@@ -226,21 +226,24 @@ impl Shell {
             .tasks
             .iter()
             .map(|t| {
-                format!(
-                    "{}: {}{}",
-                    t.task.title,
-                    match t.state {
-                        State::Pending => "waiting",
-                        State::Starting => "starting",
-                        State::Running => "working",
-                        State::Done => "done",
-                        State::Failed => "failed",
-                        State::Blocked => "blocked",
-                    },
-                    t.session
-                        .map(|id| format!(" (session {id})"))
-                        .unwrap_or_default()
-                )
+                // `t` is the task here.
+                let state = tl(match t.state {
+                    State::Pending => n!("waiting"),
+                    State::Starting => n!("starting"),
+                    State::Running => n!("working"),
+                    State::Done => n!("done"),
+                    State::Failed => n!("failed"),
+                    State::Blocked => n!("blocked"),
+                });
+                match t.session {
+                    Some(id) => tr!(
+                        "{title}: {state} (session {id})",
+                        title = t.task.title,
+                        state = state,
+                        id = id
+                    ),
+                    None => tr!("{title}: {state}", title = t.task.title, state = state),
+                }
             })
             .collect::<Vec<_>>()
             .join("\n");
@@ -344,7 +347,7 @@ impl Shell {
                 }
                 let store = locked(&store)?;
                 let mut summary = store.create(&provider, &project)?;
-                summary.title = format!("Agent · {}", task.title);
+                summary.title = tr!("Agent · {title}", title = task.title);
                 store.title(summary.id, &summary.title)?;
                 settings.worktree_cwd = Some(cwd);
                 store.save_agent_settings(summary.id, &settings)?;

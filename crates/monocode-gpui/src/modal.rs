@@ -9,6 +9,7 @@ use gpui::{
     PromptHandle, PromptLevel, PromptResponse, RenderablePromptHandle, Role, SharedString,
     Stateful, Window, canvas, div, prelude::*, px,
 };
+use monocode_core::i18n::{t, tl};
 use std::time::Duration;
 
 pub(crate) const RADIUS: f32 = 16.;
@@ -282,22 +283,44 @@ impl Focusable for Prompt {
         self.focus.clone()
     }
 }
+/// Cancel, also when a caller passed it already translated.
+fn is_cancel(action: &PromptButton) -> bool {
+    action.is_cancel() || action.label().as_ref() == t("Cancel")
+}
+
 impl Prompt {
     /// Escape and the scrim choose Cancel, or the last answer like a sheet.
     fn cancel(&self) -> usize {
         self.actions
             .iter()
-            .position(PromptButton::is_cancel)
+            .position(is_cancel)
             .unwrap_or(self.actions.len().saturating_sub(1))
     }
     /// Return chooses the first non-cancel answer, as AppKit's default button.
     fn default(&self) -> Option<usize> {
-        self.actions.iter().position(|a| !a.is_cancel())
+        self.actions.iter().position(|a| !is_cancel(a))
     }
+    /// Judged on the English label, or on a label a caller translated.
     fn destructive(&self, label: &str) -> bool {
         self.level != PromptLevel::Info
             && [
-                "delete", "remove", "discard", "revoke", "reset", "stop", "quit", "close",
+                "delete",
+                "remove",
+                "discard",
+                "revoke",
+                "reset",
+                "stop",
+                "quit",
+                "close",
+                "删除",
+                "移除",
+                "放弃",
+                "撤销",
+                "重置",
+                "停止",
+                "退出",
+                "关闭",
+                "不保存",
             ]
             .iter()
             .any(|word| label.to_lowercase().starts_with(word))
@@ -319,17 +342,19 @@ impl Render for Prompt {
         let default = self.default();
         // Cancel sits on the left; the default answer is the rightmost.
         let mut order: Vec<usize> = (0..self.actions.len()).collect();
-        order.sort_by_key(|ix| (!self.actions[*ix].is_cancel(), std::cmp::Reverse(*ix)));
+        order.sort_by_key(|ix| (!is_cancel(&self.actions[*ix]), std::cmp::Reverse(*ix)));
         let buttons = order.into_iter().map(|ix| {
             let action = &self.actions[ix];
             let label = action.label().clone();
+            // Callers pass English, so the answers above keep matching it.
+            let shown = SharedString::from(tl(&label).to_owned());
             let id = ("prompt-action", ix);
-            let button = if action.is_cancel() || Some(ix) != default {
-                ghost_button(id, label)
+            let button = if is_cancel(action) || Some(ix) != default {
+                ghost_button(id, shown)
             } else if self.destructive(&label) {
-                danger_button(id, label)
+                danger_button(id, shown)
             } else {
-                primary_button(id, label)
+                primary_button(id, shown)
             };
             button
                 .cursor_pointer()
@@ -338,9 +363,9 @@ impl Render for Prompt {
         let cancel = self.cancel();
         let card = card().child(
             card_body()
-                .child(title(self.message.clone()))
-                .when_some(self.detail.clone(), |d, detail| {
-                    d.child(body(detail).mt(px(6.)))
+                .child(title(tl(&self.message).to_owned()))
+                .when_some(self.detail.as_deref(), |d, detail| {
+                    d.child(body(tl(detail).to_owned()).mt(px(6.)))
                 })
                 .child(actions().children(buttons)),
         );

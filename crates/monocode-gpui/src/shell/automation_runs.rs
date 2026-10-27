@@ -55,7 +55,7 @@ fn now() -> i64 {
 fn service_lock(service: &ServiceHandle) -> Result<std::sync::MutexGuard<'_, Service>, String> {
     service
         .lock()
-        .map_err(|_| "Automations are unavailable".into())
+        .map_err(|_| t("Automations are unavailable").into())
 }
 
 impl Shell {
@@ -108,7 +108,8 @@ impl Shell {
                         }
                     }
                     Err(error) => {
-                        this.error = Some(format!("Could not open automations: {error}"));
+                        this.error =
+                            Some(tr!("Could not open automations: {error}", error = error));
                         cx.notify();
                     }
                 }
@@ -164,7 +165,10 @@ impl Shell {
                         }
                     }
                     Err(error) => {
-                        this.error = Some(format!("Could not evaluate automations: {error}"));
+                        this.error = Some(tr!(
+                            "Could not evaluate automations: {error}",
+                            error = error
+                        ));
                         cx.notify();
                     }
                 }
@@ -274,7 +278,10 @@ impl Shell {
                             .detach();
                     }
                     Err(error) => {
-                        this.error = Some(format!("Could not evaluate Inbox automations: {error}"));
+                        this.error = Some(tr!(
+                            "Could not evaluate Inbox automations: {error}",
+                            error = error
+                        ));
                         cx.notify();
                     }
                 }
@@ -395,15 +402,15 @@ impl Shell {
         let revision = self.navigation_revision;
         let work = cx.background_executor().spawn(async move {
             if Kind::parse(&launch.automation.harness).is_none() {
-                return Err("The automation's agent is unavailable".into());
+                return Err(t("The automation's agent is unavailable").into());
             }
             if !std::path::Path::new(&launch.automation.cwd).is_dir() {
-                return Err("The automation's project folder is unavailable".into());
+                return Err(t("The automation's project folder is unavailable").into());
             }
             if launch.automation.workspace_mode == "existing"
                 && !std::path::Path::new(&launch.automation.worktree_cwd).is_dir()
             {
-                return Err("The automation's worktree is unavailable".into());
+                return Err(t("The automation's worktree is unavailable").into());
             }
             let store = locked(&store)?;
             let mut settings = settings;
@@ -416,7 +423,7 @@ impl Shell {
                     .sessions()?
                     .into_iter()
                     .find(|session| session.id == id)
-                    .ok_or("The reusable session no longer exists")?
+                    .ok_or(t("The reusable session no longer exists"))?
             } else {
                 let mut summary =
                     store.create(&launch.automation.harness, &launch.automation.cwd)?;
@@ -549,7 +556,7 @@ impl Shell {
         let (mut ok, mut message) = view.external_outcome(cx);
         if view.submission_generation == run.generation_before {
             ok = false;
-            message = "The selected agent session could not start this run.".into();
+            message = t("The selected agent session could not start this run.").into();
         }
         let status = if cancelled {
             "cancelled"
@@ -591,7 +598,10 @@ impl Shell {
             let result = work.await;
             let _ = this.update(cx, |this, cx| {
                 if let Err(error) = result {
-                    this.error = Some(format!("Could not save automation result: {error}"));
+                    this.error = Some(tr!(
+                        "Could not save automation result: {error}",
+                        error = error
+                    ));
                 }
                 if let Some(view) = &this.automations {
                     view.update(cx, |view, cx| view.refresh(cx));

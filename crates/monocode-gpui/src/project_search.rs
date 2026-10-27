@@ -9,7 +9,12 @@ use gpui::{
     AnyElement, App, Context, Entity, EventEmitter, FocusHandle, Focusable, HighlightStyle, Role,
     ScrollHandle, StyledText, Subscription, Task, Window, div, point, prelude::*, px, rgb,
 };
-use monocode_core::search::project::{self, SearchMatch, SearchOptions};
+use monocode_core::{
+    i18n::t,
+    n,
+    search::project::{self, SearchMatch, SearchOptions},
+    tr,
+};
 use std::{
     collections::HashMap,
     ops::Range,
@@ -83,17 +88,27 @@ impl Drop for ProjectSearch {
 impl ProjectSearch {
     pub(crate) fn new(cwd: String, active: bool, cx: &mut Context<Self>) -> Self {
         let query = cx.new(|cx| {
-            let mut input = Input::field("Search", "Search", content(0.35), cx);
+            let mut input = Input::field(n!("Search"), n!("Search"), content(0.35), cx);
             input.set_font_size(12.);
             input
         });
         let include = cx.new(|cx| {
-            let mut input = Input::field("files to include", "files to include", content(0.35), cx);
+            let mut input = Input::field(
+                n!("files to include"),
+                n!("files to include"),
+                content(0.35),
+                cx,
+            );
             input.set_font_size(11.);
             input
         });
         let exclude = cx.new(|cx| {
-            let mut input = Input::field("files to exclude", "files to exclude", content(0.35), cx);
+            let mut input = Input::field(
+                n!("files to exclude"),
+                n!("files to exclude"),
+                content(0.35),
+                cx,
+            );
             input.set_font_size(11.);
             input
         });
@@ -317,26 +332,37 @@ impl Render for ProjectSearch {
                 .py_2()
                 .text_size(px(12.))
                 .text_color(content(0.5))
-                .child("No project folder")
+                .child(t("No project folder"))
                 .into_any_element();
         }
         let status = if self.loading {
-            "Searching…".to_owned()
+            t("Searching…").to_owned()
         } else if let Some(error) = &self.error {
             error.clone()
         } else if self.query.read(cx).content.trim().is_empty() {
-            "Type to search across the project".to_owned()
+            t("Type to search across the project").to_owned()
         } else if self.count == 0 {
-            "No results".to_owned()
+            t("No results").to_owned()
         } else {
-            format!(
-                "{} result{} in {} file{}{}",
-                self.count,
-                if self.count == 1 { "" } else { "s" },
-                self.groups.len(),
-                if self.groups.len() == 1 { "" } else { "s" },
-                if self.truncated { " (limited)" } else { "" }
-            )
+            let results = if self.count == 1 {
+                tr!("{count} result", count = self.count)
+            } else {
+                tr!("{count} results", count = self.count)
+            };
+            let files = if self.groups.len() == 1 {
+                tr!("{count} file", count = self.groups.len())
+            } else {
+                tr!("{count} files", count = self.groups.len())
+            };
+            if self.truncated {
+                tr!(
+                    "{results} in {files} (limited)",
+                    results = results,
+                    files = files
+                )
+            } else {
+                tr!("{results} in {files}", results = results, files = files)
+            }
         };
         let groups = self
             .groups
@@ -448,7 +474,7 @@ impl Render for ProjectSearch {
             .id("explorer-project-search")
             .debug_selector(|| "explorer-project-search".into())
             .role(Role::TabPanel)
-            .aria_label("Search in files")
+            .aria_label(t("Search in files"))
             .size_full()
             .min_h_0()
             .min_w_0()
@@ -486,7 +512,7 @@ impl Render for ProjectSearch {
                         div()
                             .id("project-search-back")
                             .role(Role::Button)
-                            .aria_label("Back to files")
+                            .aria_label(t("Back to files"))
                             .size(px(28.))
                             .flex_shrink_0()
                             .flex()
@@ -505,7 +531,7 @@ impl Render for ProjectSearch {
                             .truncate()
                             .text_size(px(12.))
                             .text_color(content(0.55))
-                            .child("Search in files"),
+                            .child(t("Search in files")),
                     ),
             )
             .child(
@@ -540,7 +566,7 @@ impl Render for ProjectSearch {
                             .child(
                                 Self::toggle(
                                     "project-search-case",
-                                    "Match case",
+                                    t("Match case"),
                                     "case-sensitive",
                                     self.case_sensitive,
                                 )
@@ -554,7 +580,7 @@ impl Render for ProjectSearch {
                             .child(
                                 Self::toggle(
                                     "project-search-word",
-                                    "Match whole word",
+                                    t("Match whole word"),
                                     "whole-word",
                                     self.whole_word,
                                 )
@@ -568,7 +594,7 @@ impl Render for ProjectSearch {
                             .child(
                                 Self::toggle(
                                     "project-search-regex",
-                                    "Use regular expression",
+                                    t("Use regular expression"),
                                     "regex",
                                     self.regex,
                                 )

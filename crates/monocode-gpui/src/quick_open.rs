@@ -4,7 +4,12 @@ use gpui::{
     Context, Entity, EventEmitter, FocusHandle, Focusable, Role, Subscription, Window, div,
     prelude::*, px,
 };
-use monocode_core::{composer, files::ProjectFile};
+use monocode_core::{
+    composer,
+    files::ProjectFile,
+    i18n::{t, tl},
+    n,
+};
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
@@ -26,22 +31,22 @@ pub(crate) enum Command {
     Orchestrator,
 }
 const COMMANDS: &[(Command, &str, &str)] = &[
-    (Command::New, "New conversation", "⌘N"),
-    (Command::Project, "Open project", "⌘O"),
-    (Command::Model, "Switch model", "⌘."),
-    (Command::Settings, "Open settings", "⌘,"),
-    (Command::Sidebar, "Toggle sidebar", "⌘B"),
-    (Command::Panel, "Toggle files and changes", "⌘⇧B"),
-    (Command::Terminal, "Toggle terminal", "⌘J"),
-    (Command::Layout, "Switch workspace layout", "⌘⇧L"),
+    (Command::New, n!("New conversation"), "⌘N"),
+    (Command::Project, n!("Open project"), "⌘O"),
+    (Command::Model, n!("Switch model"), "⌘."),
+    (Command::Settings, n!("Open settings"), "⌘,"),
+    (Command::Sidebar, n!("Toggle sidebar"), "⌘B"),
+    (Command::Panel, n!("Toggle files and changes"), "⌘⇧B"),
+    (Command::Terminal, n!("Toggle terminal"), "⌘J"),
+    (Command::Layout, n!("Switch workspace layout"), "⌘⇧L"),
     (
         Command::WorkspaceStyle,
-        "Switch rounded or boxy workspace",
+        n!("Switch rounded or boxy workspace"),
         "⌘⌥L",
     ),
-    (Command::Plan, "Toggle Plan mode", ""),
-    (Command::Operator, "Toggle Operator", ""),
-    (Command::Orchestrator, "Toggle Orchestrator", ""),
+    (Command::Plan, n!("Toggle Plan mode"), ""),
+    (Command::Operator, n!("Toggle Operator"), ""),
+    (Command::Orchestrator, n!("Toggle Orchestrator"), ""),
 ];
 pub(crate) enum Picked {
     File(String),
@@ -81,8 +86,8 @@ impl QuickOpen {
     pub(crate) fn new(cwd: String, palette: bool, cx: &mut Context<Self>) -> Self {
         let search = cx.new(|cx| {
             input::Input::field(
-                "Go to file or run a command",
-                "Search files by name…  (> for commands)",
+                n!("Go to file or run a command"),
+                n!("Search files by name…  (> for commands)"),
                 content(0.35),
                 cx,
             )
@@ -133,11 +138,15 @@ impl QuickOpen {
             let mut commands: Vec<_> = COMMANDS
                 .iter()
                 .filter_map(|(command, label, hint)| {
-                    composer::score(query.trim(), label).map(|score| {
+                    // English keeps matching; the shown label matches too.
+                    let shown = tl(label);
+                    let score = composer::score(query.trim(), label)
+                        .max(composer::score(query.trim(), shown));
+                    score.map(|score| {
                         (
                             score,
                             Row {
-                                label: (*label).into(),
+                                label: shown.into(),
                                 detail: if cfg!(target_os = "macos") {
                                     (*hint).into()
                                 } else {
@@ -236,7 +245,7 @@ impl Render for QuickOpen {
         div()
             .id("quick-open")
             .role(Role::Dialog)
-            .aria_label("Go to file or run a command")
+            .aria_label(t("Go to file or run a command"))
             .w_full()
             .flex()
             .flex_col()
@@ -272,7 +281,7 @@ impl Render for QuickOpen {
                 div()
                     .id("quick-open-results")
                     .role(Role::ListBox)
-                    .aria_label("Results")
+                    .aria_label(t("Results"))
                     .p_1p5()
                     .max_h(px(380.))
                     .overflow_y_scroll()
@@ -286,9 +295,9 @@ impl Render for QuickOpen {
                                 .text_size(px(13.))
                                 .text_color(content(0.45))
                                 .child(if self.loading {
-                                    "Loading project files…".to_owned()
+                                    t("Loading project files…").to_owned()
                                 } else {
-                                    self.error.clone().unwrap_or_else(|| "No results".into())
+                                    self.error.clone().unwrap_or_else(|| t("No results").into())
                                 }),
                         )
                     }),
@@ -301,7 +310,7 @@ impl Render for QuickOpen {
                     .border_color(content(0.07))
                     .text_size(px(10.))
                     .text_color(content(0.35))
-                    .child("↑ ↓ navigate    ↵ open    Esc close    > commands"),
+                    .child(t("↑ ↓ navigate    ↵ open    Esc close    > commands")),
             )
     }
 }

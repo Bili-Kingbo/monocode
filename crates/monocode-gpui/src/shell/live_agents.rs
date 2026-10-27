@@ -60,13 +60,13 @@ impl Shell {
                     id: *id,
                     cwd: view.summary.cwd.clone(),
                     provider: view.summary.provider.clone(),
-                    title: view.display_title(),
+                    title: session_loading::shown(view.display_title()),
                     activity: if needs_approval {
-                        "Need approval".into()
+                        t("Need approval").into()
                     } else if done {
-                        "Done".into()
+                        t("Done").into()
                     } else {
-                        tool.unwrap_or_else(|| "Working".into())
+                        tool.unwrap_or_else(|| t("Working").into())
                     },
                     started_at,
                     duration_ms: duration_ms.filter(|_| done),
@@ -124,7 +124,7 @@ impl Shell {
                 .id("live-agents")
                 .debug_selector(|| "sidebar-activity-card".into())
                 .role(Role::Group)
-                .aria_label(format!("{count} working agents"))
+                .aria_label(tr!("{count} working agents", count = count))
                 .flex_shrink_0()
                 .px_2()
                 .when(self.workspace.boxy_layout(), |d| d.pb_2())
@@ -158,7 +158,7 @@ impl Shell {
                                         .truncate()
                                         .text_size(px(12.))
                                         .text_color(content(0.5))
-                                        .child("Working"),
+                                        .child(t("Working")),
                                 )
                                 .child(
                                     div()
@@ -211,9 +211,9 @@ impl Shell {
                                         }),
                                     )
                                     .child(if expanded {
-                                        "Show less".to_owned()
+                                        t("Show less").to_owned()
                                     } else {
-                                        format!("{extra} more")
+                                        tr!("{extra} more", extra = extra)
                                     })
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.live_agents_expanded = !this.live_agents_expanded;
