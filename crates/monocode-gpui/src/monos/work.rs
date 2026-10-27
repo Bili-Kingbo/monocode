@@ -38,10 +38,12 @@ impl Monos {
                     }
                     Ok(None) => {
                         this.work.documents.remove(&id);
-                        this.error = Some("Document unavailable. It may have been deleted.".into());
+                        this.error =
+                            Some(t("Document unavailable. It may have been deleted.").into());
                     }
                     Err(error) => {
-                        this.error = Some(format!("Could not open this document: {error}"))
+                        this.error =
+                            Some(tr!("Could not open this document: {error}", error = error))
                     }
                 }
                 cx.notify();

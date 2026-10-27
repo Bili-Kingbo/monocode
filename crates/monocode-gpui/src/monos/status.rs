@@ -1,4 +1,5 @@
 //! AppKit owns menu navigation and accessibility; actions return to GPUI.
+use monocode_core::i18n::{chinese, t};
 use objc2::runtime::AnyObject;
 use objc2::{
     AnyThread, DefinedClass, MainThreadMarker, MainThreadOnly, define_class, msg_send,
@@ -67,7 +68,8 @@ impl Status {
         })
     }
     pub(super) fn update(&mut self, monos: &[(String, String)], run: Rc<dyn Fn(&str)>) {
-        let signature = format!("{monos:?}");
+        // The titles follow the language too.
+        let signature = format!("{}{monos:?}", chinese());
         if self.signature == signature {
             return;
         }
@@ -79,7 +81,7 @@ impl Status {
         menu.setAutoenablesItems(false);
         if monos.is_empty() {
             let title = NSMenuItem::new(mtm);
-            title.setTitle(&NSString::from_str("No monos yet"));
+            title.setTitle(&NSString::from_str(t("No monos yet")));
             title.setEnabled(false);
             menu.addItem(&title);
         }
@@ -90,12 +92,12 @@ impl Status {
         menu.addItem(&NSMenuItem::separatorItem(mtm));
         menu.addItem(&Item::new(
             mtm,
-            "Quick Composer",
+            t("Quick Composer"),
             "composer".into(),
             run.clone(),
         ));
         menu.addItem(&NSMenuItem::separatorItem(mtm));
-        menu.addItem(&Item::new(mtm, "Quit MonoCode", "quit".into(), run));
+        menu.addItem(&Item::new(mtm, t("Quit MonoCode"), "quit".into(), run));
         self.item.setMenu(Some(&menu));
     }
 }

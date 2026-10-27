@@ -62,9 +62,9 @@ impl Monos {
                                 ),
                         )
                         .child(if dropped > 0 {
-                            format!("{dropped} lines not loading")
+                            tr!("{dropped} lines not loading", dropped = dropped)
                         } else {
-                            format!("{lines} / 200 lines")
+                            tr!("{lines} / 200 lines", lines = lines)
                         }),
                 )
         });
@@ -76,11 +76,11 @@ impl Monos {
             .flex()
             .flex_col()
             .child(
-                Self::settings_page_header("Memory").when(files.is_some(), |d| {
+                Self::settings_page_header(t("Memory")).when(files.is_some(), |d| {
                     d.child(
                         icon_button_enabled(
                             "mono-add-memory",
-                            "Add memory",
+                            t("Add memory"),
                             "plus",
                             !self.memory_adding,
                         )
@@ -95,7 +95,7 @@ impl Monos {
                                 this.error = None;
                                 let editor = this.field(
                                     "memory-fact",
-                                    "New memory",
+                                    t("New memory"),
                                     String::new(),
                                     false,
                                     cx,
@@ -127,7 +127,7 @@ impl Monos {
                                 .text_center()
                                 .text_size(px(12.))
                                 .text_color(content(0.45))
-                                .child("Loading…"),
+                                .child(t("Loading…")),
                         )
                     })
                     .when(files.is_some() && rows.is_empty(), |d| {
@@ -138,7 +138,7 @@ impl Monos {
                                 .text_center()
                                 .text_size(px(12.))
                                 .text_color(content(0.45))
-                                .child("Nothing remembered yet"),
+                                .child(t("Nothing remembered yet")),
                         )
                     })
                     .children(rows),
@@ -176,16 +176,16 @@ impl Monos {
         let editor = self.field(
             &key,
             if original.is_some() {
-                "Edit memory"
+                t("Edit memory")
             } else {
-                "New memory"
+                t("New memory")
             },
             original.map(memory::fact).unwrap_or_default(),
             false,
             cx,
         );
         editor.update(cx, |f, cx| {
-            f.set_placeholder("Something it should remember", cx)
+            f.set_placeholder(t("Something it should remember"), cx)
         });
         if self.field_blurs.insert(editor.entity_id()) {
             let (mono, row, field) = (mono.id.clone(), original.map(str::to_owned), key.clone());
@@ -260,7 +260,7 @@ impl Monos {
                 .trim_start_matches("~~")
                 .get(..10)
                 .and_then(|day| chrono::NaiveDate::parse_from_str(day, "%Y-%m-%d").ok())
-                .map(|day| day.format("%b %-d").to_string());
+                .map(|day| day.format(t("%b %-d")).to_string());
             let edit = line.to_string();
             let remove = edit.clone();
             let edit_button = edit.clone();
@@ -276,7 +276,7 @@ impl Monos {
                         div()
                             .id(("memory-fact-body", index))
                             .role(Role::Button)
-                            .aria_label(format!("Edit memory: {fact}"))
+                            .aria_label(tr!("Edit memory: {fact}", fact = fact))
                             .flex_1()
                             .min_w_0()
                             .flex()
@@ -320,8 +320,13 @@ impl Monos {
                                     this.active.as_deref().unwrap_or_default(),
                                     mono::files::content_hash(&edit)
                                 );
-                                let field =
-                                    this.field(&key, "Edit memory", memory::fact(&edit), false, cx);
+                                let field = this.field(
+                                    &key,
+                                    t("Edit memory"),
+                                    memory::fact(&edit),
+                                    false,
+                                    cx,
+                                );
                                 window.focus(&field.focus_handle(cx), cx);
                                 cx.notify();
                             })),
@@ -338,7 +343,7 @@ impl Monos {
                                 d.child(
                                     icon_button(
                                         "mono-memory-edit",
-                                        "Edit memory fact",
+                                        t("Edit memory fact"),
                                         "pencil-edit",
                                     )
                                     .on_click(cx.listener(
@@ -352,7 +357,7 @@ impl Monos {
                                             );
                                             let field = this.field(
                                                 &key,
-                                                "Edit memory",
+                                                t("Edit memory"),
                                                 memory::fact(&edit_button),
                                                 false,
                                                 cx,
@@ -364,7 +369,7 @@ impl Monos {
                                 )
                             })
                             .child(
-                                icon_button("mono-memory-forget", "Forget memory fact", "trash")
+                                icon_button("mono-memory-forget", t("Forget memory fact"), "trash")
                                     .on_click(cx.listener(move |this, _, _, cx| {
                                         this.edit_memory_fact(&remove, None, cx)
                                     })),

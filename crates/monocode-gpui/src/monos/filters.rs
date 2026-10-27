@@ -49,19 +49,19 @@ impl Monos {
     pub(super) fn filter_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let f = &self.session_filters;
         let mut items: Vec<MenuItem> = vec![
-            MenuAction::new("archived", "Show archived")
+            MenuAction::new("archived", t("Show archived"))
                 .checked(f.show_archived)
                 .into(),
-            MenuAction::new("unavailable", "Unavailable sessions")
+            MenuAction::new("unavailable", t("Unavailable sessions"))
                 .checked(f.show_unavailable)
                 .into(),
             MenuItem::Separator,
         ];
         for (id, label) in [
-            ("all", "All time"),
-            ("today", "Today"),
-            ("7d", "Last 7 days"),
-            ("30d", "Last 30 days"),
+            ("all", t("All time")),
+            ("today", t("Today")),
+            ("7d", t("Last 7 days")),
+            ("30d", t("Last 30 days")),
         ] {
             items.push(
                 MenuAction::new(format!("time:{id}"), label)
@@ -75,9 +75,9 @@ impl Monos {
         }
         items.push(MenuItem::Separator);
         for (id, label, on) in [
-            ("working", "Working", f.working),
-            ("approval", "Needs approval", f.needs_approval),
-            ("done", "Done", f.done),
+            ("working", t("Working"), f.working),
+            ("approval", t("Needs approval"), f.needs_approval),
+            ("done", t("Done"), f.done),
         ] {
             items.push(MenuAction::new(id, label).checked(on).into());
         }
@@ -95,8 +95,8 @@ impl Monos {
             }
         }
         items.push(MenuItem::Separator);
-        items.push(MenuAction::new("reset", "Reset filters").into());
-        let menu = cx.new(|cx| Menu::new("Filter Mono sessions", items, window, cx).width(228.));
+        items.push(MenuAction::new("reset", t("Reset filters")).into());
+        let menu = cx.new(|cx| Menu::new(t("Filter Mono sessions"), items, window, cx).width(228.));
         let events = cx.subscribe(&menu, |this, _, event: &MenuEvent, cx| {
             if let MenuEvent::Picked(id, _) = event {
                 let f = &mut this.session_filters;
