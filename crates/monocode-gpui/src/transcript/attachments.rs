@@ -22,7 +22,7 @@ impl Attachment {
             .filter(|name| !name.is_empty())
             .map(str::to_owned)
             .or_else(|| path.as_ref()?.file_name()?.to_str().map(str::to_owned))
-            .unwrap_or_else(|| "Image".into());
+            .unwrap_or_else(|| t("Image").into());
         let mime = value["mimeType"].as_str().unwrap_or("").to_owned();
         let image = value["kind"] == "image"
             || mime.starts_with("image/")
@@ -274,7 +274,7 @@ impl TranscriptView {
                         .role(Role::Button)
                         .focusable()
                         .debug_selector(move || format!("transcript-image-{ix}"))
-                        .aria_label(format!("Open {} full screen", file.name))
+                        .aria_label(tr!("Open {label} full screen", label = file.name))
                         .when_some(source, |d, source| {
                             d.cursor(gpui::CursorStyle::PointingHand)
                                 .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| {

@@ -12,6 +12,8 @@ use gpui::{
 use monocode_core::{
     composer::{self, Token, Trigger},
     files::ProjectFile,
+    i18n::{t, tl},
+    n,
     skills::DiscoveredSkill,
 };
 use std::{
@@ -507,11 +509,11 @@ impl Completion {
                         server.provider,
                         server.scope,
                         if server.provider != self.provider.id() {
-                            "Different provider"
+                            t("Different provider")
                         } else if !server.enabled {
-                            "Disabled in provider configuration"
+                            t("Disabled in provider configuration")
                         } else {
-                            "Configured for this provider"
+                            t("Configured for this provider")
                         }
                     ),
                     insertion: String::new(),
@@ -572,41 +574,49 @@ impl Completion {
             for (order, (id, label, detail)) in [
                 (
                     "draft",
-                    "Draft",
-                    "Save this message without starting the agent",
+                    n!("Draft"),
+                    n!("Save this message without starting the agent"),
                 ),
                 (
                     "orchestrator",
-                    "Orchestrator",
-                    "Plan and coordinate agent work",
+                    n!("Orchestrator"),
+                    n!("Plan and coordinate agent work"),
                 ),
                 (
                     "operator",
-                    "Operator",
-                    "Give this thread access to MonoCode",
+                    n!("Operator"),
+                    n!("Give this thread access to MonoCode"),
                 ),
-                ("plan", "Plan mode", "Review a plan before building"),
+                ("plan", n!("Plan mode"), n!("Review a plan before building")),
                 (
                     "btw",
-                    "Side question",
-                    "Ask a read-only side question about the current turn",
+                    n!("Side question"),
+                    n!("Ask a read-only side question about the current turn"),
                 ),
                 (
                     "compact",
-                    "Compact context",
-                    "Summarize older conversation context to free space",
+                    n!("Compact context"),
+                    n!("Summarize older conversation context to free space"),
                 ),
                 (
                     "add-to-folder",
-                    "Add to folder",
-                    "Place this session in an existing or new sidebar folder",
+                    n!("Add to folder"),
+                    n!("Place this session in an existing or new sidebar folder"),
                 ),
-                ("mcp", "MCP server", "Find an MCP server for this message"),
-                ("stage", "Stage", "Stage only this session's changes"),
+                (
+                    "mcp",
+                    n!("MCP server"),
+                    n!("Find an MCP server for this message"),
+                ),
+                (
+                    "stage",
+                    n!("Stage"),
+                    n!("Stage only this session's changes"),
+                ),
                 (
                     "commit",
-                    "Commit",
-                    "Stage and commit this session's changes",
+                    n!("Commit"),
+                    n!("Stage and commit this session's changes"),
                 ),
             ]
             .into_iter()
@@ -635,8 +645,8 @@ impl Completion {
                     choices.push((
                         score + priority,
                         Choice {
-                            label: label.into(),
-                            detail: detail.into(),
+                            label: tl(label).into(),
+                            detail: tl(detail).into(),
                             insertion: format!("/{id}"),
                             mode: (!matches!(id, "compact" | "btw" | "stage" | "commit"))
                                 .then_some(id),
@@ -931,15 +941,15 @@ impl Render for Completion {
                 .collect();
             let weak = cx.weak_entity();
             let title = if self.mcp_open {
-                "MCP SERVERS"
+                t("MCP SERVERS")
             } else if self
                 .token
                 .as_ref()
                 .is_some_and(|t| t.trigger == Trigger::Mention)
             {
-                "FILES & NOTES"
+                t("FILES & NOTES")
             } else {
-                "SKILLS & COMMANDS"
+                t("SKILLS & COMMANDS")
             };
             let anchor = if self.composer_anchor.get().is_some() {
                 self.composer_anchor.clone()
@@ -1023,11 +1033,11 @@ impl Render for Completion {
                                         .text_size(px(12.))
                                         .text_color(content(0.45))
                                         .child(SharedString::from(if self.loading {
-                                            "Loading…".to_owned()
+                                            t("Loading…").to_owned()
                                         } else {
                                             self.error
                                                 .clone()
-                                                .unwrap_or_else(|| "No matches".into())
+                                                .unwrap_or_else(|| t("No matches").into())
                                         })),
                                 )
                             })
@@ -1042,7 +1052,7 @@ impl Render for Completion {
                                     .border_color(content(0.07))
                                     .text_size(px(10.))
                                     .text_color(content(0.35))
-                                    .child("↑ ↓ navigate    ↵ / Tab select    Esc dismiss"),
+                                    .child(t("↑ ↓ navigate    ↵ / Tab select    Esc dismiss")),
                             ),
                     ),
             );

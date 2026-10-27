@@ -12,9 +12,13 @@ use gpui::{
     AnyElement, Context, Pixels, Role, SharedString, Transformation, div, percentage, prelude::*,
     px, rgb,
 };
-use monocode_core::tool::{
-    ToolCall, ToolState,
-    tasks::{AgentRun, AgentStep, Panel, TaskList, TaskStatus},
+use monocode_core::{
+    i18n::{t, tl},
+    tool::{
+        ToolCall, ToolState,
+        tasks::{AgentRun, AgentStep, Panel, TaskList, TaskStatus},
+    },
+    tr,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -33,11 +37,45 @@ pub(super) fn render(
         Panel::Agent(run) => agent(view, call, &run, start, width, cx),
     })
 }
+/// `TaskList::progress` as shown: "Complete", or "3 of 5".
+fn progress(list: &TaskList) -> String {
+    let progress = list.progress();
+    match progress.split_once(" of ") {
+        Some((done, total)) => tr!("{done} of {total}", done = done, total = total),
+        None => tl(&progress).to_owned(),
+    }
+}
+/// `AgentRun::status_line` as shown.
+fn status_line(run: &AgentRun, state: &ToolState) -> String {
+    if matches!(state, ToolState::Failed | ToolState::Cancelled) {
+        return t("failed").to_owned();
+    }
+    let tools = run.steps.iter().filter(|step| step.kind == "tool");
+    let count = tools.clone().count();
+    let failed = tools
+        .filter(|step| matches!(step.state, Some(ToolState::Failed | ToolState::Cancelled)))
+        .count();
+    match (count, failed) {
+        (0, _) => String::new(),
+        (1, 0) => tr!("{count} step", count = count),
+        (_, 0) => tr!("{count} steps", count = count),
+        (1, _) => tr!(
+            "{count} step, {failed} failed",
+            count = count,
+            failed = failed
+        ),
+        _ => tr!(
+            "{count} steps, {failed} failed",
+            count = count,
+            failed = failed
+        ),
+    }
+}
 fn task_list(list: &TaskList, start: usize) -> AnyElement {
     div()
         .id(("task-progress", start))
         .role(Role::Group)
-        .aria_label(format!("Task progress: {}", list.progress()))
+        .aria_label(tr!("Task progress: {progress}", progress = progress(list)))
         .w_full()
         .min_w_0()
         .my_1()
@@ -62,7 +100,7 @@ fn task_list(list: &TaskList, start: usize) -> AnyElement {
                                 .flex_1()
                                 .text_size(px(12.))
                                 .text_color(content(0.85))
-                                .child("Tasks"),
+                                .child(t("Tasks")),
                         )
                         .child(
                             div()
@@ -72,7 +110,7 @@ fn task_list(list: &TaskList, start: usize) -> AnyElement {
                                 .bg(content(0.07))
                                 .text_size(px(10.))
                                 .text_color(content(0.5))
-                                .child(list.progress()),
+                                .child(progress(list)),
                         ),
                 )
                 .when(!list.explanation.is_empty(), |d| {
@@ -98,7 +136,7 @@ fn task_list(list: &TaskList, start: usize) -> AnyElement {
                             .py_1()
                             .text_size(px(12.))
                             .text_color(content(0.5))
-                            .child("No tasks"),
+                            .child(t("No tasks")),
                     )
                 })
                 .children(
@@ -116,7 +154,7 @@ fn task_list(list: &TaskList, start: usize) -> AnyElement {
                             div()
                                 .id(("task-item", index))
                                 .role(Role::Label)
-                                .aria_label(format!("{}: {}", task.status.label(), task.text))
+                                .aria_label(format!("{}: {}", tl(task.status.label()), task.text))
                                 .flex()
                                 .items_start()
                                 .gap_2p5()
@@ -157,7 +195,10 @@ fn task_list(list: &TaskList, start: usize) -> AnyElement {
                             .py_1()
                             .text_size(px(11.))
                             .text_color(content(0.45))
-                            .child(format!("Showing 100 of {} tasks", list.items.len())),
+                            .child(tr!(
+                                "Showing 100 of {count} tasks",
+                                count = list.items.len()
+                            )),
                     )
                 }),
         )
@@ -385,7 +426,7 @@ fn agent(
     }
     let rotation = view.agent_panels.progress(&key, open).2;
     let toggle_key = key.clone();
-    let status = run.status_line(&call.state);
+    let status = status_line(run, &call.state);
     let model = run.model_name(
         monocode_core::provider::Kind::parse(&view.provider)
             .unwrap_or(monocode_core::provider::Kind::Codex),
@@ -399,9 +440,13 @@ fn agent(
             Role::Label
         })
         .aria_label(if has_detail {
-            format!("{} {name}'s work", if open { "Hide" } else { "Show" })
+            if open {
+                tr!("Hide {name}'s work", name = name)
+            } else {
+                tr!("Show {name}'s work", name = name)
+            }
         } else {
-            format!("Subagent: {name}")
+            tr!("Subagent: {name}", name = name)
         })
         .when(has_detail, |d| d.aria_expanded(open))
         .tooltip({
@@ -659,9 +704,9 @@ fn agent_trail(
             .count();
         let title = if failed_agents > 0 {
             if failed_agents == 1 {
-                "Subagent failed".to_owned()
+                t("Subagent failed").to_owned()
             } else {
-                format!("{failed_agents} subagents failed")
+                tr!("{count} subagents failed", count = failed_agents)
             }
         } else {
             phase
@@ -670,9 +715,9 @@ fn agent_trail(
                 .filter(|text| !text.is_empty())
                 .unwrap_or_else(|| {
                     if calls.is_empty() {
-                        if live { "Thinking" } else { "Thought" }.to_owned()
+                        if live { t("Thinking") } else { t("Thought") }.to_owned()
                     } else {
-                        crate::activity::summary(&calls, live).0
+                        crate::activity::summary_shown(&calls, live).0
                     }
                 })
         };
@@ -716,10 +761,11 @@ fn agent_trail(
                 div()
                     .id("header")
                     .role(if inert { Role::Label } else { Role::Button })
-                    .aria_label(format!(
-                        "{} the steps for {title}",
-                        if open { "Hide" } else { "Show" }
-                    ))
+                    .aria_label(if open {
+                        tr!("Hide the steps for {title}", title = title)
+                    } else {
+                        tr!("Show the steps for {title}", title = title)
+                    })
                     .when(!inert, |d| d.aria_expanded(open).cursor_pointer())
                     .group("agent-phase")
                     .flex()
@@ -883,11 +929,12 @@ fn agent_step(
                 .id("toggle")
                 .role(Role::Button)
                 .aria_expanded(open)
-                .aria_label(format!(
-                    "{} {}: {summary}",
-                    if open { "Hide" } else { "Show" },
-                    if reasoning { "thinking" } else { "note" }
-                ))
+                .aria_label(match (open, reasoning) {
+                    (true, true) => tr!("Hide thinking: {summary}", summary = summary),
+                    (false, true) => tr!("Show thinking: {summary}", summary = summary),
+                    (true, false) => tr!("Hide note: {summary}", summary = summary),
+                    (false, false) => tr!("Show note: {summary}", summary = summary),
+                })
                 .flex()
                 .items_center()
                 .gap_1p5()
@@ -904,7 +951,7 @@ fn agent_step(
                         .min_w_0()
                         .truncate()
                         .child(if open && reasoning {
-                            "Thinking".to_owned()
+                            t("Thinking").to_owned()
                         } else {
                             summary
                         }),

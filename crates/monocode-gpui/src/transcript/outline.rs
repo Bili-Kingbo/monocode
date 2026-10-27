@@ -4,6 +4,7 @@ use super::TranscriptView;
 use crate::popover::{Align, Anchor, AnchorSlot, Side, popover};
 use crate::theme::*;
 use gpui::{Context, ListOffset, Role, Task, Window, div, prelude::*, px};
+use monocode_core::i18n::t;
 use std::{
     collections::HashMap,
     time::{Duration, Instant},
@@ -195,7 +196,7 @@ impl TranscriptView {
             .id("prompt-outline")
             .debug_selector(|| "prompt-outline".into())
             .role(Role::Toolbar)
-            .aria_label("Prompts")
+            .aria_label(t("Prompts"))
             .w(px(BAR_WIDTH_LIFTED))
             .flex()
             .flex_col()
@@ -378,7 +379,7 @@ fn prompt_label(text: &str) -> String {
         .map(str::trim)
         .find(|line| !line.is_empty())
         .map(|line| line.split_whitespace().collect::<Vec<_>>().join(" "))
-        .unwrap_or_else(|| "Empty message".into())
+        .unwrap_or_else(|| t("Empty message").into())
 }
 
 /// Selects at most `max` prompts. The window slides to keep the active

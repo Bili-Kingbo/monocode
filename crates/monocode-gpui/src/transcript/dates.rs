@@ -6,7 +6,7 @@ pub(super) fn full_stamp(at: u64) -> String {
     i64::try_from(at)
         .ok()
         .and_then(DateTime::from_timestamp_millis)
-        .map(|date| date.with_timezone(&Local).format("%c").to_string())
+        .map(|date| date.with_timezone(&Local).format(t("%c")).to_string())
         .unwrap_or_default()
 }
 
@@ -26,13 +26,13 @@ pub(crate) fn opens_stretch(at: Option<u64>, previous: Option<u64>) -> bool {
 
 fn day_label(date: NaiveDate, today: NaiveDate) -> String {
     if date == today {
-        "Today".into()
+        t("Today").into()
     } else if Some(date) == today.pred_opt() {
-        "Yesterday".into()
+        t("Yesterday").into()
     } else if date.year() == today.year() {
-        date.format("%a, %b %-d").to_string()
+        date.format(t("%a, %b %-d")).to_string()
     } else {
-        date.format("%a, %b %-d, %Y").to_string()
+        date.format(t("%a, %b %-d, %Y")).to_string()
     }
 }
 

@@ -9,6 +9,7 @@ use gpui::{
     Context, EventEmitter, FontWeight, Role, SharedString, Task, Window, div, prelude::*, px, rgb,
 };
 use monocode_core::checkpoint::{CheckpointFile, CheckpointStatus};
+use monocode_core::{i18n::t, tr};
 
 /// The card shows this many files until expanded.
 const COLLAPSED: usize = 3;
@@ -241,7 +242,7 @@ impl Render for SessionReview {
                         .text_size(px(12.))
                         .font_weight(FontWeight::MEDIUM)
                         .text_color(content(0.8))
-                        .child("Couldn’t record changes"),
+                        .child(t("Couldn’t record changes")),
                 )
                 .child(
                     div()
@@ -266,10 +267,11 @@ impl Render for SessionReview {
         let additions = self.files.iter().map(|f| f.additions).sum();
         let deletions = self.files.iter().map(|f| f.deletions).sum();
         let count = self.files.len();
-        let title: SharedString = format!(
-            "Changed {count} {}",
-            if count == 1 { "file" } else { "files" }
-        )
+        let title: SharedString = if count == 1 {
+            tr!("Changed {count} file", count = count)
+        } else {
+            tr!("Changed {count} files", count = count)
+        }
         .into();
         let header = div()
             .min_w_0()
@@ -315,13 +317,13 @@ impl Render for SessionReview {
                     .items_center()
                     .gap(px(2.))
                     .child(
-                        text_button("session-review-undo", "Undo", !disabled && can_undo)
+                        text_button("session-review-undo", t("Undo"), !disabled && can_undo)
                             .aria_label(if can_undo {
-                                "Undo the recorded changes"
+                                t("Undo the recorded changes")
                             } else if self.undo_locked {
-                                "Undo is unavailable while another session is running in this project"
+                                t("Undo is unavailable while another session is running in this project")
                             } else {
-                                "Undo is unavailable because the workspace was shared, the branch moved, or a recorded file changed afterward"
+                                t("Undo is unavailable because the workspace was shared, the branch moved, or a recorded file changed afterward")
                             })
                             .when(!disabled && can_undo, |d| {
                                 d.on_click(
@@ -330,8 +332,8 @@ impl Render for SessionReview {
                             }),
                     )
                     .child(
-                        text_button("session-review-keep", "Keep", !disabled)
-                            .aria_label("Keep the recorded changes and dismiss this card")
+                        text_button("session-review-keep", t("Keep"), !disabled)
+                            .aria_label(t("Keep the recorded changes and dismiss this card"))
                             .when(!disabled, |d| {
                                 d.on_click(
                                     cx.listener(|this, _, _, cx| this.run(Action::Keep, cx)),
@@ -342,7 +344,7 @@ impl Render for SessionReview {
                         div()
                             .id("session-review-open")
                             .role(Role::Button)
-                            .aria_label("Review changes")
+                            .aria_label(t("Review changes"))
                             .h(px(28.))
                             .px(px(10.))
                             .flex()
@@ -354,7 +356,7 @@ impl Render for SessionReview {
                             .text_color(content(0.75))
                             .cursor_pointer()
                             .hover(|s| s.bg(content(0.12)).text_color(content(1.)))
-                            .child("Review")
+                            .child(t("Review"))
                             .on_click(cx.listener(|_, _, _, cx| {
                                 cx.emit(SessionReviewEvent::Open { path: None })
                             })),
@@ -402,7 +404,7 @@ impl Render for SessionReview {
                         .text_size(px(11.))
                         .font_weight(FontWeight::MEDIUM)
                         .text_color(content(0.45))
-                        .child("Diff unavailable")
+                        .child(t("Diff unavailable"))
                         .into_any_element()
                 })
                 .on_click(cx.listener(move |_, _, _, cx| {
@@ -456,12 +458,11 @@ impl Render for SessionReview {
                             .group_hover("session-review-more", |s| s.text_color(content(0.7))),
                         )
                         .child(if expanded {
-                            "Show fewer files".to_string()
+                            t("Show fewer files").to_string()
+                        } else if hidden == 1 {
+                            tr!("Show {hidden} more file", hidden = hidden)
                         } else {
-                            format!(
-                                "Show {hidden} more {}",
-                                if hidden == 1 { "file" } else { "files" }
-                            )
+                            tr!("Show {hidden} more files", hidden = hidden)
                         })
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.expanded = !this.expanded;

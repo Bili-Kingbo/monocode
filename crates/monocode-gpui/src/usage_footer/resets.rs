@@ -54,12 +54,12 @@ impl UsageFooter {
                         .items_center()
                         .justify_between()
                         .font_weight(FontWeight::MEDIUM)
-                        .child("Banked resets")
+                        .child(t("Banked resets"))
                         .child(
                             div()
                                 .text_size(px(10.))
                                 .text_color(content(0.5))
-                                .child(format!("{count} available")),
+                                .child(tr!("{count} available", count = count)),
                         ),
                 )
                 .child(
@@ -115,9 +115,12 @@ impl UsageFooter {
         let confirming = self.confirm_reset.as_ref() == Some(&row.key) && !disabled;
         let now = usage::now_ms();
         let expiry = match row.credit.as_ref().and_then(|c| c.expires_at) {
-            None => "Expiry not provided".into(),
-            Some(at) if at <= now => "Expires now".into(),
-            Some(at) => format!("Expires in {}", usage::duration(at - now)),
+            None => t("Expiry not provided").into(),
+            Some(at) if at <= now => t("Expires now").into(),
+            Some(at) => tr!(
+                "Expires in {duration}",
+                duration = usage::duration(at - now)
+            ),
         };
         div()
             .id(gpui::SharedString::from(format!(
@@ -170,12 +173,12 @@ impl UsageFooter {
                                 div()
                                     .text_size(px(10.))
                                     .text_color(content(0.45))
-                                    .child("Applying…"),
+                                    .child(t("Applying…")),
                             )
                         } else {
                             d.child(self.reset_button(
                                 &row.key,
-                                "Use reset",
+                                n!("Use reset"),
                                 Command::Confirm(row.key.clone()),
                                 disabled,
                                 cx,
@@ -194,7 +197,7 @@ impl UsageFooter {
                             div()
                                 .text_size(px(10.))
                                 .text_color(content(0.5))
-                                .child("Spend this reset now?"),
+                                .child(t("Spend this reset now?")),
                         )
                         .child(
                             div()
@@ -204,14 +207,14 @@ impl UsageFooter {
                                 .gap_1()
                                 .child(self.reset_button(
                                     &row.key,
-                                    "Cancel",
+                                    n!("Cancel"),
                                     Command::Cancel,
                                     false,
                                     cx,
                                 ))
                                 .child(self.reset_button(
                                     &row.key,
-                                    "Confirm",
+                                    n!("Confirm"),
                                     Command::Apply(row.key.clone()),
                                     false,
                                     cx,
@@ -233,10 +236,11 @@ impl UsageFooter {
         let id =
             gpui::SharedString::from(format!("banked-reset-{}-{row}", label.replace(' ', "-")));
         let selector = id.clone();
+        let shown = tl(label);
         let button = if label == "Confirm" {
-            primary_button(id, label, disabled)
+            primary_button(id, shown, disabled)
         } else {
-            secondary_button(id, label, false, disabled)
+            secondary_button(id, shown, false, disabled)
         };
         button
             .debug_selector(move || selector.to_string())
@@ -244,7 +248,7 @@ impl UsageFooter {
             .py_0()
             .px_2()
             .text_size(px(10.))
-            .child(label)
+            .child(shown)
             .when(!disabled, |d| {
                 let click = command.clone();
                 d.focusable()

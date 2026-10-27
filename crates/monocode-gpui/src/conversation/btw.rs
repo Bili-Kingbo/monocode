@@ -24,7 +24,7 @@ const CLOSE_MS: f32 = 260.;
 const OPEN_EASE: fx::Ease = (0.22, 1., 0.36, 1.);
 const CLOSE_EASE: fx::Ease = (0.4, 0., 0.2, 1.);
 const BURST_MS: f32 = 1900.;
-const MODEL_NOTE: &str = "Answer side questions with another model.";
+const MODEL_NOTE: &str = n!("Answer side questions with another model.");
 const BLOCK_CHARS: usize = 8_000;
 
 fn supported(kind: Kind) -> bool {
@@ -488,7 +488,7 @@ impl Btw {
                     title: if *selection {
                         monocode_core::notes::title(text)
                     } else {
-                        "Side question".into()
+                        t("Side question").into()
                     },
                     body: text.clone(),
                     tags: Vec::new(),
@@ -707,7 +707,7 @@ impl Btw {
                 if settings.account.id != monocode_core::accounts::DEFAULT {
                     let store = locked(&store)?;
                     if !store.provider_accounts()?.exists(provider, &settings.account.id) {
-                        return Err("This provider account was removed. Choose another account before retrying the side question.".into());
+                        return Err(n!("This provider account was removed. Choose another account before retrying the side question.").into());
                     }
                     settings.account.root = store.data_dir().map(std::path::Path::to_path_buf);
                 }
@@ -716,7 +716,7 @@ impl Btw {
                     for event in events {
                         match event {
                             Event::Text(text) => tx.send_blocking(Stream::Text(text)).map_err(|_| "Side question closed".to_owned())?,
-                            Event::Tool(_) | Event::Approval(_) | Event::Question(_) => return Err("The side-question provider attempted to use tools or request input.".into()),
+                            Event::Tool(_) | Event::Approval(_) | Event::Question(_) => return Err(n!("The side-question provider attempted to use tools or request input.").into()),
                             _ => {}
                         }
                     }
@@ -829,7 +829,7 @@ impl Btw {
     /// The response menu's model rows for the side thread's own provider:
     /// each model, with its reasoning efforts in a submenu.
     fn model_items(&self, result: Result<Vec<Model>, String>) -> Vec<MenuItem> {
-        let mut items = vec![MenuItem::Note(MODEL_NOTE.into())];
+        let mut items = vec![MenuItem::Note(tl(MODEL_NOTE).into())];
         let Some(thread) = self.active() else {
             return items;
         };
@@ -838,7 +838,7 @@ impl Btw {
             Ok(models) => models,
             Err(error) => {
                 items.push(MenuItem::Note(
-                    format!("Couldn't load models: {error}").into(),
+                    tr!("Couldn't load models: {error}", error = error).into(),
                 ));
                 return items;
             }
@@ -871,7 +871,7 @@ impl Btw {
             .checked(selected);
             if !model.efforts.is_empty() {
                 let mut efforts = vec![
-                    MenuAction::new(target(None), "Default")
+                    MenuAction::new(target(None), t("Default"))
                         .checked(selected && thread.effort.is_none()),
                 ];
                 efforts.extend(model.efforts.iter().map(|effort| {
@@ -883,7 +883,7 @@ impl Btw {
             items.push(option.into());
         }
         if items.len() == 1 {
-            items.push(MenuItem::Note("No models are available.".into()));
+            items.push(MenuItem::Note(t("No models are available.").into()));
         }
         items
     }
@@ -909,8 +909,8 @@ impl Btw {
         let items = match cached {
             Some(models) => self.model_items(Ok(models)),
             None => vec![
-                MenuItem::Note(MODEL_NOTE.into()),
-                MenuItem::Note("Loading models…".into()),
+                MenuItem::Note(tl(MODEL_NOTE).into()),
+                MenuItem::Note(t("Loading models…").into()),
             ],
         };
         let menu = cx.new(|cx| {
@@ -1036,7 +1036,7 @@ fn compact_question(text: Option<&str>) -> String {
     let compact = text
         .map(|text| text.split_whitespace().collect::<Vec<_>>().join(" "))
         .filter(|text| !text.is_empty())
-        .unwrap_or_else(|| "New question".into());
+        .unwrap_or_else(|| t("New question").into());
     if compact.chars().count() > 48 {
         format!("{}…", bounded(&compact, 45))
     } else {
@@ -1186,7 +1186,7 @@ impl Btw {
                         div()
                             .id(format!("btw-tab-{id}"))
                             .role(Role::Tab)
-                            .aria_label(question.unwrap_or("New question").to_owned())
+                            .aria_label(question.unwrap_or(t("New question")).to_owned())
                             .aria_selected(selected)
                             .cursor_pointer()
                             .h_full()
@@ -1209,9 +1209,9 @@ impl Btw {
                             .id(format!("btw-remove-{remove_id}"))
                             .role(Role::Button)
                             .aria_label(if persisted {
-                                format!("Delete “{label}”")
+                                tr!("Delete “{label}”", label = label)
                             } else {
-                                "Discard new question".into()
+                                t("Discard new question").into()
                             })
                             .cursor_pointer()
                             .mr(px(4.))
@@ -1248,7 +1248,7 @@ impl Btw {
                 div()
                     .id("btw-tabs")
                     .role(Role::TabList)
-                    .aria_label("Side questions")
+                    .aria_label(t("Side questions"))
                     .flex_1()
                     .min_w_0()
                     .flex()
@@ -1258,13 +1258,13 @@ impl Btw {
                     .children(tabs),
             )
             .child(
-                header_button("btw-new", "New side question", "plus", 14.)
+                header_button("btw-new", t("New side question"), "plus", 14.)
                     .on_click(cx.listener(|this, _, _, cx| this.new_thread(cx))),
             )
             .child(
                 header_button(
                     "btw-close",
-                    "Back to the conversation (Esc)",
+                    t("Back to the conversation (Esc)"),
                     "chevron-down",
                     16.,
                 )
@@ -1283,9 +1283,9 @@ impl Btw {
                     .clone()
                     .filter(|e| !e.is_empty())
                     .unwrap_or_else(|| {
-                        format!(
-                            "{} could not answer this side question.",
-                            Kind::from_id(&thread.provider).label()
+                        tr!(
+                            "{agent} could not answer this side question.",
+                            agent = Kind::from_id(&thread.provider).label()
                         )
                     })
             });
@@ -1314,7 +1314,7 @@ impl Btw {
                                     .text_size(px(10.))
                                     .font_weight(gpui::FontWeight::MEDIUM)
                                     .text_color(red(0xfecaca, 0.7))
-                                    .child("COULDN’T FINISH"),
+                                    .child(t("COULDN’T FINISH")),
                             )
                             .child(
                                 div()
@@ -1322,7 +1322,7 @@ impl Btw {
                                     .text_size(px(12.))
                                     .line_height(px(18.))
                                     .text_color(red(0xfee2e2, 0.75))
-                                    .child(message),
+                                    .child(status_text(&message)),
                             ),
                     )
                     .when(retry, |d| {
@@ -1330,7 +1330,7 @@ impl Btw {
                             div()
                                 .id("btw-retry")
                                 .role(Role::Button)
-                                .aria_label("Retry side question")
+                                .aria_label(t("Retry side question"))
                                 .cursor_pointer()
                                 .flex_shrink_0()
                                 .h(px(24.))
@@ -1345,7 +1345,7 @@ impl Btw {
                                 .hover(|s| s.bg(red(0xfecaca, 0.1)).text_color(red(0xfef2f2, 1.)))
                                 .when(running, |d| d.opacity(0.5))
                                 .child(icon("refresh-cw", 12.))
-                                .child("Retry")
+                                .child(t("Retry"))
                                 .on_click(cx.listener(|this, _, _, cx| this.retry(cx))),
                         )
                     }),
@@ -1369,7 +1369,7 @@ impl Btw {
                     ),
                 )
             })
-            .unwrap_or_else(|| (self.target.provider.id().into(), "Model".into()));
+            .unwrap_or_else(|| (self.target.provider.id().into(), t("Model").into()));
         let focused = self.input.focus_handle(cx).is_focused(window);
         div().flex_shrink_0().px(px(6.)).pb(px(6.)).child(
             div()
@@ -1404,7 +1404,7 @@ impl Btw {
                         .px_2()
                         .pb(px(10.))
                         .child(
-                            tool_pill("btw-model", "Model")
+                            tool_pill("btw-model", t("Model"))
                                 .min_w_0()
                                 .max_w(px(220.))
                                 .flex_shrink(1.)
@@ -1438,7 +1438,7 @@ impl Btw {
                         .child(
                             send_button(
                                 "btw-send",
-                                if running { "Stop" } else { "Send" },
+                                if running { t("Stop") } else { t("Send") },
                                 running,
                                 running || can_submit,
                             )
@@ -1502,7 +1502,7 @@ impl Render for Btw {
             .flex()
             .flex_col()
             .role(Role::Dialog)
-            .aria_label("By-the-way conversations")
+            .aria_label(t("By-the-way conversations"))
             .when(open, |d| {
                 d.on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
             })
@@ -1850,7 +1850,7 @@ impl Conversation {
         self.attach_account(cx);
         let Some(target) = self.btw_target(cx) else {
             self.status =
-                "Finish a supported conversation turn before asking a side question.".into();
+                n!("Finish a supported conversation turn before asking a side question.").into();
             cx.notify();
             return false;
         };

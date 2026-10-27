@@ -159,7 +159,7 @@ impl TranscriptView {
                                             .text_size(px(12.))
                                             .text_color(content(0.5))
                                             .child(icon("circle-dashed-hi", 14.))
-                                            .child("Draft"),
+                                            .child(t("Draft")),
                                     )
                                     .child(
                                         div()
@@ -169,22 +169,22 @@ impl TranscriptView {
                                             .child(
                                                 draft_button(
                                                     "remove-message-draft",
-                                                    "Remove draft",
+                                                    t("Remove draft"),
                                                 )
                                                 .px_2()
                                                 .text_color(content(0.55))
                                                 .child(icon("trash", 14.))
-                                                .child("Remove")
+                                                .child(t("Remove"))
                                                 .on_click(cx.listener(|_, _, _, cx| {
                                                     cx.emit(ResponseRequest::Draft { send: false })
                                                 })),
                                             )
                                             .child(
-                                                draft_button("send-message-draft", "Send draft")
+                                                draft_button("send-message-draft", t("Send draft"))
                                                     .px(px(10.))
                                                     .bg(white(1.))
                                                     .text_color(black(1.))
-                                                    .child("Send")
+                                                    .child(t("Send"))
                                                     .child(icon("send", 14.).text_color(black(1.)))
                                                     .on_click(cx.listener(|_, _, _, cx| {
                                                         cx.emit(ResponseRequest::Draft {
