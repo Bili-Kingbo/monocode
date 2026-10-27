@@ -1,4 +1,5 @@
 //! Preset colors from workspaceThemes.ts, including surface tints and accents.
+use monocode_core::n;
 #[derive(Clone, Copy)]
 pub(crate) struct Palette {
     pub surface: u32,
@@ -10,7 +11,7 @@ pub(crate) struct Palette {
 pub(crate) const PALETTES: &[(&str, &str, Palette, Palette)] = &[
     (
         "default",
-        "Default",
+        n!("Default"),
         Palette {
             surface: 0x0d0d0d,
             panel: 0x060606,
@@ -28,7 +29,7 @@ pub(crate) const PALETTES: &[(&str, &str, Palette, Palette)] = &[
     ),
     (
         "harbor",
-        "Harbor",
+        n!("Harbor"),
         Palette {
             surface: 0x0b1018,
             panel: 0x060a10,
@@ -46,7 +47,7 @@ pub(crate) const PALETTES: &[(&str, &str, Palette, Palette)] = &[
     ),
     (
         "moss",
-        "Moss",
+        n!("Moss"),
         Palette {
             surface: 0x0d110e,
             panel: 0x070a08,
@@ -64,7 +65,7 @@ pub(crate) const PALETTES: &[(&str, &str, Palette, Palette)] = &[
     ),
     (
         "ember",
-        "Ember",
+        n!("Ember"),
         Palette {
             surface: 0x120e0c,
             panel: 0x0a0706,
@@ -82,7 +83,7 @@ pub(crate) const PALETTES: &[(&str, &str, Palette, Palette)] = &[
     ),
     (
         "orchid",
-        "Orchid",
+        n!("Orchid"),
         Palette {
             surface: 0x110d16,
             panel: 0x09070c,
@@ -100,7 +101,7 @@ pub(crate) const PALETTES: &[(&str, &str, Palette, Palette)] = &[
     ),
     (
         "tidepool",
-        "Tidepool",
+        n!("Tidepool"),
         Palette {
             surface: 0x0a1213,
             panel: 0x050a0b,
@@ -118,7 +119,7 @@ pub(crate) const PALETTES: &[(&str, &str, Palette, Palette)] = &[
     ),
     (
         "dune",
-        "Dune",
+        n!("Dune"),
         Palette {
             surface: 0x13110d,
             panel: 0x0b0a07,
@@ -136,7 +137,7 @@ pub(crate) const PALETTES: &[(&str, &str, Palette, Palette)] = &[
     ),
     (
         "rosewood",
-        "Rosewood",
+        n!("Rosewood"),
         Palette {
             surface: 0x140e10,
             panel: 0x0b0809,
@@ -154,7 +155,7 @@ pub(crate) const PALETTES: &[(&str, &str, Palette, Palette)] = &[
     ),
     (
         "glacier",
-        "Glacier",
+        n!("Glacier"),
         Palette {
             surface: 0x0e1114,
             panel: 0x080a0c,
@@ -172,7 +173,7 @@ pub(crate) const PALETTES: &[(&str, &str, Palette, Palette)] = &[
     ),
     (
         "arcade",
-        "Arcade",
+        n!("Arcade"),
         Palette {
             surface: 0x0f0b1a,
             panel: 0x08060f,
@@ -190,7 +191,7 @@ pub(crate) const PALETTES: &[(&str, &str, Palette, Palette)] = &[
     ),
     (
         "ink",
-        "Ink",
+        n!("Ink"),
         Palette {
             surface: 0x000000,
             panel: 0x000000,

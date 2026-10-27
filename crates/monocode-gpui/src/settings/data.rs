@@ -1,6 +1,6 @@
 //! Settings discovery runs on a worker; rendering never probes CLIs or Git.
 use monocode_core::{
-    git,
+    git, n,
     provider::{self, Kind},
 };
 use std::path::{Path, PathBuf};
@@ -77,7 +77,12 @@ pub(super) fn discover(cwd: &str) -> Discovery {
                     scope: s.scope,
                     path: s.config_path.into(),
                     transport: s.transport,
-                    status: if s.enabled { "Configured" } else { "Disabled" }.into(),
+                    status: if s.enabled {
+                        n!("Configured")
+                    } else {
+                        n!("Disabled")
+                    }
+                    .into(),
                 })
                 .collect()
         }
