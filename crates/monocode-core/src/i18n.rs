@@ -64,7 +64,11 @@ pub fn t(en: &'static str) -> &'static str {
 /// `t` for a label held in a variable, such as one from a table marked with
 /// `n!`, or a fixed status kept as a `String`.
 pub fn tl(en: &str) -> &str {
-    if !chinese() {
+    lookup(en, chinese())
+}
+
+fn lookup(en: &str, chinese: bool) -> &str {
+    if !chinese {
         return en;
     }
     table().get(en).copied().unwrap_or(en)
@@ -73,7 +77,11 @@ pub fn tl(en: &str) -> &str {
 /// A sentence with `{name}` slots, translated before the slots are filled so
 /// each language can order them.
 pub fn tf(en: &'static str, args: &[(&str, &dyn Display)]) -> String {
-    let mut text = t(en).to_owned();
+    fill(t(en), args)
+}
+
+fn fill(text: &str, args: &[(&str, &dyn Display)]) -> String {
+    let mut text = text.to_owned();
     for (name, value) in args {
         text = text.replace(&format!("{{{name}}}"), &value.to_string());
     }
@@ -134,10 +142,11 @@ mod tests {
         }
     }
 
-    /// The English literals passed to `t(…)`, `tr!(…)` and `tf(…)`.
+    /// The English literals passed to `t(…)`, `tr!(…)`, `tf(…)` and `n!(…)`,
+    /// also when formatting moved the literal onto the next line.
     fn labels(text: &str) -> Vec<String> {
         let mut labels = Vec::new();
-        for call in ["t(\"", "tr!(\"", "tf(\"", "n!(\""] {
+        for call in ["t(", "tr!(", "tf(", "n!("] {
             let mut rest = text;
             while let Some(at) = rest.find(call) {
                 let before = rest[..at].chars().next_back();
@@ -145,6 +154,10 @@ mod tests {
                 if before.is_some_and(|c| c.is_alphanumeric() || c == '_') {
                     continue;
                 }
+                let Some(quoted) = rest.trim_start().strip_prefix('"') else {
+                    continue;
+                };
+                rest = quoted;
                 let mut label = String::new();
                 let mut chars = rest.chars();
                 while let Some(c) = chars.next() {
@@ -220,7 +233,8 @@ mod tests {
                 }
             }
             // A space sets Latin text and numbers apart from Chinese.
-            for pair in chars.windows(2) {
+            // A date format reads as Chinese dates do ("10月27日").
+            for pair in chars.windows(2).filter(|_| !en.contains('%')) {
                 let latin = |c: char| c.is_ascii_alphanumeric() || c == '}' || c == '{';
                 assert!(
                     !(cjk(pair[0]) && latin(pair[1]) || latin(pair[0]) && cjk(pair[1])),
@@ -244,21 +258,24 @@ mod tests {
         assert!(!pick(&[]));
     }
 
+    /// Without switching the shared language, so tests that read English
+    /// text can run alongside.
     #[test]
     fn labels_follow_the_language() {
-        let was = chinese();
-        CHINESE.store(true, Ordering::Relaxed);
-        assert_eq!(t("Settings…"), "设置…");
-        assert_eq!(t("Not a label anyone wrote"), "Not a label anyone wrote");
+        assert_eq!(lookup("Settings…", true), "设置…");
+        assert_eq!(lookup("Settings…", false), "Settings…");
         assert_eq!(
-            crate::tr!("Stage Changes in {path}", path = "src"),
+            lookup("Not a label anyone wrote", true),
+            "Not a label anyone wrote"
+        );
+        let path: &dyn Display = &"src";
+        assert_eq!(
+            fill(lookup("Stage Changes in {path}", true), &[("path", path)]),
             "暂存 src 中的改动"
         );
-        CHINESE.store(false, Ordering::Relaxed);
         assert_eq!(
             crate::tr!("Stage Changes in {path}", path = "src"),
             "Stage Changes in src"
         );
-        CHINESE.store(was, Ordering::Relaxed);
     }
 }
