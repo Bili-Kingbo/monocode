@@ -12,7 +12,10 @@ use gpui::{
     ScrollStrategy, SharedString, Subscription, UniformListScrollHandle, Window, actions, canvas,
     div, fill, point, prelude::*, px, rgb, size, uniform_list,
 };
-use monocode_core::scm::{self, HistoryCommit};
+use monocode_core::{
+    i18n::t,
+    scm::{self, HistoryCommit},
+};
 use std::{collections::HashMap, path::PathBuf};
 
 const ROW: f32 = 44.;
@@ -66,7 +69,8 @@ pub(crate) struct History {
 impl History {
     pub(crate) fn new(git: Entity<ProjectGit>, _: &mut Window, cx: &mut Context<Self>) -> Self {
         let search = cx.new(|cx| {
-            let mut input = Input::field("Search commits", "Search history…", content(0.35), cx);
+            let mut input =
+                Input::field(t("Search commits"), t("Search history…"), content(0.35), cx);
             input.set_font_size(12.);
             input
         });
@@ -265,12 +269,12 @@ impl History {
         let label: SharedString = branch
             .clone()
             .or_else(|| head.map(|h| h.commit.short_sha.clone()))
-            .unwrap_or_else(|| "History".into())
+            .unwrap_or_else(|| t("History").into())
             .into();
         let can_refresh = self.available() && !self.loading;
         div()
             .flex_shrink_0()
-            .child(pane_header("history-toolbar", "History").map(|d| {
+            .child(pane_header("history-toolbar", t("History")).map(|d| {
                 if self.search_open {
                     d.key_context("HistorySearch")
                         .on_action(cx.listener(|this, _: &CloseSearch, window, cx| {
@@ -288,7 +292,7 @@ impl History {
                         .child(
                             header_action(
                                 "history-close-search",
-                                "Close history search",
+                                t("Close history search"),
                                 "x",
                                 12.,
                                 true,
@@ -318,7 +322,7 @@ impl History {
                             .child(
                                 header_action(
                                     "history-search",
-                                    "Search history",
+                                    t("Search history"),
                                     "search",
                                     14.,
                                     true,
@@ -331,7 +335,7 @@ impl History {
                             .child(
                                 header_action(
                                     "history-refresh",
-                                    "Refresh history",
+                                    t("Refresh history"),
                                     "refresh-cw",
                                     14.,
                                     can_refresh,
@@ -553,14 +557,11 @@ fn ref_pill(r: &git_graph::GraphRef) -> impl IntoElement {
 }
 
 /// `Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" })` in
-/// an English locale.
+/// the interface language.
 fn short_date(timestamp: i64) -> Option<String> {
-    use chrono::{Datelike, Local, TimeZone};
+    use chrono::{Local, TimeZone};
     let date = Local.timestamp_opt(timestamp, 0).single()?;
-    const MONTHS: [&str; 12] = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
-    ];
-    Some(format!("{} {}", MONTHS[date.month0() as usize], date.day()))
+    Some(date.format(t("%b %-d")).to_string())
 }
 
 /// `color-mix(in oklab, color 70%, content)`: the detailed rows' softened ink.
@@ -691,20 +692,20 @@ impl Focusable for History {
 impl Render for History {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let empty: Option<(&'static str, bool)> = if !self.available() {
-            Some(("No project folder", false))
+            Some((t("No project folder"), false))
         } else if self.error.is_some() && self.items.is_empty() {
             None
         } else if self.items.is_empty() {
             Some((
                 if self.loading {
-                    "Loading history…"
+                    t("Loading history…")
                 } else {
-                    "No commits yet"
+                    t("No commits yet")
                 },
                 false,
             ))
         } else if self.visible.is_empty() {
-            Some(("No matching commits", true))
+            Some((t("No matching commits"), true))
         } else {
             None
         };
@@ -713,7 +714,7 @@ impl Render for History {
         div()
             .id("history")
             .role(Role::TabPanel)
-            .aria_label("History")
+            .aria_label(t("History"))
             .track_focus(&self.focus)
             .size_full()
             .min_h_0()

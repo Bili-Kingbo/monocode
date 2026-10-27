@@ -18,8 +18,10 @@ use gpui::{
 };
 use monocode_core::{
     agent::{AccessMode, Settings},
+    i18n::t,
     provider::{self, Event, Kind, Request},
     scm::{self, ChangedFile, DiffIndex, Pr},
+    tr,
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -185,18 +187,21 @@ pub(crate) fn status_color(status: &str) -> Hsla {
     .into()
 }
 fn sync_status_label(index: &DiffIndex) -> String {
-    let plural = |n: i64| if n == 1 { "" } else { "s" };
     if index.ahead > 0 && index.behind > 0 {
-        format!(
-            "Diverged from {}",
-            index.upstream.as_deref().unwrap_or("upstream")
-        )
+        match index.upstream.as_deref() {
+            Some(upstream) => tr!("Diverged from {upstream}", upstream = upstream),
+            None => t("Diverged from upstream").into(),
+        }
+    } else if index.ahead == 1 {
+        tr!("{count} unpushed commit", count = index.ahead)
     } else if index.ahead > 0 {
-        format!("{} unpushed commit{}", index.ahead, plural(index.ahead))
+        tr!("{count} unpushed commits", count = index.ahead)
+    } else if index.behind == 1 {
+        tr!("{count} incoming commit", count = index.behind)
     } else if index.behind > 0 {
-        format!("{} incoming commit{}", index.behind, plural(index.behind))
+        tr!("{count} incoming commits", count = index.behind)
     } else {
-        "No files".into()
+        t("No files").into()
     }
 }
 
@@ -440,7 +445,7 @@ impl Changes {
     }
     /// `window.alert`.
     fn fail(error: String, window: &mut Window, cx: &mut App) {
-        drop(window.prompt(PromptLevel::Critical, &error, None, &["OK"], cx));
+        drop(window.prompt(PromptLevel::Critical, &error, None, &[t("OK")], cx));
     }
     /// confirmNative: Tauri's `ask` with the OK label it was given.
     fn confirm(
@@ -455,7 +460,7 @@ impl Changes {
             None,
             &[
                 gpui::PromptButton::ok(ok),
-                gpui::PromptButton::cancel("Cancel"),
+                gpui::PromptButton::cancel(t("Cancel")),
             ],
             cx,
         );
@@ -525,11 +530,14 @@ impl Changes {
         let untracked = file.status == "untracked";
         let ask = Self::confirm(
             if untracked {
-                format!("Delete untracked file {name}?")
+                tr!("Delete untracked file {name}?", name = name)
             } else {
-                format!("Discard changes in {name}? This cannot be undone.")
+                tr!(
+                    "Discard changes in {name}? This cannot be undone.",
+                    name = name
+                )
             },
-            if untracked { "Delete" } else { "Discard" },
+            if untracked { t("Delete") } else { t("Discard") },
             window,
             cx,
         );
@@ -575,18 +583,28 @@ impl Changes {
         let n = unstaged.len();
         let untracked_only = n == 1 && only.status == "untracked";
         let message = if untracked_only {
-            format!("Delete untracked file {}?", basename(&only.relative))
+            tr!(
+                "Delete untracked file {name}?",
+                name = basename(&only.relative)
+            )
         } else if n == 1 {
-            format!(
-                "Discard changes in {}? This cannot be undone.",
-                basename(&only.relative)
+            tr!(
+                "Discard changes in {name}? This cannot be undone.",
+                name = basename(&only.relative)
             )
         } else {
-            format!("Discard all unstaged changes in {n} files? This cannot be undone.")
+            tr!(
+                "Discard all unstaged changes in {count} files? This cannot be undone.",
+                count = n
+            )
         };
         let ask = Self::confirm(
             message,
-            if untracked_only { "Delete" } else { "Discard" },
+            if untracked_only {
+                t("Delete")
+            } else {
+                t("Discard")
+            },
             window,
             cx,
         );
@@ -629,7 +647,7 @@ impl Changes {
         self.run_git(
             "pull".into(),
             |path| scm::pull(&path),
-            |this, _, cx| this.set_status("Pull complete", cx),
+            |this, _, cx| this.set_status(t("Pull complete"), cx),
             window,
             cx,
         );
@@ -654,7 +672,7 @@ impl Changes {
         }
         let Some((kind, binary)) = self.text_harness() else {
             Self::fail(
-                "No provider CLI is installed to write a commit message.".into(),
+                t("No provider CLI is installed to write a commit message.").into(),
                 window,
                 cx,
             );
@@ -737,17 +755,20 @@ impl Changes {
         {
             questions.push((
                 if create_pr {
-                    format!("Create a pull request from default branch \"{branch}\"?")
+                    tr!(
+                        "Create a pull request from default branch \"{branch}\"?",
+                        branch = branch
+                    )
                 } else {
-                    format!("Push to default branch \"{branch}\"?")
+                    tr!("Push to default branch \"{branch}\"?", branch = branch)
                 },
-                "OK",
+                t("OK"),
             ));
         }
         if self.amend.is_some() && index.as_ref().is_some_and(|i| i.head_pushed) {
             questions.push((
-                "Amend a commit that is already pushed? MonoCode cannot push the result. You will need a force push from the terminal.".into(),
-                "Amend",
+                t("Amend a commit that is already pushed? MonoCode cannot push the result. You will need a force push from the terminal.").into(),
+                t("Amend"),
             ));
         }
         self.menu = None;
@@ -840,9 +861,9 @@ impl Changes {
         let index = self.index(cx);
         let ahead = index.as_ref().is_some_and(|i| i.ahead > 0);
         let question = Self::on_default(index.as_ref()).then(|| {
-            format!(
-                "Create a pull request from default branch \"{}\"?",
-                index
+            tr!(
+                "Create a pull request from default branch \"{branch}\"?",
+                branch = index
                     .as_ref()
                     .and_then(|i| i.branch.clone())
                     .unwrap_or_default()
@@ -852,7 +873,7 @@ impl Changes {
         cx.spawn_in(window, async move |this, cx| {
             if let Some(question) = question {
                 let Ok(ask) = this.update_in(cx, |_, window, cx| {
-                    Self::confirm(question, "OK", window, cx)
+                    Self::confirm(question, t("OK"), window, cx)
                 }) else {
                     return;
                 };
@@ -892,7 +913,7 @@ impl Changes {
                     .is_some_and(|i| i.remote.is_some() && i.upstream.is_some());
                 let pulling = self.busy.as_deref() == Some("pull");
                 vec![
-                    MenuAction::new("pull", if pulling { "Pulling…" } else { "Pull" })
+                    MenuAction::new("pull", if pulling { t("Pulling…") } else { t("Pull") })
                         .icon(if pulling { "loader" } else { "refresh-cw" })
                         .disabled(self.busy.is_some() || !can_pull)
                         .into(),
@@ -901,22 +922,22 @@ impl Changes {
             MenuKind::Commit => {
                 let (can_push, can_push_pr) = self.push_options(cx);
                 vec![
-                    MenuAction::new("push", "Commit & Push")
+                    MenuAction::new("push", t("Commit & Push"))
                         .disabled(!can_push)
                         .into(),
-                    MenuAction::new("push-pr", "Commit, Push & Create PR")
+                    MenuAction::new("push-pr", t("Commit, Push & Create PR"))
                         .disabled(!can_push_pr)
                         .into(),
                     MenuItem::Separator,
-                    MenuAction::new("amend", "Amend Last Commit")
+                    MenuAction::new("amend", t("Amend Last Commit"))
                         .checked(self.amend.is_some())
                         .into(),
                 ]
             }
         };
         let (label, width) = match kind {
-            MenuKind::Branch => ("Branch actions", 144.),
-            MenuKind::Commit => ("Commit options", 192.),
+            MenuKind::Branch => (t("Branch actions"), 144.),
+            MenuKind::Commit => (t("Commit options"), 192.),
         };
         let menu = cx.new(|cx| {
             Menu::new(label, items, window, cx)
@@ -969,7 +990,7 @@ impl Changes {
             .is_some_and(|m| m.kind == MenuKind::Branch);
         let branch = index.as_ref().and_then(|i| i.branch.clone());
         let index = index.unwrap_or_default();
-        pane_header("changes-header", "Changes")
+        pane_header("changes-header", t("Changes"))
             .when_some(branch.clone(), |d, branch| {
                 d.child(
                     div()
@@ -1002,7 +1023,7 @@ impl Changes {
                 )
             })
             .when(branch.is_none(), |d| {
-                d.child(div().flex_shrink_0().child("Changes"))
+                d.child(div().flex_shrink_0().child(t("Changes")))
             })
             .when_some(self.status.clone(), |d, status| {
                 d.child(
@@ -1022,7 +1043,7 @@ impl Changes {
                     div()
                         .id("branch-actions")
                         .role(Role::Button)
-                        .aria_label("Branch actions")
+                        .aria_label(t("Branch actions"))
                         .aria_expanded(menu_open)
                         .group("branch-actions")
                         .relative()
@@ -1067,9 +1088,9 @@ impl Changes {
             .as_ref()
             .is_some_and(|m| m.kind == MenuKind::Commit);
         let placeholder = if amend {
-            format!("Amend message ({MOD}↩ to amend)")
+            tr!("Amend message ({key}↩ to amend)", key = MOD)
         } else {
-            format!("Message ({MOD}↩ to commit)")
+            tr!("Message ({key}↩ to commit)", key = MOD)
         };
         self.message
             .update(cx, |m, cx| m.set_placeholder(placeholder, cx));
@@ -1078,9 +1099,9 @@ impl Changes {
         let face = if can_commit { solid } else { content(0.4) };
         let ink: Hsla = rgb(BACKGROUND_BASE).into();
         let generate_label = if generating {
-            "Cancel commit message generation"
+            t("Cancel commit message generation")
         } else {
-            "Generate commit message"
+            t("Generate commit message")
         };
         div()
             .flex_shrink_0()
@@ -1166,7 +1187,11 @@ impl Changes {
                         div()
                             .id("commit")
                             .role(Role::Button)
-                            .aria_label(if amend { "Amend Commit" } else { "Commit" })
+                            .aria_label(if amend {
+                                t("Amend Commit")
+                            } else {
+                                t("Commit")
+                            })
                             .h(px(28.))
                             .min_w_0()
                             .flex_1()
@@ -1180,7 +1205,11 @@ impl Changes {
                             .bg(face)
                             .text_color(ink)
                             .child(icon("check-2", 14.).text_color(ink))
-                            .child(if amend { "Amend Commit" } else { "Commit" })
+                            .child(if amend {
+                                t("Amend Commit")
+                            } else {
+                                t("Commit")
+                            })
                             .when(can_commit, |d| {
                                 d.on_click(cx.listener(|this, _, window, cx| {
                                     this.commit(false, false, window, cx)
@@ -1191,7 +1220,7 @@ impl Changes {
                         div()
                             .id("commit-options")
                             .role(Role::Button)
-                            .aria_label("Commit options")
+                            .aria_label(t("Commit options"))
                             .aria_expanded(menu_open)
                             .size(px(28.))
                             .flex_shrink_0()
@@ -1251,19 +1280,38 @@ impl Changes {
             )
         });
         let syncing = self.busy.as_deref() == Some("sync");
-        let plural = |n: i64| if n == 1 { "" } else { "s" };
         let sync_title = if syncing {
-            "Synchronizing Changes...".to_owned()
+            t("Synchronizing Changes...").to_owned()
         } else if can_publish {
-            index.branch.as_ref().map_or("Publish Branch".into(), |b| {
-                format!("Publish Branch \"{b}\"")
-            })
+            index
+                .branch
+                .as_ref()
+                .map_or(t("Publish Branch").into(), |b| {
+                    tr!("Publish Branch \"{branch}\"", branch = b)
+                })
         } else if behind > 0 && ahead > 0 {
-            format!("Pull {behind} and push {ahead} commits between {dest}")
+            tr!(
+                "Pull {behind} and push {ahead} commits between {dest}",
+                behind = behind,
+                ahead = ahead,
+                dest = dest
+            )
+        } else if behind == 1 {
+            tr!(
+                "Pull {count} commit from {dest}",
+                count = behind,
+                dest = dest
+            )
         } else if behind > 0 {
-            format!("Pull {behind} commit{} from {dest}", plural(behind))
+            tr!(
+                "Pull {count} commits from {dest}",
+                count = behind,
+                dest = dest
+            )
+        } else if ahead == 1 {
+            tr!("Push {count} commit to {dest}", count = ahead, dest = dest)
         } else {
-            format!("Push {ahead} commit{} to {dest}", plural(ahead))
+            tr!("Push {count} commits to {dest}", count = ahead, dest = dest)
         };
         let button = |id: &'static str, title: String, enabled: bool| {
             div()
@@ -1300,7 +1348,7 @@ impl Changes {
                         } else {
                             glyph("cloud-upload")
                         })
-                        .child(div().min_w_0().truncate().child("Publish Branch"))
+                        .child(div().min_w_0().truncate().child(t("Publish Branch")))
                         .when(!busy, |d| {
                             d.on_click(cx.listener(|this, _, window, cx| this.sync(window, cx)))
                         }),
@@ -1314,7 +1362,7 @@ impl Changes {
                         } else {
                             glyph("refresh-cw")
                         })
-                        .child(div().min_w_0().truncate().child("Sync Changes"))
+                        .child(div().min_w_0().truncate().child(t("Sync Changes")))
                         .when(behind > 0, |d| {
                             d.child(
                                 div()
@@ -1342,8 +1390,8 @@ impl Changes {
                 let title = index
                     .default_branch
                     .as_ref()
-                    .map_or("Create pull request".to_owned(), |b| {
-                        format!("Create a pull request into {b}")
+                    .map_or(t("Create pull request").to_owned(), |b| {
+                        tr!("Create a pull request into {branch}", branch = b)
                     });
                 let enabled = can_create_pr && !busy;
                 d.child(
@@ -1353,7 +1401,7 @@ impl Changes {
                         } else {
                             glyph("git-pull-request")
                         })
-                        .child("Create PR")
+                        .child(t("Create PR"))
                         .when(enabled, |d| {
                             d.on_click(
                                 cx.listener(|this, _, window, cx| this.create_pr(window, cx)),
@@ -1369,9 +1417,13 @@ impl Changes {
                     state: String::new(),
                 });
                 let title = if pr.title.is_empty() {
-                    "View pull request".to_owned()
+                    t("View pull request").to_owned()
                 } else {
-                    format!("View PR #{}: {}", pr.number, pr.title)
+                    tr!(
+                        "View PR #{number}: {title}",
+                        number = pr.number,
+                        title = pr.title
+                    )
                 };
                 let enabled = can_view_pr && !busy;
                 let url = pr.url.clone();
@@ -1379,9 +1431,9 @@ impl Changes {
                     button("view-pr", title, enabled)
                         .child(glyph("external-link"))
                         .child(div().min_w_0().truncate().child(if pr.number > 0 {
-                            format!("View PR #{}", pr.number)
+                            tr!("View PR #{number}", number = pr.number)
                         } else {
-                            "View PR".into()
+                            t("View PR").into()
                         }))
                         .when(enabled, |d| d.on_click(move |_, _, cx| cx.open_url(&url))),
                 )
@@ -1409,8 +1461,8 @@ impl Changes {
         match self.lines[ix].clone() {
             Line::Section(kind) => {
                 let (title, open) = match kind {
-                    Kind2::Staged => ("Staged Changes", self.staged_open),
-                    Kind2::Unstaged => ("Changes", self.changes_open),
+                    Kind2::Staged => (t("Staged Changes"), self.staged_open),
+                    Kind2::Unstaged => (t("Changes"), self.changes_open),
                 };
                 let count = files
                     .iter()
@@ -1422,13 +1474,13 @@ impl Changes {
                 let tree = self.view == ChangesView::Tree;
                 let actions: Vec<(&'static str, &'static str, &'static str)> = match kind {
                     Kind2::Staged => vec![
-                        ("open-all-staged", "Open All Changes", "file-diff"),
-                        ("unstage-all", "Unstage All Changes", "minus-sign"),
+                        ("open-all-staged", t("Open All Changes"), "file-diff"),
+                        ("unstage-all", t("Unstage All Changes"), "minus-sign"),
                     ],
                     Kind2::Unstaged => vec![
-                        ("open-all-unstaged", "Open All Changes", "file-diff"),
-                        ("discard-all", "Discard All Changes", "undo"),
-                        ("stage-all", "Stage All Changes", "plus"),
+                        ("open-all-unstaged", t("Open All Changes"), "file-diff"),
+                        ("discard-all", t("Discard All Changes"), "undo"),
+                        ("stage-all", t("Stage All Changes"), "plus"),
                     ],
                 };
                 div()
@@ -1496,7 +1548,11 @@ impl Changes {
                     .child(
                         icon_action(
                             ("view", ix),
-                            if tree { "View as List" } else { "View as Tree" },
+                            if tree {
+                                t("View as List")
+                            } else {
+                                t("View as Tree")
+                            },
                             if tree { "list-bullet" } else { "folder-tree" },
                             true,
                         )
@@ -1611,10 +1667,11 @@ impl Changes {
                             .child(
                                 icon_action(
                                     ("dir-action", ix),
-                                    format!(
-                                        "{} Changes in {path}",
-                                        if stage { "Stage" } else { "Unstage" }
-                                    ),
+                                    if stage {
+                                        tr!("Stage Changes in {path}", path = path)
+                                    } else {
+                                        tr!("Unstage Changes in {path}", path = path)
+                                    },
                                     if stage { "plus" } else { "minus-sign" },
                                     !busy,
                                 )
@@ -1743,26 +1800,31 @@ impl Changes {
                             })
                             .when(kind == Kind2::Unstaged, |d| {
                                 d.child(
-                                    icon_action(("discard", ix), "Discard Changes", "undo", !busy)
-                                        .when(!busy, |d| {
-                                            d.on_click(cx.listener(move |this, _, window, cx| {
-                                                this.run_file(
-                                                    row_file.clone(),
-                                                    FileAction::Discard,
-                                                    window,
-                                                    cx,
-                                                )
-                                            }))
-                                        }),
+                                    icon_action(
+                                        ("discard", ix),
+                                        t("Discard Changes"),
+                                        "undo",
+                                        !busy,
+                                    )
+                                    .when(!busy, |d| {
+                                        d.on_click(cx.listener(move |this, _, window, cx| {
+                                            this.run_file(
+                                                row_file.clone(),
+                                                FileAction::Discard,
+                                                window,
+                                                cx,
+                                            )
+                                        }))
+                                    }),
                                 )
                             })
                             .child(
                                 icon_action(
                                     ("stage", ix),
                                     if kind == Kind2::Staged {
-                                        "Unstage Changes"
+                                        t("Unstage Changes")
                                     } else {
-                                        "Stage Changes"
+                                        t("Stage Changes")
                                     },
                                     if kind == Kind2::Staged {
                                         "minus-sign"
@@ -1829,12 +1891,15 @@ pub(crate) fn generate_commit_message(
             .take(240)
             .collect();
         if snippet.is_empty() {
-            format!(
-                "Could not generate a commit message. {} returned no text.",
-                kind.label()
+            tr!(
+                "Could not generate a commit message. {harness} returned no text.",
+                harness = kind.label()
             )
         } else {
-            format!("Could not generate a commit message. Model replied: {snippet}")
+            tr!(
+                "Could not generate a commit message. Model replied: {snippet}",
+                snippet = snippet
+            )
         }
     })
 }
@@ -1918,16 +1983,16 @@ impl Render for Changes {
                 .py_2()
                 .text_size(px(12.))
                 .text_color(content(0.5))
-                .child("No project folder")
+                .child(t("No project folder"))
                 .into_any_element();
         }
         let index = self.git.read(cx).index.clone();
         let empty = match &index {
-            None => Some("Loading changes…".to_owned()),
+            None => Some(t("Loading changes…").to_owned()),
             Some(i) if i.files.is_empty() => Some(if i.ahead > 0 || i.behind > 0 {
                 sync_status_label(i)
             } else {
-                "No uncommitted changes".into()
+                t("No uncommitted changes").into()
             }),
             _ => None,
         };
@@ -1943,7 +2008,7 @@ impl Render for Changes {
         div()
             .id("changes")
             .role(Role::TabPanel)
-            .aria_label("Changes")
+            .aria_label(t("Changes"))
             .size_full()
             .min_h_0()
             .flex()

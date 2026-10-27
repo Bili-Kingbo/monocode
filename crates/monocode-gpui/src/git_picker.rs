@@ -4,7 +4,11 @@ use gpui::{
     AnyElement, Context, Entity, EventEmitter, FocusHandle, Focusable, Role, Subscription, Window,
     div, prelude::*, px,
 };
-use monocode_core::git::{self, Snapshot};
+use monocode_core::{
+    git::{self, Snapshot},
+    i18n::t,
+    tr,
+};
 use std::path::PathBuf;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -112,14 +116,14 @@ impl GitPicker {
         let search = cx.new(|cx| {
             input::Input::field(
                 if mode == Mode::Worktree {
-                    "Search working copies"
+                    t("Search working copies")
                 } else {
-                    "Search branches"
+                    t("Search branches")
                 },
                 if mode == Mode::Worktree {
-                    "Search working copies…"
+                    t("Search working copies…")
                 } else {
-                    "Search branches…"
+                    t("Search branches…")
                 },
                 content(0.4),
                 cx,
@@ -302,7 +306,7 @@ impl gpui::Render for GitPicker {
                         (branch.name, branch.remote, selected, false, "git-branch")
                     }
                     Choice::Create(name) => (
-                        format!("Create branch ‘{name}’"),
+                        tr!("Create branch ‘{name}’", name = name),
                         None,
                         false,
                         false,
@@ -321,13 +325,13 @@ impl gpui::Render for GitPicker {
                         };
                         (
                             tree.branch.unwrap_or_else(|| {
-                                format!(
-                                    "Detached {}",
-                                    tree.head.chars().take(7).collect::<String>()
+                                tr!(
+                                    "Detached {sha}",
+                                    sha = tree.head.chars().take(7).collect::<String>()
                                 )
                             }),
                             Some(if tree.main {
-                                "Project folder".into()
+                                t("Project folder").into()
                             } else {
                                 tree.path
                             }),
@@ -398,13 +402,13 @@ impl gpui::Render for GitPicker {
             })
             .role(Role::Dialog)
             .aria_label(if existing_only {
-                "Existing worktrees"
+                t("Existing worktrees")
             } else if self.mode == Mode::Worktree {
-                "Working copies"
+                t("Working copies")
             } else if self.mode == Mode::Base {
-                "Worktree base branch"
+                t("Worktree base branch")
             } else {
-                "Branches"
+                t("Branches")
             })
             .key_context("GitPicker")
             .w_full()
@@ -459,7 +463,7 @@ impl gpui::Render for GitPicker {
                 div()
                     .id("git-choices")
                     .role(Role::ListBox)
-                    .aria_label("Working copy options")
+                    .aria_label(t("Working copy options"))
                     .when(!existing_only, |d| d.flex_1())
                     .when(existing_only, |d| d.max_h(px(284.)))
                     .min_h_0()
@@ -475,13 +479,13 @@ impl gpui::Render for GitPicker {
                                 .text_size(px(12.))
                                 .text_color(content(0.45))
                                 .child(if self.state.is_none() && self.error.is_none() {
-                                    "Loading…"
+                                    t("Loading…")
                                 } else if existing_only
                                     && self.search.read(cx).content.trim().is_empty()
                                 {
-                                    "No existing worktrees"
+                                    t("No existing worktrees")
                                 } else {
-                                    "No matches"
+                                    t("No matches")
                                 }),
                         )
                     }),
@@ -493,7 +497,7 @@ impl gpui::Render for GitPicker {
                         .py(px(6.))
                         .text_size(px(10.))
                         .text_color(content(0.4))
-                        .child("Type a new name to create a branch"),
+                        .child(t("Type a new name to create a branch")),
                 )
             })
             .when_some(self.error.clone(), |d, error| {

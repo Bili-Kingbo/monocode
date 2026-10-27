@@ -3,17 +3,20 @@ use super::*;
 impl FileEditor {
     pub(super) fn search_panel(&self, cx: &mut Context<Self>) -> AnyElement {
         let count = if self.search_invalid {
-            "Invalid regex".into()
+            t("Invalid regex").into()
         } else if self.search.read(cx).content.is_empty() {
             String::new()
         } else if self.matches.is_empty() {
-            "No results".into()
+            t("No results").into()
         } else {
-            format!(
-                "{} of {}{}",
-                self.match_index + 1,
-                self.matches.len().min(999),
-                if self.matches.len() > 999 { "+" } else { "" }
+            tr!(
+                "{index} of {total}",
+                index = self.match_index + 1,
+                total = format!(
+                    "{}{}",
+                    self.matches.len().min(999),
+                    if self.matches.len() > 999 { "+" } else { "" }
+                )
             )
         };
         let bad = self.search_invalid
@@ -81,7 +84,7 @@ impl FileEditor {
             .child(
                 icon_action(
                     "toggle-replace",
-                    "Toggle Replace",
+                    t("Toggle Replace"),
                     if self.replace_open {
                         "chevron-down"
                     } else {
@@ -110,22 +113,21 @@ impl FileEditor {
                             .gap_1()
                             .child(query)
                             .child(
-                                toggle("match-case", "Aa", "Match Case", self.match_case).on_click(
-                                    cx.listener(|this, _, _, cx| {
+                                toggle("match-case", "Aa", t("Match Case"), self.match_case)
+                                    .on_click(cx.listener(|this, _, _, cx| {
                                         this.match_case = !this.match_case;
                                         this.find_matches(cx);
-                                    }),
-                                ),
+                                    })),
                             )
                             .child(
-                                toggle("whole-word", "ab", "Match Whole Word", self.whole_word)
+                                toggle("whole-word", "ab", t("Match Whole Word"), self.whole_word)
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.whole_word = !this.whole_word;
                                         this.find_matches(cx);
                                     })),
                             )
                             .child(
-                                toggle("use-regex", ".*", "Use Regular Expression", self.regex)
+                                toggle("use-regex", ".*", t("Use Regular Expression"), self.regex)
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.regex = !this.regex;
                                         this.find_matches(cx);
@@ -157,14 +159,14 @@ impl FileEditor {
                                     div()
                                         .id("replace-next")
                                         .role(Role::Button)
-                                        .aria_label("Replace")
+                                        .aria_label(t("Replace"))
                                         .px_2()
                                         .py_1()
                                         .rounded_md()
                                         .text_size(px(11.))
                                         .text_color(content(0.6))
                                         .hover(|s| s.bg(content(0.1)))
-                                        .child("Replace")
+                                        .child(t("Replace"))
                                         .on_click(cx.listener(|this, _, _, cx| {
                                             this.replace_matches(false, cx)
                                         })),
@@ -173,14 +175,14 @@ impl FileEditor {
                                     div()
                                         .id("replace-all")
                                         .role(Role::Button)
-                                        .aria_label("Replace All")
+                                        .aria_label(t("Replace All"))
                                         .px_2()
                                         .py_1()
                                         .rounded_md()
                                         .text_size(px(11.))
                                         .text_color(content(0.6))
                                         .hover(|s| s.bg(content(0.1)))
-                                        .child("All")
+                                        .child(t("All"))
                                         .on_click(cx.listener(|this, _, _, cx| {
                                             this.replace_matches(true, cx)
                                         })),
@@ -197,7 +199,7 @@ impl FileEditor {
                     .child(
                         icon_action(
                             "find-prev",
-                            "Previous Match",
+                            t("Previous Match"),
                             "chevron-up",
                             !self.matches.is_empty(),
                         )
@@ -206,14 +208,14 @@ impl FileEditor {
                     .child(
                         icon_action(
                             "find-next",
-                            "Next Match",
+                            t("Next Match"),
                             "chevron-down",
                             !self.matches.is_empty(),
                         )
                         .on_click(cx.listener(|this, _, _, cx| this.step_match(false, cx))),
                     )
                     .child(
-                        icon_action("close-find", "Close", "x", true)
+                        icon_action("close-find", t("Close"), "x", true)
                             .size(px(24.))
                             .on_click(cx.listener(|this, _, w, cx| this.dismiss_search(w, cx))),
                     ),

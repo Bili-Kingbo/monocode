@@ -4,6 +4,7 @@
 //! lines it touched. Languages without a grammar here use the QuickJS path.
 use crate::editor_analysis::{Analysis, Change, Diagnostic, Edit, Fold, Token};
 use gpui::SharedString;
+use monocode_core::{i18n::t, tr};
 use std::{
     collections::HashMap,
     ops::Range,
@@ -517,20 +518,20 @@ fn diagnostics(tree: &Tree, text: &str) -> Vec<Diagnostic> {
         let (mut from, mut to) = (node.start_byte(), node.end_byte());
         let message = if node.is_missing() {
             if node.is_named() {
-                format!("Expected {}", node.kind())
+                tr!("Expected {token}", token = node.kind())
             } else {
-                format!("Expected {}", quote(node.kind()))
+                tr!("Expected {token}", token = quote(node.kind()))
             }
         } else {
             let skipped = text[from..to].trim();
             if !skipped.is_empty() {
-                format!("Unexpected {}", quote(skipped))
+                tr!("Unexpected {token}", token = quote(skipped))
             } else if let Some(token) = token_at(text, from) {
-                format!("Unexpected {}", quote(token))
+                tr!("Unexpected {token}", token = quote(token))
             } else if from >= text.len() {
-                "Unexpected end of file".into()
+                t("Unexpected end of file").into()
             } else {
-                "Unexpected end of line".into()
+                t("Unexpected end of line").into()
             }
         };
         // Zero-width points widen to one character, never across a line break.
