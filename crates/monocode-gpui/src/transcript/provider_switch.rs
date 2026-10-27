@@ -36,7 +36,7 @@ impl TranscriptView {
                 .id(SharedString::from(format!("provider-separator-{start}")))
                 .debug_selector(|| "provider-separator".into())
                 .role(Role::Label)
-                .aria_label(format!("Continued with {label}"))
+                .aria_label(tr!("Continued with {label}", label = label))
                 .w_full()
                 .flex()
                 .justify_center()

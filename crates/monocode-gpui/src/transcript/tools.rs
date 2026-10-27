@@ -2,7 +2,43 @@
 use super::{TranscriptView, tasks};
 use crate::theme::*;
 use gpui::{AnyElement, Context, Div, Role, div, prelude::*, px, rgb};
-use monocode_core::tool::{CommandStep, ToolCall, ToolState};
+use monocode_core::{
+    i18n::tl,
+    n,
+    tool::{CommandStep, ToolCall, ToolState},
+    tr,
+};
+
+/// Text monocode-core writes in English, which the transcript translates
+/// where it shows it: tool captions, task states and interjection kinds.
+#[allow(dead_code)]
+const CORE_TEXT: &[&str] = &[
+    n!("Read"),
+    n!("Write"),
+    n!("Edit"),
+    n!("Find"),
+    n!("List"),
+    n!("Search"),
+    n!("Run"),
+    n!("Planning"),
+    n!("Planned"),
+    n!("Checking"),
+    n!("Checked"),
+    n!("Drawing"),
+    n!("Drew"),
+    n!("a chart"),
+    n!("Compacting context…"),
+    n!("Context compacted"),
+    n!("Context compaction failed"),
+    n!("Context compaction cancelled"),
+    n!("Pending"),
+    n!("In progress"),
+    n!("Completed"),
+    n!("Cancelled"),
+    n!("Complete"),
+    n!("Advisor"),
+    n!("Notice"),
+];
 
 /// Shell plumbing that says nothing about what a chained command was for.
 fn is_noise(step: &CommandStep) -> bool {
@@ -69,7 +105,7 @@ impl TranscriptView {
         if tool.is_milestone() {
             let running = tool.state == ToolState::Running;
             let failed = tool.state == ToolState::Failed;
-            let label = tool.summary().0;
+            let label = crate::conversation::status_text(&tool.summary().0);
             return div()
                 .id(gpui::SharedString::from(format!("tool:{identity}")))
                 .debug_selector(move || format!("tool-{start}"))
@@ -157,13 +193,13 @@ impl TranscriptView {
         let chain = shown.action == "Run" && !shown.steps.is_empty();
         let caption = match (&shown.description, chain) {
             (Some(description), true) => description.clone(),
-            _ => format!("{action} {}", shown.target),
+            _ => format!("{} {}", tl(action), shown.target),
         };
         let state_label = match tool.state {
-            ToolState::Running => "Running",
-            ToolState::Completed => "Completed",
-            ToolState::Failed => "Failed",
-            ToolState::Cancelled => "Cancelled",
+            ToolState::Running => tr!("Running tool call: {caption}", caption = caption),
+            ToolState::Completed => tr!("Completed tool call: {caption}", caption = caption),
+            ToolState::Failed => tr!("Failed tool call: {caption}", caption = caption),
+            ToolState::Cancelled => tr!("Cancelled tool call: {caption}", caption = caption),
         };
         // Chained commands and failures share one disclosure: steps, then error.
         let error_key = format!("tool-detail:{start}:{}", tool.id);
@@ -219,7 +255,7 @@ impl TranscriptView {
             .id(gpui::SharedString::from(format!("tool:{identity}")))
             .debug_selector(move || format!("tool-{start}"))
             .role(Role::Group)
-            .aria_label(format!("{state_label} tool call: {caption}"))
+            .aria_label(state_label)
             .flex()
             .w_full()
             .min_w_0()
@@ -239,7 +275,7 @@ impl TranscriptView {
                         } else {
                             content(0.5)
                         })
-                        .child(action.to_owned()),
+                        .child(tl(action).to_owned()),
                 )
             })
             .child(
@@ -290,9 +326,10 @@ impl TranscriptView {
                                         } else {
                                             content(0.5)
                                         })
-                                        .aria_label(format!(
-                                            "{hidden} more patterns: {}",
-                                            patterns[2..].join(", ")
+                                        .aria_label(tr!(
+                                            "{hidden} more patterns: {patterns}",
+                                            hidden = hidden,
+                                            patterns = patterns[2..].join(", ")
                                         ))
                                         .child(format!("+{hidden}")),
                                 )
@@ -309,7 +346,7 @@ impl TranscriptView {
                         })
                         .when_some(target_path, |d, path| {
                             d.role(Role::Button)
-                                .aria_label(format!("Open {path}"))
+                                .aria_label(tr!("Open {path}", path = path))
                                 .cursor_pointer()
                                 .hover(|style| style.text_color(rgb(0x7dd3fc)))
                                 .on_click(move |_, window, cx| {
@@ -321,7 +358,12 @@ impl TranscriptView {
                                 })
                         })
                         .when(!is_search && !chain, |d| {
-                            d.child(div().min_w_0().truncate().child(shown.target))
+                            d.child(div().min_w_0().truncate().child(if visual {
+                                // A chart's placeholder target, "a chart".
+                                tl(&shown.target).to_owned()
+                            } else {
+                                shown.target
+                            }))
                         })
                         .when(chain, |d| {
                             let hidden = chips.len().saturating_sub(3);
@@ -372,7 +414,7 @@ impl TranscriptView {
                                             .child(div().min_w_0().truncate().child(label.clone()))
                                             .when_some(path, |d, path| {
                                                 d.role(Role::Button)
-                                                    .aria_label(format!("Open {path}"))
+                                                    .aria_label(tr!("Open {path}", path = path))
                                                     .cursor_pointer()
                                                     .hover(|style| style.text_color(rgb(0x7dd3fc)))
                                                     .on_click(move |_, window, cx| {
@@ -406,9 +448,10 @@ impl TranscriptView {
                                             } else {
                                                 content(0.5)
                                             })
-                                            .aria_label(format!(
-                                                "{hidden} more steps: {}",
-                                                rest.join(", ")
+                                            .aria_label(tr!(
+                                                "{hidden} more steps: {steps}",
+                                                hidden = hidden,
+                                                steps = rest.join(", ")
                                             ))
                                             .child(format!("+{hidden}")),
                                     )
@@ -427,11 +470,18 @@ impl TranscriptView {
                             .id("error-toggle")
                             .role(Role::Button)
                             .aria_expanded(error_open)
-                            .aria_label(format!(
-                                "{} {} for {caption}",
-                                if error_open { "Hide" } else { "Show" },
-                                if has_error { "error details" } else { "steps" }
-                            ))
+                            .aria_label(match (error_open, has_error) {
+                                (true, true) => {
+                                    tr!("Hide error details for {caption}", caption = caption)
+                                }
+                                (false, true) => {
+                                    tr!("Show error details for {caption}", caption = caption)
+                                }
+                                (true, false) => tr!("Hide steps for {caption}", caption = caption),
+                                (false, false) => {
+                                    tr!("Show steps for {caption}", caption = caption)
+                                }
+                            })
                             .p_1()
                             .child(
                                 icon(
@@ -497,7 +547,7 @@ impl TranscriptView {
                                     )
                                     .when_some(path, |d, path| {
                                         d.role(Role::Button)
-                                            .aria_label(format!("Open {path}"))
+                                            .aria_label(tr!("Open {path}", path = path))
                                             .cursor_pointer()
                                             .hover(|style| style.text_color(rgb(0x7dd3fc)))
                                             .on_click(move |_, window, cx| {

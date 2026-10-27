@@ -67,7 +67,7 @@ impl Conversation {
     }
     pub(crate) fn toggle_mode(&mut self, id: &str, cx: &mut Context<Self>) {
         if self.is_remote() && matches!(id, "operator" | "orchestrator") {
-            self.status = "This mode is not available on remote projects.".into();
+            self.status = n!("This mode is not available on remote projects.").into();
             cx.notify();
             return;
         }
@@ -164,7 +164,7 @@ impl Conversation {
             files: true,
             directories: false,
             multiple: true,
-            prompt: Some("Attach files".into()),
+            prompt: Some(t("Attach files").into()),
         });
         cx.spawn(async move |this, cx| {
             if let Ok(Ok(Some(paths))) = paths.await {
@@ -213,7 +213,7 @@ impl Conversation {
                 || images.iter().map(|i| i.bytes().len() as u64).sum::<u64>()
                     > monocode_core::composer::MAX_EMBED_BYTES
             {
-                return Err("Attach up to 20 files totalling 20 MB.".to_owned());
+                return Err(n!("Attach up to 20 files totalling 20 MB.").to_owned());
             }
             let root = locked(&store)?
                 .data_dir()
@@ -329,7 +329,7 @@ impl Conversation {
                     let remove = div()
                         .id(("remove-attachment", ix))
                         .role(Role::Button)
-                        .aria_label(format!("Remove {label}"))
+                        .aria_label(tr!("Remove {label}", label = label))
                         .cursor_pointer()
                         .flex_shrink_0()
                         .flex()
@@ -375,7 +375,7 @@ impl Conversation {
                             .role(Role::Button)
                             .focusable()
                             .debug_selector(move || format!("composer-image-{ix}"))
-                            .aria_label(format!("Open {label} full screen"))
+                            .aria_label(tr!("Open {label} full screen", label = label))
                             .cursor(CursorStyle::PointingHand)
                             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                             .on_click(move |_, window, cx| {
@@ -406,7 +406,7 @@ impl Conversation {
                         div()
                             .text_size(px(11.))
                             .text_color(content(0.5))
-                            .child("Attaching…"),
+                            .child(t("Attaching…")),
                     )
                 })
                 .when_some(self.attachment_error.clone(), |d, error| {
@@ -414,7 +414,7 @@ impl Conversation {
                         div()
                             .text_size(px(11.))
                             .text_color(tint(AMBER_400, 0.9))
-                            .child(error),
+                            .child(status_text(&error)),
                     )
                 })
                 .into_any_element(),
@@ -535,7 +535,7 @@ impl Conversation {
                         self.orchestration_plan
                             .as_ref()
                             .map(|p| p.title.clone())
-                            .unwrap_or_else(|| "Orchestrator".into()),
+                            .unwrap_or_else(|| t("Orchestrator").into()),
                     ),
             );
         if let Some(plan) = &self.orchestration_plan {
@@ -561,7 +561,10 @@ impl Conversation {
                                         if task.depends_on.is_empty() {
                                             String::new()
                                         } else {
-                                            format!(" · after {}", task.depends_on.join(", "))
+                                            tr!(
+                                                " · after {tasks}",
+                                                tasks = task.depends_on.join(", ")
+                                            )
                                         }
                                     ),
                                 ))
@@ -573,9 +576,9 @@ impl Conversation {
                         .flex()
                         .gap_2()
                         .child(
-                            tool_pill("start-orchestration", "Start agents")
+                            tool_pill("start-orchestration", t("Start agents"))
                                 .bg(content(0.1))
-                                .child("Start agents")
+                                .child(t("Start agents"))
                                 .on_click(cx.listener(|this, _, _, cx| {
                                     if let Some(plan) = this.orchestration_plan.clone() {
                                         cx.emit(StartOrchestration(plan));
@@ -583,8 +586,8 @@ impl Conversation {
                                 })),
                         )
                         .child(
-                            tool_pill("dismiss-orchestration", "Dismiss plan")
-                                .child("Dismiss")
+                            tool_pill("dismiss-orchestration", t("Dismiss plan"))
+                                .child(t("Dismiss"))
                                 .on_click(cx.listener(|this, _, _, cx| {
                                     this.orchestration_plan = None;
                                     cx.notify();
@@ -597,8 +600,8 @@ impl Conversation {
             card = card
                 .child(div().text_color(tint(AMBER_400, 0.9)).child(error.clone()))
                 .child(
-                    tool_pill("dismiss-plan-error", "Dismiss")
-                        .child("Dismiss")
+                    tool_pill("dismiss-plan-error", t("Dismiss"))
+                        .child(t("Dismiss"))
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.orchestration_error = None;
                             cx.notify();
@@ -609,8 +612,8 @@ impl Conversation {
             card = card
                 .child(div().text_color(content(0.6)).child(progress.clone()))
                 .child(
-                    tool_pill("stop-orchestration", "Stop agents")
-                        .child("Stop agents")
+                    tool_pill("stop-orchestration", t("Stop agents"))
+                        .child(t("Stop agents"))
                         .on_click(cx.listener(|_, _, _, cx| cx.emit(StopOrchestration))),
                 );
         }

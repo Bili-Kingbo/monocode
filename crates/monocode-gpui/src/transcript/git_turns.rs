@@ -73,18 +73,19 @@ pub(crate) fn latest_commit(rows: &[Row]) -> Option<String> {
 
 fn live_label(action: GitAction, step: Step) -> &'static str {
     match step {
-        Step::Push => "Pushing…",
-        Step::Commit => "Committing…",
-        Step::Stage => "Staging…",
+        Step::Push => t("Pushing…"),
+        Step::Commit => t("Committing…"),
+        Step::Stage => t("Staging…"),
         Step::Review => match action {
-            GitAction::Push => "Getting ready to push…",
-            _ => "Checking your changes…",
+            GitAction::Push => t("Getting ready to push…"),
+            _ => t("Checking your changes…"),
         },
     }
 }
 
-fn plural(count: usize, one: &str, many: &str) -> String {
-    format!("{count} {}", if count == 1 { one } else { many })
+/// `one` or `many`, a `{count}` sentence, as shown.
+fn plural(count: usize, one: &'static str, many: &'static str) -> String {
+    monocode_core::i18n::tf(if count == 1 { one } else { many }, &[("count", &count)])
 }
 
 fn counts(additions: u64, deletions: u64) -> Div {
@@ -190,21 +191,24 @@ impl TranscriptView {
         let has_counts = additions + deletions > 0;
         let title: SharedString = match (commit, push) {
             (Some(commit), _) => commit.subject.clone().into(),
-            (None, Some(push)) if push.up_to_date => "Already up to date".into(),
-            (None, Some(push)) if !push.ok => "Push didn’t go through".into(),
+            (None, Some(push)) if push.up_to_date => t("Already up to date").into(),
+            (None, Some(push)) if !push.ok => t("Push didn’t go through").into(),
             (None, Some(push)) => push
                 .branch
                 .as_ref()
-                .map_or_else(|| "Pushed".into(), |branch| format!("Pushed {branch}"))
+                .map_or_else(
+                    || t("Pushed").into(),
+                    |branch| tr!("Pushed {branch}", branch = branch),
+                )
                 .into(),
-            (None, None) => format!(
-                "Staged {}",
-                plural(
+            (None, None) => tr!(
+                "Staged {files}",
+                files = plural(
                     report
                         .staged_totals
                         .map_or(report.staged.len(), |(files, _, _)| files as usize),
-                    "file",
-                    "files"
+                    n!("{count} file"),
+                    n!("{count} files")
                 )
             )
             .into(),
@@ -232,9 +236,9 @@ impl TranscriptView {
                     .id(("git-card-hash", message_start))
                     .role(Role::Button)
                     .aria_label(if copied {
-                        "Copied the commit hash".to_string()
+                        t("Copied the commit hash").to_string()
                     } else {
-                        format!("Copy commit {}", commit.hash)
+                        tr!("Copy commit {hash}", hash = commit.hash)
                     })
                     .flex_shrink_0()
                     .flex()
@@ -256,7 +260,7 @@ impl TranscriptView {
                     } else {
                         div().child(commit.hash.clone()).into_any_element()
                     })
-                    .when(copied, |d| d.child("Copied"))
+                    .when(copied, |d| d.child(t("Copied")))
                     .on_mouse_down(gpui::MouseButton::Left, |_, _, cx| cx.stop_propagation())
                     .on_click(cx.listener(move |this, _, _, cx| {
                         cx.write_to_clipboard(ClipboardItem::new_string(hash.clone()));
@@ -294,8 +298,8 @@ impl TranscriptView {
                     .child(dot())
                     .child(div().flex_shrink_0().child(plural(
                         report.commits.len(),
-                        "commit",
-                        "commits",
+                        n!("{count} commit"),
+                        n!("{count} commits"),
                     )));
             }
         }
@@ -321,19 +325,22 @@ impl TranscriptView {
                         ),
                     )
                     .child(div().truncate().child(if push_failed {
-                        "Push rejected".to_string()
+                        t("Push rejected").to_string()
                     } else if commit.is_none() {
-                        push.repo.clone().unwrap_or_else(|| "Remote updated".into())
-                    } else {
                         push.repo
-                            .as_ref()
-                            .map_or_else(|| "Pushed".into(), |repo| format!("Pushed to {repo}"))
+                            .clone()
+                            .unwrap_or_else(|| t("Remote updated").into())
+                    } else {
+                        push.repo.as_ref().map_or_else(
+                            || t("Pushed").into(),
+                            |repo| tr!("Pushed to {repo}", repo = repo),
+                        )
                     })),
             );
         }
         if commit.is_none() && push.is_none() {
             parts += 1;
-            subtitle = subtitle.child(div().child("Ready to commit"));
+            subtitle = subtitle.child(div().child(t("Ready to commit")));
         }
         if has_counts {
             if parts > 0 {
@@ -346,13 +353,13 @@ impl TranscriptView {
         let link = push.filter(|push| push.ok).and_then(|push| {
             push.pull_request
                 .clone()
-                .map(|url| ("Open pull request", "git-pull-request", url))
+                .map(|url| (t("Open pull request"), "git-pull-request", url))
                 .or_else(|| {
                     let web = push.web.as_ref()?;
                     let commit = commit?;
                     web.starts_with("https://github.com/").then(|| {
                         (
-                            "View commit",
+                            t("View commit"),
                             "external-link",
                             format!("{web}/commit/{}", commit.hash),
                         )
@@ -465,7 +472,7 @@ impl TranscriptView {
             div()
                 .id(("git-card-file", message_start * 64 + ix))
                 .role(Role::Link)
-                .aria_label(SharedString::from(format!("Open {}", file.path)))
+                .aria_label(SharedString::from(tr!("Open {path}", path = file.path)))
                 .h(px(30.))
                 .w_full()
                 .min_w_0()
@@ -494,7 +501,11 @@ impl TranscriptView {
                             .text_size(px(11.))
                             .font_features(tabular())
                             .text_color(content(0.45))
-                            .child(plural(lines as usize, "line", "lines")),
+                            .child(plural(
+                                lines as usize,
+                                n!("{count} line"),
+                                n!("{count} lines"),
+                            )),
                     ),
                     (None, None) => d,
                 })
@@ -541,9 +552,13 @@ impl TranscriptView {
                                             .items_center()
                                             .text_size(px(11.))
                                             .text_color(content(0.4))
-                                            .child(format!(
-                                                "+{} more",
-                                                plural(hidden, "file", "files")
+                                            .child(tr!(
+                                                "+{files} more",
+                                                files = plural(
+                                                    hidden,
+                                                    n!("{count} file"),
+                                                    n!("{count} files")
+                                                )
                                             )),
                                     )
                                 }),
@@ -674,7 +689,13 @@ fn title_text(card: &GitCard) -> String {
         .last()
         .map(|commit| commit.subject.clone())
         .or_else(|| card.report.push.as_ref().and_then(|p| p.branch.clone()))
-        .unwrap_or_else(|| plural(card.report.staged.len(), "file", "files"))
+        .unwrap_or_else(|| {
+            plural(
+                card.report.staged.len(),
+                n!("{count} file"),
+                n!("{count} files"),
+            )
+        })
 }
 
 #[cfg(test)]

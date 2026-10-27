@@ -42,7 +42,7 @@ impl Conversation {
             .items_center()
             .gap(px(6.))
             .child(
-                approval_button("approval-deny", "Deny")
+                approval_button("approval-deny", t("Deny"))
                     .text_color(content(0.5))
                     .hover(|s| s.bg(content(0.08)).text_color(content(0.9)))
                     .on_click(cx.listener(move |this, _, _, cx| {
@@ -51,7 +51,7 @@ impl Conversation {
             )
             .when(approval.can_remember, |d| {
                 d.child(
-                    approval_button("approval-session", "Allow for this session")
+                    approval_button("approval-session", t("Allow for this session"))
                         .bg(content(0.06))
                         .hover(|s| s.bg(content(0.1)))
                         .on_click(cx.listener(move |this, _, _, cx| {
@@ -60,7 +60,7 @@ impl Conversation {
                 )
             })
             .child(
-                approval_button("approval-allow", "Allow once")
+                approval_button("approval-allow", t("Allow once"))
                     .bg(content(1.))
                     .text_color(ink)
                     .font_weight(gpui::FontWeight::MEDIUM)
@@ -72,7 +72,7 @@ impl Conversation {
         // The question and its answers share one row; any detail follows below.
         let card = composer_shelf::card("approval-request", self.classic_layout)
             .role(Role::Group)
-            .aria_label(approval.title.clone())
+            .aria_label(tl(&approval.title).to_owned())
             .child(
                 div()
                     .debug_selector(|| "approval-header".into())
@@ -87,7 +87,7 @@ impl Conversation {
                             .flex_1()
                             .py_1()
                             .text_color(content(0.75))
-                            .child(approval.title.clone()),
+                            .child(tl(&approval.title).to_owned()),
                     )
                     .child(actions),
             )

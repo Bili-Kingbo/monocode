@@ -3,7 +3,11 @@ use gpui::{
     AnyElement, App, Bounds, ContentMask, Element, ElementId, GlobalElementId, InspectorElementId,
     LayoutId, Pixels, StyledText, Window, point, prelude::*, rgb,
 };
-use monocode_core::tool::{ToolCall, ToolState};
+use monocode_core::{
+    i18n::tl,
+    n,
+    tool::{ToolCall, ToolState},
+};
 use std::collections::HashSet;
 
 /// Shade a fixed glyph layout. Animated StyledText highlights change font-run
@@ -127,6 +131,18 @@ pub(crate) fn file_icon(path: &str, side: f32) -> AnyElement {
     crate::file_icons::file_type_icon(name, false, false, side)
 }
 pub(crate) fn summary(tools: &[ToolCall], live: bool) -> (String, &'static str) {
+    summarize(tools, live, false)
+}
+/// `summary` in the interface language, for the desktop transcript; the
+/// mobile host keeps the English one.
+pub(crate) fn summary_shown(tools: &[ToolCall], live: bool) -> (String, &'static str) {
+    summarize(tools, live, true)
+}
+fn summarize(tools: &[ToolCall], live: bool, shown: bool) -> (String, &'static str) {
+    let say = |en: &'static str, count: usize| -> String {
+        let text = if shown { tl(en) } else { en };
+        text.replace("{count}", &count.to_string())
+    };
     let mut order = Vec::new();
     let mut reads = HashSet::new();
     let mut edits = HashSet::new();
@@ -187,9 +203,9 @@ pub(crate) fn summary(tools: &[ToolCall], live: bool) -> (String, &'static str) 
     if failed_agents > 0 {
         return (
             if failed_agents == 1 {
-                "Subagent failed".into()
+                say(n!("Subagent failed"), 1)
             } else {
-                format!("{failed_agents} subagents failed")
+                say(n!("{count} subagents failed"), failed_agents)
             },
             "bot",
         );
@@ -205,78 +221,77 @@ pub(crate) fn summary(tools: &[ToolCall], live: bool) -> (String, &'static str) 
                 .unwrap_or("")
                 .to_owned()
         } else {
-            format!("{} files", paths.len())
+            say(n!("{count} files"), paths.len())
         }
+    };
+    let with = |en: &'static str, what: String| -> String {
+        let text = if shown { tl(en) } else { en };
+        text.replace("{what}", &what)
     };
     let title = order
         .iter()
         .map(|kind| {
             let live = *kind == current;
             match *kind {
-                "research" if searches > 0 && !reads.is_empty() => if live {
-                    "Exploring the project"
-                } else {
-                    "Explored the project"
+                "research" if searches > 0 && !reads.is_empty() => {
+                    if live {
+                        say(n!("Exploring the project"), 0)
+                    } else {
+                        say(n!("Explored the project"), 0)
+                    }
                 }
-                .into(),
-                "research" if !reads.is_empty() => format!(
-                    "{} {}",
-                    if live { "Reading" } else { "Read" },
-                    file_label(&reads)
-                ),
-                "research" => if live {
-                    "Searching the project"
-                } else {
-                    "Searched the project"
+                "research" if !reads.is_empty() => {
+                    if live {
+                        with(n!("Reading {what}"), file_label(&reads))
+                    } else {
+                        with(n!("Read {what}"), file_label(&reads))
+                    }
                 }
-                .into(),
-                "edit" => format!(
-                    "{} {}",
-                    if live { "Editing" } else { "Edited" },
-                    file_label(&edits)
-                ),
-                "run" => format!(
-                    "{} {}",
-                    if live { "Running" } else { "Ran" },
-                    if commands == 1 {
-                        "a command".into()
+                "research" => {
+                    if live {
+                        say(n!("Searching the project"), 0)
                     } else {
-                        format!("{commands} commands")
+                        say(n!("Searched the project"), 0)
                     }
-                ),
-                "visual" if charts == 0 => if live {
-                    "Planning a chart"
-                } else {
-                    "Planned a chart"
                 }
-                .into(),
-                "visual" => format!(
-                    "{} {}",
-                    if live { "Drawing" } else { "Drew" },
-                    if charts == 1 {
-                        "a chart".into()
+                "edit" => {
+                    if live {
+                        with(n!("Editing {what}"), file_label(&edits))
                     } else {
-                        format!("{charts} charts")
+                        with(n!("Edited {what}"), file_label(&edits))
                     }
-                ),
-                "agent" => format!(
-                    "{} {}",
-                    if live { "Running" } else { "Ran" },
-                    if agents == 1 {
-                        "a subagent".into()
+                }
+                "run" => match (live, commands) {
+                    (true, 1) => say(n!("Running a command"), 1),
+                    (false, 1) => say(n!("Ran a command"), 1),
+                    (true, count) => say(n!("Running {count} commands"), count),
+                    (false, count) => say(n!("Ran {count} commands"), count),
+                },
+                "visual" if charts == 0 => {
+                    if live {
+                        say(n!("Planning a chart"), 0)
                     } else {
-                        format!("{agents} subagents")
+                        say(n!("Planned a chart"), 0)
                     }
-                ),
-                _ => format!(
-                    "{} {}",
-                    if live { "Running" } else { "Ran" },
-                    if others == 1 {
-                        "a tool".into()
-                    } else {
-                        format!("{others} tools")
-                    }
-                ),
+                }
+                "visual" => match (live, charts) {
+                    (true, 1) => say(n!("Drawing a chart"), 1),
+                    (false, 1) => say(n!("Drew a chart"), 1),
+                    (true, count) => say(n!("Drawing {count} charts"), count),
+                    (false, count) => say(n!("Drew {count} charts"), count),
+                },
+                "agent" => match (live, agents) {
+                    (true, 1) => say(n!("Running a subagent"), 1),
+                    (false, 1) => say(n!("Ran a subagent"), 1),
+                    (true, count) => say(n!("Running {count} subagents"), count),
+                    (false, count) => say(n!("Ran {count} subagents"), count),
+                },
+                _ => match (live, others) {
+                    (true, 1) => say(n!("Running a tool"), 1),
+                    (false, 1) => say(n!("Ran a tool"), 1),
+                    (true, count) => say(n!("Running {count} tools"), count),
+                    (false, count) => say(n!("Ran {count} tools"), count),
+                },
             }
         })
         .collect::<Vec<String>>()

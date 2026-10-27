@@ -59,18 +59,18 @@ impl GitAction {
     }
     pub(crate) fn label(self) -> &'static str {
         match self {
-            Self::Stage => "Stage",
-            Self::Commit => "Commit",
-            Self::CommitPush => "Commit & push",
-            Self::Push => "Push",
+            Self::Stage => t("Stage"),
+            Self::Commit => t("Commit"),
+            Self::CommitPush => t("Commit & push"),
+            Self::Push => t("Push"),
         }
     }
     fn description(self) -> &'static str {
         match self {
-            Self::Stage => "Stage only this session's changes",
-            Self::Commit => "Stage and commit with a written message",
-            Self::CommitPush => "Commit, then push the branch",
-            Self::Push => "Push this session's commits",
+            Self::Stage => t("Stage only this session's changes"),
+            Self::Commit => t("Stage and commit with a written message"),
+            Self::CommitPush => t("Commit, then push the branch"),
+            Self::Push => t("Push this session's commits"),
         }
     }
     pub(crate) fn icon(self) -> &'static str {
@@ -87,10 +87,10 @@ impl GitAction {
     /// What the transcript shows for the turn.
     pub(crate) fn message(self) -> &'static str {
         match self {
-            Self::Stage => "Stage your changes",
-            Self::Commit => "Commit your changes",
-            Self::CommitPush => "Commit and push your changes",
-            Self::Push => "Push your commits",
+            Self::Stage => n!("Stage your changes"),
+            Self::Commit => n!("Commit your changes"),
+            Self::CommitPush => n!("Commit and push your changes"),
+            Self::Push => n!("Push your commits"),
         }
     }
     /// What the agent receives instead.
@@ -357,7 +357,7 @@ impl Conversation {
                 .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
         };
         let main = segment("git-action-run")
-            .aria_label(SharedString::from(current.message()))
+            .aria_label(SharedString::from(tl(current.message())))
             .pl(px(10.))
             .pr(px(if has_menu { 8. } else { 10. }))
             .gap(px(6.))
@@ -365,7 +365,7 @@ impl Conversation {
             .child(div().text_size(px(12.)).child(current.label()))
             .on_click(cx.listener(move |this, _, _, cx| this.run_git_action(current, cx)));
         let chevron = segment("git-action-menu")
-            .aria_label("Git actions")
+            .aria_label(t("Git actions"))
             .aria_expanded(menu_open)
             .relative()
             .px(px(7.))
@@ -380,7 +380,7 @@ impl Conversation {
                 .id("git-actions")
                 .debug_selector(|| "git-actions".into())
                 .role(Role::Group)
-                .aria_label("Git actions")
+                .aria_label(t("Git actions"))
                 .relative()
                 .h(px(30.))
                 .flex()

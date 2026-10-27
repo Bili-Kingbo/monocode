@@ -50,7 +50,8 @@ impl Conversation {
         }
         if self.busy || !self.follow_ups.state.messages.is_empty() {
             self.status =
-                "Wait for the current turn and queued messages before compacting context.".into();
+                n!("Wait for the current turn and queued messages before compacting context.")
+                    .into();
             cx.notify();
             return;
         }
@@ -64,7 +65,7 @@ impl Conversation {
             return;
         }
         if self.summary.provider_id.is_none() {
-            self.status = "Send a message before compacting this chat.".into();
+            self.status = n!("Send a message before compacting this chat.").into();
             cx.notify();
             return;
         }
@@ -99,7 +100,7 @@ impl Conversation {
         self.busy = true;
         self.submission_generation = self.submission_generation.wrapping_add(1);
         let generation = self.submission_generation;
-        self.status = "Compacting context…".into();
+        self.status = n!("Compacting context…").into();
         let compact_start = self.transcript.read(cx).source_rows().len();
         let mut compact_tool = ToolCall::new(
             &format!(
