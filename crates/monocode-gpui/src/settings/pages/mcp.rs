@@ -7,6 +7,21 @@ use crate::{
     theme::*,
 };
 use gpui::{AnyElement, Context, SharedString, div, prelude::*, px};
+use monocode_core::{
+    i18n::{t, tl},
+    n, tr,
+};
+
+/// A config scope as shown; the value stays as each CLI names it.
+fn scope_label(scope: &str) -> &str {
+    match scope {
+        "local" => t("local"),
+        "project" => t("project"),
+        "user" => t("user"),
+        _ => scope,
+    }
+}
+
 impl SettingsView {
     pub(super) fn mcp_page(&mut self, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let project = self.project_picker(cx);
@@ -32,7 +47,7 @@ impl SettingsView {
                                     div()
                                         .text_size(px(14.))
                                         .font_weight(gpui::FontWeight::SEMIBOLD)
-                                        .child("MCP connections"),
+                                        .child(t("MCP connections")),
                                 )
                                 .child(project),
                         )
@@ -41,7 +56,7 @@ impl SettingsView {
                                 .mt_1()
                                 .text_size(px(12.))
                                 .text_color(content(0.55))
-                                .child("Servers for this project and your accounts."),
+                                .child(t("Servers for this project and your accounts.")),
                         ),
                 )
                 .child(
@@ -49,14 +64,14 @@ impl SettingsView {
                         .flex()
                         .items_center()
                         .gap_2()
-                        .child(self.refresh_button("refresh-mcp", "Refresh", cx))
+                        .child(self.refresh_button("refresh-mcp", t("Refresh"), cx))
                         .child(
                             secondary_button(
                                 "mcp-show-all",
                                 if self.mcp_show_all {
-                                    "Show available providers"
+                                    t("Show available providers")
                                 } else {
-                                    "Show all providers"
+                                    t("Show all providers")
                                 },
                                 false,
                                 false,
@@ -68,7 +83,7 @@ impl SettingsView {
                             })),
                         )
                         .child(
-                            secondary_button("add-mcp", "Add MCP server", false, busy)
+                            secondary_button("add-mcp", t("Add MCP server"), false, busy)
                                 .debug_selector(|| "settings-add-mcp".into())
                                 .child(icon("plus", 14.))
                                 .on_click(cx.listener(move |this, _, window, cx| {
@@ -81,7 +96,7 @@ impl SettingsView {
                 .into_any_element(),
         ];
         let filter = self.mcp_filter.clone();
-        let counts = std::iter::once(("all", "All"))
+        let counts = std::iter::once(("all", t("All")))
             .chain(
                 [
                     ("claude", "Claude Code"),
@@ -114,7 +129,7 @@ impl SettingsView {
                 .mt_6()
                 .child(self.segmented(
                     "mcp-filter",
-                    "Filter MCP servers by provider",
+                    t("Filter MCP servers by provider"),
                     &filter,
                     &options,
                     cx,
@@ -138,7 +153,7 @@ impl SettingsView {
             );
         }
         if self.discovery_loading {
-            page.push(note("Checking servers…"));
+            page.push(note(t("Checking servers…")));
             return page;
         }
         let servers = self
@@ -149,7 +164,7 @@ impl SettingsView {
             .cloned()
             .collect::<Vec<_>>();
         if servers.is_empty() {
-            page.push(note("No MCP servers configured for this provider."));
+            page.push(note(t("No MCP servers configured for this provider.")));
         } else {
             page.push(
                 div()
@@ -203,9 +218,9 @@ impl SettingsView {
                                                     )
                                                     .label()
                                                 },
-                                                server.scope,
+                                                scope_label(&server.scope),
                                                 server.transport,
-                                                server.status
+                                                tl(&server.status)
                                             )),
                                     )
                                     .child(
@@ -224,11 +239,11 @@ impl SettingsView {
                             row = row.child(
                                 secondary_button(
                                     SharedString::from(format!("mcp-login-{ix}")),
-                                    "Sign in",
+                                    t("Sign in"),
                                     false,
                                     busy,
                                 )
-                                .child("Sign in")
+                                .child(t("Sign in"))
                                 .on_click(cx.listener(
                                     move |this, _, _, cx| this.mcp_action(login.clone(), false, cx),
                                 )),
@@ -246,9 +261,13 @@ impl SettingsView {
                                 remove.scope = scope.clone();
                                 row = row.child(self.segmented(
                                     "mcp-remove-scope",
-                                    "Scope to remove this server from",
+                                    t("Scope to remove this server from"),
                                     &scope,
-                                    &[("local", "Local"), ("project", "Project"), ("user", "User")],
+                                    &[
+                                        ("local", t("Local")),
+                                        ("project", t("Project")),
+                                        ("user", t("User")),
+                                    ],
                                     cx,
                                     move |this, value, cx| {
                                         this.mcp_remove_scopes.insert(name.clone(), value.into());
@@ -259,21 +278,22 @@ impl SettingsView {
                             row = row.child(
                                 secondary_button(
                                     SharedString::from(format!("mcp-remove-{ix}")),
-                                    "Remove",
+                                    t("Remove"),
                                     false,
                                     busy,
                                 )
-                                .child("Remove")
+                                .child(t("Remove"))
                                 .on_click(cx.listener(
                                     move |_, _, window, cx| {
                                         let prompt = window.prompt(
                                             gpui::PromptLevel::Warning,
-                                            "Remove MCP server",
-                                            Some(&format!(
-                                                "Remove {} from {} scope?",
-                                                remove.name, remove.scope
+                                            t("Remove MCP server"),
+                                            Some(&tr!(
+                                                "Remove {name} from {scope} scope?",
+                                                name = remove.name,
+                                                scope = scope_label(&remove.scope)
                                             )),
-                                            &["Remove", "Cancel"],
+                                            &[t("Remove"), t("Cancel")],
                                             cx,
                                         );
                                         let server = remove.clone();
@@ -293,11 +313,11 @@ impl SettingsView {
                             row = row.child(
                                 secondary_button(
                                     SharedString::from(format!("mcp-show-{ix}")),
-                                    "Show config",
+                                    t("Show config"),
                                     false,
                                     false,
                                 )
-                                .child("Show config")
+                                .child(t("Show config"))
                                 .on_click(move |_, _, cx| cx.reveal_path(&path)),
                             );
                         }
@@ -306,7 +326,9 @@ impl SettingsView {
                     .into_any_element(),
             );
         }
-        page.push(note("Live connection status is available for Claude Code."));
+        page.push(note(t(
+            "Live connection status is available for Claude Code.",
+        )));
         page
     }
     pub(crate) fn refresh_mcp_health(&mut self, cx: &mut Context<Self>) {
@@ -337,17 +359,17 @@ impl SettingsView {
                             }
                             let lower = detail.to_lowercase();
                             let status = if lower.contains("connected") {
-                                "Connected"
+                                n!("Connected")
                             } else if lower.contains("authentication")
                                 || lower.contains("needs auth")
                             {
-                                "Needs authentication"
+                                n!("Needs authentication")
                             } else if lower.contains("failed") {
-                                "Failed"
+                                n!("Failed")
                             } else if lower.contains("disabled") {
-                                "Disabled"
+                                n!("Disabled")
                             } else {
-                                "Configured"
+                                n!("Configured")
                             };
                             let mut found = false;
                             for server in &mut this.discovery.mcp {
@@ -372,8 +394,10 @@ impl SettingsView {
                         }
                     }
                     Err(e) => {
-                        this.discovery.mcp_error =
-                            Some(format!("Claude connection status unavailable: {e}"))
+                        this.discovery.mcp_error = Some(tr!(
+                            "Claude connection status unavailable: {error}",
+                            error = e
+                        ))
                     }
                 }
                 cx.notify();

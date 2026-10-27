@@ -6,16 +6,17 @@ use crate::{
     theme::*,
 };
 use gpui::{AnyElement, Context, Role, SharedString, div, prelude::*, px};
+use monocode_core::{i18n::t, tr};
 impl SettingsView {
     pub(super) fn archive_page(&mut self, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let mut rows = vec![self.row(
             Some("show-archived"),
             true,
-            "Show archived in the sidebar",
-            Some("Keep archived conversations listed alongside the active ones.".into()),
+            t("Show archived in the sidebar"),
+            Some(t("Keep archived conversations listed alongside the active ones.").into()),
             vec![self.toggle(
                 "show-archived",
-                "Show archived in the sidebar",
+                t("Show archived in the sidebar"),
                 self.prefs.show_archived,
                 false,
                 cx,
@@ -23,9 +24,9 @@ impl SettingsView {
             )],
         )];
         if self.ctx.cwd.is_empty() {
-            rows.push(note("Open a project to see its archived conversations."));
+            rows.push(note(t("Open a project to see its archived conversations.")));
         } else if self.ctx.archived.is_empty() {
-            rows.push(note("No archived conversations in this project."));
+            rows.push(note(t("No archived conversations in this project.")));
         }
         for session in &self.ctx.archived {
             let id = session.id;
@@ -33,7 +34,7 @@ impl SettingsView {
                 session.updated_at.min(i64::MAX as u64) as i64,
             )
             .filter(|_| session.updated_at > 0)
-            .map(|d| d.format("%b %-d").to_string())
+            .map(|d| d.format(t("%b %-d")).to_string())
             .unwrap_or_default();
             rows.push(
                 div()
@@ -69,11 +70,11 @@ impl SettingsView {
                     .child(
                         secondary_button(
                             SharedString::from(format!("unarchive-{id}")),
-                            "Unarchive",
+                            t("Unarchive"),
                             false,
                             false,
                         )
-                        .child("Unarchive")
+                        .child(t("Unarchive"))
                         .on_click(cx.listener(move |_, _, _, cx| {
                             cx.emit(SettingsEvent::Archive(id, false))
                         })),
@@ -81,11 +82,11 @@ impl SettingsView {
                     .child(
                         secondary_button(
                             SharedString::from(format!("delete-{id}")),
-                            "Delete",
+                            t("Delete"),
                             true,
                             false,
                         )
-                        .child("Delete")
+                        .child(t("Delete"))
                         .on_click(
                             cx.listener(move |_, _, _, cx| cx.emit(SettingsEvent::Delete(id))),
                         ),
@@ -94,9 +95,9 @@ impl SettingsView {
             );
         }
         let title = if self.ctx.cwd.is_empty() {
-            "Archived conversations".into()
+            t("Archived conversations").into()
         } else {
-            format!("Archived in {}", self.ctx.project_label)
+            tr!("Archived in {project}", project = self.ctx.project_label)
         };
         let mut projects: Vec<AnyElement> = self
             .ctx
@@ -130,11 +131,11 @@ impl SettingsView {
                     .child(
                         secondary_button(
                             SharedString::from(format!("unarchive-project-{ix}")),
-                            "Unarchive",
+                            t("Unarchive"),
                             false,
                             false,
                         )
-                        .child("Unarchive")
+                        .child(t("Unarchive"))
                         .on_click(cx.listener(move |_, _, _, cx| {
                             cx.emit(SettingsEvent::UnarchiveProject(unarchive.clone()))
                         })),
@@ -142,11 +143,11 @@ impl SettingsView {
                     .child(
                         secondary_button(
                             SharedString::from(format!("delete-project-{ix}")),
-                            "Delete",
+                            t("Delete"),
                             true,
                             false,
                         )
-                        .child("Delete")
+                        .child(t("Delete"))
                         .on_click(cx.listener(move |_, _, _, cx| {
                             cx.emit(SettingsEvent::DeleteProject(delete.clone()))
                         })),
@@ -155,14 +156,14 @@ impl SettingsView {
             })
             .collect();
         if projects.is_empty() {
-            projects.push(note("No archived projects."));
+            projects.push(note(t("No archived projects.")));
         }
         vec![
             self.group(
                 None,
                 true,
-                "Archived projects",
-                Some("Archive a project from the rail to keep its chats without listing it in the sidebar.".into()),
+                t("Archived projects"),
+                Some(t("Archive a project from the rail to keep its chats without listing it in the sidebar.").into()),
                 None,
                 projects,
             ),

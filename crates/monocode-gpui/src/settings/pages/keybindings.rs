@@ -4,6 +4,10 @@ use crate::{
     theme::*,
 };
 use gpui::{AnyElement, Context, FontWeight, Role, div, prelude::*, px};
+use monocode_core::{
+    i18n::{t, tl},
+    n, tr,
+};
 #[derive(Clone, Copy)]
 pub(crate) struct Binding {
     pub command: &'static str,
@@ -13,289 +17,289 @@ pub(crate) struct Binding {
 }
 pub(crate) const BINDINGS: &[Binding] = &[
     Binding {
-        command: "App: Settings",
+        command: n!("App: Settings"),
         keys: "⌘,",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "App: Search",
+        command: n!("App: Search"),
         keys: "⌘K",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "App: Go to File",
+        command: n!("App: Go to File"),
         keys: "⌘P",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "App: Command Palette",
+        command: n!("App: Command Palette"),
         keys: "⌘⇧P",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "App: Find in Files",
+        command: n!("App: Find in Files"),
         keys: "⌘⇧F",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "App: Open Project",
+        command: n!("App: Open Project"),
         keys: "⌘O",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "App: New Window",
+        command: n!("App: New Window"),
         keys: "⌘⇧N",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "App: Quick Composer",
+        command: n!("App: Quick Composer"),
         keys: "⌘⇧Space",
-        when: "Anywhere",
+        when: n!("Anywhere"),
         fixed: false,
     },
     Binding {
-        command: "App: Toggle Sidebar",
+        command: n!("App: Toggle Sidebar"),
         keys: "⌘B",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "App: Toggle Session Sidebar",
+        command: n!("App: Toggle Session Sidebar"),
         keys: "⌘⇧B",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "App: Switch Model",
+        command: n!("App: Switch Model"),
         keys: "⌘.",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "App: Toggle Mono",
+        command: n!("App: Toggle Mono"),
         keys: "⌘I",
-        when: "Project with a mono",
+        when: n!("Project with a mono"),
         fixed: false,
     },
     Binding {
-        command: "Composer: Toggle Workspace",
+        command: n!("Composer: Toggle Workspace"),
         keys: "⌘⇧G",
-        when: "Draft session composer",
+        when: n!("Draft session composer"),
         fixed: false,
     },
     Binding {
-        command: "View: Reload",
+        command: n!("View: Reload"),
         keys: "⌘⇧R",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "View: Zoom In",
+        command: n!("View: Zoom In"),
         keys: "⌘+",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "View: Zoom Out",
+        command: n!("View: Zoom Out"),
         keys: "⌘-",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "View: Reset Zoom",
+        command: n!("View: Reset Zoom"),
         keys: "⌘0",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Tab: New",
+        command: n!("Tab: New"),
         keys: "⌘T",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Tab: Close Others",
+        command: n!("Tab: Close Others"),
         keys: "⌘⌥T",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Tab: Close All",
+        command: n!("Tab: Close All"),
         keys: "⌘⇧W",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Tab: Next",
+        command: n!("Tab: Next"),
         keys: "⌘⇧]",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Tab: Previous",
+        command: n!("Tab: Previous"),
         keys: "⌘⇧[",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Tab: Cycle Next",
+        command: n!("Tab: Cycle Next"),
         keys: "⌃Tab",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Tab: Cycle Previous",
+        command: n!("Tab: Cycle Previous"),
         keys: "⌃⇧Tab",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Tab: Back",
+        command: n!("Tab: Back"),
         keys: "⌘[",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Tab: Forward",
+        command: n!("Tab: Forward"),
         keys: "⌘]",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Tab: Activate 1–8",
+        command: n!("Tab: Activate 1–8"),
         keys: "⌘1 … ⌘8",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Tab: Activate Last",
+        command: n!("Tab: Activate Last"),
         keys: "⌘9",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Session: Archive",
+        command: n!("Session: Archive"),
         keys: "⌘⇧A",
         when: "sessionFocus && !overlay",
         fixed: false,
     },
     Binding {
-        command: "Session: Stop",
+        command: n!("Session: Stop"),
         keys: "Esc",
         when: "sessionBusy && !terminalFocus",
         fixed: true,
     },
     Binding {
-        command: "Session: Previous",
+        command: n!("Session: Previous"),
         keys: "⌘⇧↑",
         when: "!overlay && (!textFocus || emptyComposer)",
         fixed: false,
     },
     Binding {
-        command: "Session: Next",
+        command: n!("Session: Next"),
         keys: "⌘⇧↓",
         when: "!overlay && (!textFocus || emptyComposer)",
         fixed: false,
     },
     Binding {
-        command: "Session: Previous in Current Tab",
+        command: n!("Session: Previous in Current Tab"),
         keys: "⌘↑",
         when: "!overlay && (!textFocus || emptyComposer)",
         fixed: false,
     },
     Binding {
-        command: "Session: Next in Current Tab",
+        command: n!("Session: Next in Current Tab"),
         keys: "⌘↓",
         when: "!overlay && (!textFocus || emptyComposer)",
         fixed: false,
     },
     Binding {
-        command: "Project: Previous",
+        command: n!("Project: Previous"),
         keys: "⌘⇧←",
         when: "!overlay && (!textFocus || emptyComposer)",
         fixed: false,
     },
     Binding {
-        command: "Project: Next",
+        command: n!("Project: Next"),
         keys: "⌘⇧→",
         when: "!overlay && (!textFocus || emptyComposer)",
         fixed: false,
     },
     Binding {
-        command: "Pane: Close",
+        command: n!("Pane: Close"),
         keys: "⌘W",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Pane: Split Right",
+        command: n!("Pane: Split Right"),
         keys: "⌘D",
         when: "!editorFocus",
         fixed: false,
     },
     Binding {
-        command: "Pane: Split Down",
+        command: n!("Pane: Split Down"),
         keys: "⌘⇧D",
         when: "!editorFocus",
         fixed: false,
     },
     Binding {
-        command: "Pane: Focus Left",
+        command: n!("Pane: Focus Left"),
         keys: "⌘⌥←",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Pane: Focus Right",
+        command: n!("Pane: Focus Right"),
         keys: "⌘⌥→",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Pane: Focus Up",
+        command: n!("Pane: Focus Up"),
         keys: "⌘⌥↑",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Pane: Focus Down",
+        command: n!("Pane: Focus Down"),
         keys: "⌘⌥↓",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Terminal: New",
+        command: n!("Terminal: New"),
         keys: "⌘`",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Terminal: New Tab",
+        command: n!("Terminal: New Tab"),
         keys: "⌘⇧`",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Terminal: Toggle Dock",
+        command: n!("Terminal: Toggle Dock"),
         keys: "⌘J",
-        when: "Always",
+        when: n!("Always"),
         fixed: false,
     },
     Binding {
-        command: "Editor: Find",
+        command: n!("Editor: Find"),
         keys: "⌘F",
         when: "editorFocus",
         fixed: false,
     },
     Binding {
-        command: "Editor: Replace",
+        command: n!("Editor: Replace"),
         keys: "⌘⌥F",
         when: "editorFocus",
         fixed: false,
@@ -369,50 +373,51 @@ impl SettingsView {
             .iter()
             .filter(|r| cfg!(target_os = "macos") || r.command != "App: Quick Composer")
             .filter(|r| {
-                format!("{} {} {}", r.command, self.binding_label(r), r.when)
-                    .to_lowercase()
-                    .contains(&query)
+                format!(
+                    "{} {} {} {} {}",
+                    r.command,
+                    tl(r.command),
+                    self.binding_label(r),
+                    r.when,
+                    tl(r.when)
+                )
+                .to_lowercase()
+                .contains(&query)
             })
             .copied()
             .collect();
-        let action = div()
-            .flex()
-            .items_center()
-            .gap_3()
-            .child(
-                div()
-                    .text_size(px(12.))
-                    .text_color(content(0.4))
-                    .child(format!(
-                        "{} {}",
-                        rows.len(),
-                        if rows.len() == 1 {
-                            "binding"
-                        } else {
-                            "bindings"
-                        }
-                    )),
-            )
-            .child(
-                div()
-                    .h(px(28.))
-                    .w(px(176.))
-                    .flex()
-                    .items_center()
-                    .gap_2()
-                    .rounded_md()
-                    .border_1()
-                    .border_color(content(0.1))
-                    .px_2()
-                    .child(icon("search-01", 14.))
-                    .child(
-                        div()
-                            .min_w_0()
-                            .flex_1()
-                            .child(self.keybinding_filter.clone()),
-                    ),
-            )
-            .into_any_element();
+        let action =
+            div()
+                .flex()
+                .items_center()
+                .gap_3()
+                .child(div().text_size(px(12.)).text_color(content(0.4)).child(
+                    if rows.len() == 1 {
+                        tr!("{count} binding", count = rows.len())
+                    } else {
+                        tr!("{count} bindings", count = rows.len())
+                    },
+                ))
+                .child(
+                    div()
+                        .h(px(28.))
+                        .w(px(176.))
+                        .flex()
+                        .items_center()
+                        .gap_2()
+                        .rounded_md()
+                        .border_1()
+                        .border_color(content(0.1))
+                        .px_2()
+                        .child(icon("search-01", 14.))
+                        .child(
+                            div()
+                                .min_w_0()
+                                .flex_1()
+                                .child(self.keybinding_filter.clone()),
+                        ),
+                )
+                .into_any_element();
         let mut children = vec![
             div()
                 .flex()
@@ -425,13 +430,13 @@ impl SettingsView {
                 .text_size(px(11.))
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_color(content(0.4))
-                .child(div().min_w_0().flex_1().child("COMMAND"))
-                .child(div().w(px(160.)).flex_shrink_0().child("KEYBINDING"))
-                .child(div().w(px(112.)).flex_shrink_0().child("WHEN"))
+                .child(div().min_w_0().flex_1().child(t("COMMAND")))
+                .child(div().w(px(160.)).flex_shrink_0().child(t("KEYBINDING")))
+                .child(div().w(px(112.)).flex_shrink_0().child(t("WHEN")))
                 .into_any_element(),
         ];
         if rows.is_empty() {
-            children.push(super::super::widgets::note("No matching bindings"));
+            children.push(super::super::widgets::note(t("No matching bindings")));
         }
         for row in rows {
             let command = row.command;
@@ -440,7 +445,7 @@ impl SettingsView {
             let disabled = self.prefs.keybindings.get(command) == Some(&None);
             let label = if recording {
                 if self.recording_preview.is_empty() {
-                    "Record…".into()
+                    t("Record…").into()
                 } else {
                     self.recording_preview.clone()
                 }
@@ -462,7 +467,7 @@ impl SettingsView {
                             .flex_1()
                             .truncate()
                             .text_color(content(if disabled { 0.45 } else { 1. }))
-                            .child(command),
+                            .child(tl(command)),
                     )
                     .child(
                         div()
@@ -476,7 +481,10 @@ impl SettingsView {
                                     .id(gpui::SharedString::from(format!("shortcut-{command}")))
                                     .debug_selector(move || format!("shortcut-{command}"))
                                     .role(if row.fixed { Role::Label } else { Role::Button })
-                                    .aria_label(format!("Change {command} shortcut"))
+                                    .aria_label(tr!(
+                                        "Change {command} shortcut",
+                                        command = tl(command)
+                                    ))
                                     .h(px(24.))
                                     .w(px(112.))
                                     .flex()
@@ -518,7 +526,10 @@ impl SettingsView {
                                         .id(gpui::SharedString::from(format!("reset-{command}")))
                                         .debug_selector(move || format!("reset-shortcut-{command}"))
                                         .role(Role::Button)
-                                        .aria_label(format!("Reset {command} shortcut"))
+                                        .aria_label(tr!(
+                                            "Reset {command} shortcut",
+                                            command = tl(command)
+                                        ))
                                         .p_1()
                                         .rounded_md()
                                         .cursor_pointer()
@@ -540,7 +551,7 @@ impl SettingsView {
                             .font_family(crate::fonts::mono())
                             .text_size(px(11.))
                             .text_color(content(0.4))
-                            .child(row.when),
+                            .child(tl(row.when)),
                     )
                     .into_any_element(),
             );
@@ -556,10 +567,10 @@ impl SettingsView {
                     .into_any_element(),
             );
         }
-        vec![self.group(None,true,"Shortcuts",Some("Click a shortcut to record new keys. Press Delete while recording to disable it.".into()),Some(action),children)]
+        vec![self.group(None,true,t("Shortcuts"),Some(t("Click a shortcut to record new keys. Press Delete while recording to disable it.").into()),Some(action),children)]
     }
     fn binding_label(&self, row: &Binding) -> String {
-        command_shortcut(&self.prefs, row.command).unwrap_or_else(|| "Disabled".into())
+        command_shortcut(&self.prefs, row.command).unwrap_or_else(|| t("Disabled").into())
     }
     pub(in crate::settings) fn record_key(
         &mut self,
@@ -595,7 +606,7 @@ impl SettingsView {
         let shortcut = key.unparse();
         self.recording_preview = shortcut_label(&shortcut);
         if bare || (!key.modifiers.platform && !key.modifiers.control && !key.modifiers.alt) {
-            self.recording_error = Some("Use Command, Control, or Option with a key.".into());
+            self.recording_error = Some(t("Use Command, Control, or Option with a key.").into());
             cx.notify();
             return;
         }
@@ -605,7 +616,8 @@ impl SettingsView {
                 "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8"
             )
         {
-            self.recording_error = Some("Tab: Activate 1–8 needs a number key from 1 to 8".into());
+            self.recording_error =
+                Some(t("Tab: Activate 1–8 needs a number key from 1 to 8").into());
             cx.notify();
             return;
         }
@@ -619,7 +631,10 @@ impl SettingsView {
                         .and_then(|s| s.as_ref())
                         == Some(&shortcut))
         }) {
-            self.recording_error = Some(format!("Already used by {}", other.command));
+            self.recording_error = Some(tr!(
+                "Already used by {command}",
+                command = tl(other.command)
+            ));
             cx.notify();
             return;
         }
