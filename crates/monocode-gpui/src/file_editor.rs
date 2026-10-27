@@ -12,7 +12,11 @@ use gpui::{
     ImageFormat, ImageSource, KeyBinding, ObjectFit, PromptLevel, RenderImage, Role, SharedString,
     Subscription, Task, Window, actions, div, img, prelude::*, px, rgb,
 };
-use monocode_core::files::document::{self, Document, TextDocument};
+use monocode_core::{
+    files::document::{self, Document, TextDocument},
+    i18n::t,
+    tr,
+};
 use std::{path::PathBuf, sync::Arc, time::Duration};
 
 mod chrome;
@@ -196,12 +200,12 @@ impl FileEditor {
     ) -> Self {
         let input = cx.new(Input::editor);
         let search = cx.new(|cx| {
-            let mut field = Input::field("Find", "Find", content(0.35), cx);
+            let mut field = Input::field(t("Find"), t("Find"), content(0.35), cx);
             field.set_font_size(12.);
             field
         });
         let replacement = cx.new(|cx| {
-            let mut field = Input::field("Replace", "Replace", content(0.35), cx);
+            let mut field = Input::field(t("Replace"), t("Replace"), content(0.35), cx);
             field.set_font_size(12.);
             field
         });
@@ -790,9 +794,9 @@ impl FileEditor {
         }
         let answer = window.prompt(
             PromptLevel::Warning,
-            "Discard your edits and reload this file?",
+            t("Discard your edits and reload this file?"),
             None,
-            &["Reload", "Cancel"],
+            &[t("Reload"), t("Cancel")],
             cx,
         );
         cx.spawn_in(window, async move |this, cx| {
@@ -1037,7 +1041,7 @@ impl gpui::Render for FileEditor {
                             div()
                                 .text_size(px(12.))
                                 .text_color(content(0.5))
-                                .child("Couldn’t decode this image")
+                                .child(t("Couldn’t decode this image"))
                                 .into_any_element()
                         }),
                 )
@@ -1066,19 +1070,19 @@ impl gpui::Render for FileEditor {
                     self.unsupported
                         .clone()
                         .or(self.error.clone())
-                        .unwrap_or_else(|| "Opening file…".into()),
+                        .unwrap_or_else(|| t("Opening file…").into()),
                 )
                 .when(!self.loading, |d| {
                     d.child(
                         div()
                             .id("open-file-externally")
                             .role(Role::Button)
-                            .aria_label("Open externally")
+                            .aria_label(t("Open externally"))
                             .px_3()
                             .py_1()
                             .rounded_md()
                             .hover(|s| s.bg(content(0.1)))
-                            .child("Open externally")
+                            .child(t("Open externally"))
                             .on_click(cx.listener(|this, _, _, cx| {
                                 cx.open_url(&format!(
                                     "file://{}",
@@ -1101,24 +1105,24 @@ impl gpui::Render for FileEditor {
                                 div()
                                     .id("retry-file")
                                     .role(Role::Button)
-                                    .aria_label("Retry")
+                                    .aria_label(t("Retry"))
                                     .px_3()
                                     .py_1()
                                     .rounded_md()
                                     .bg(content(0.1))
-                                    .child("Retry")
+                                    .child(t("Retry"))
                                     .on_click(cx.listener(|this, _, _, cx| this.load(true, cx))),
                             )
                             .child(
                                 div()
                                     .id("reveal-file")
                                     .role(Role::Button)
-                                    .aria_label("Reveal")
+                                    .aria_label(t("Reveal"))
                                     .px_3()
                                     .py_1()
                                     .rounded_md()
                                     .bg(content(0.1))
-                                    .child("Reveal")
+                                    .child(t("Reveal"))
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         let path = PathBuf::from(&this.path);
                                         cx.background_executor()
@@ -1132,12 +1136,12 @@ impl gpui::Render for FileEditor {
                                 div()
                                     .id("copy-file-path")
                                     .role(Role::Button)
-                                    .aria_label("Copy path")
+                                    .aria_label(t("Copy path"))
                                     .px_3()
                                     .py_1()
                                     .rounded_md()
                                     .bg(content(0.1))
-                                    .child("Copy path")
+                                    .child(t("Copy path"))
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         cx.write_to_clipboard(gpui::ClipboardItem::new_string(
                                             this.path.clone(),
@@ -1228,7 +1232,7 @@ impl gpui::Render for FileEditor {
             .when_some(
                 self.error.clone().filter(|_| ready).or_else(|| {
                     self.disk_changed
-                        .then(|| "File changed on disk. Reload to use the new version.".into())
+                        .then(|| t("File changed on disk. Reload to use the new version.").into())
                 }),
                 |d, error| {
                     d.child(

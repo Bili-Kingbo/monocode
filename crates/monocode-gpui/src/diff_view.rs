@@ -17,7 +17,11 @@ use gpui::{
     MouseDownEvent, MouseMoveEvent, Pixels, Role, ScrollWheelEvent, SharedString, StyledText,
     Subscription, Task, Window, actions, canvas, div, list, prelude::*, px, rgb,
 };
-use monocode_core::diff::{self, Block, Line, LineKind};
+use monocode_core::{
+    diff::{self, Block, Line, LineKind},
+    i18n::{t, tl},
+    tr,
+};
 use std::{
     borrow::Cow,
     cell::Cell,
@@ -62,13 +66,13 @@ pub(crate) struct DiffFile {
 impl DiffFile {
     fn message(&self) -> Option<String> {
         if self.binary {
-            Some("Binary file changed".into())
+            Some(t("Binary file changed").into())
         } else if self.too_large {
-            Some("Diff is too large to display".into())
+            Some(t("Diff is too large to display").into())
         } else if let Some(message) = &self.empty_message {
-            Some(message.clone())
+            Some(tl(message).to_owned())
         } else if self.blocks.is_empty() {
-            Some("No textual diff".into())
+            Some(t("No textual diff").into())
         } else {
             None
         }
@@ -804,7 +808,7 @@ impl DiffView {
         let anchor = self.action_slots.get(&row).cloned().unwrap_or_default();
         let input = cx.new(|cx| {
             let mut input = Input::commit_message(cx);
-            input.set_placeholder("Leave a comment…", cx);
+            input.set_placeholder(t("Leave a comment…"), cx);
             input
         });
         let focus = input.read(cx).focus_handle(cx);
@@ -869,7 +873,7 @@ impl DiffView {
         div()
             .id("diff-tools")
             .role(Role::Toolbar)
-            .aria_label("Diff tools")
+            .aria_label(t("Diff tools"))
             .h(px(32.))
             .flex_shrink_0()
             .min_w_0()
@@ -887,9 +891,9 @@ impl DiffView {
                     .flex_shrink_0()
                     .text_color(content(0.65))
                     .child(if count == 1 {
-                        "1 file".to_owned()
+                        t("1 file").to_owned()
                     } else {
-                        format!("{count} files")
+                        tr!("{count} files", count = count)
                     }),
             )
             .child(diff_counts(additions, deletions))
@@ -901,7 +905,7 @@ impl DiffView {
                     .items_center()
                     .gap(px(2.))
                     .child(
-                        tool_button("previous-hunk", "Previous hunk", "chevron-up", can_prev)
+                        tool_button("previous-hunk", t("Previous hunk"), "chevron-up", can_prev)
                             .when(can_prev, |d| {
                                 d.on_click(cx.listener(|this, _, _, cx| this.navigate(-1, cx)))
                             }),
@@ -917,14 +921,14 @@ impl DiffView {
                             .child(position),
                     )
                     .child(
-                        tool_button("next-hunk", "Next hunk", "chevron-down", can_next)
+                        tool_button("next-hunk", t("Next hunk"), "chevron-down", can_next)
                             .when(can_next, |d| {
                                 d.on_click(cx.listener(|this, _, _, cx| this.navigate(1, cx)))
                             }),
                     )
                     .child(div().mx_1().h(px(12.)).w(px(1.)).bg(stroke()))
                     .child(
-                        tool_button("expand-all", "Expand all files", "unfold-vertical", true)
+                        tool_button("expand-all", t("Expand all files"), "unfold-vertical", true)
                             .on_click(cx.listener(|this, _, _, cx| {
                                 this.open = this.files.iter().map(|f| f.id.clone()).collect();
                                 this.rebuild(cx);
@@ -933,7 +937,7 @@ impl DiffView {
                     .child(
                         tool_button(
                             "collapse-all",
-                            "Collapse all files",
+                            t("Collapse all files"),
                             "fold-vertical",
                             !self.open.is_empty(),
                         )
@@ -974,11 +978,11 @@ impl DiffView {
                 div()
                     .id(("diff-file-toggle", file * 2 + usize::from(sticky)))
                     .role(Role::Button)
-                    .aria_label(SharedString::from(format!(
-                        "{} {}",
-                        if expanded { "Collapse" } else { "Expand" },
-                        f.label
-                    )))
+                    .aria_label(SharedString::from(if expanded {
+                        tr!("Collapse {file}", file = f.label)
+                    } else {
+                        tr!("Expand {file}", file = f.label)
+                    }))
                     .aria_expanded(expanded)
                     .h_full()
                     .min_w_0()
@@ -1026,7 +1030,7 @@ impl DiffView {
             .child(diff_counts(f.additions, f.deletions))
             .when(f.can_discard, |d| {
                 d.child(
-                    tool_button(("discard-file", file), "Discard file", "undo", !busy).when(
+                    tool_button(("discard-file", file), t("Discard file"), "undo", !busy).when(
                         !busy,
                         |d| {
                             d.on_click(cx.listener(move |_, _, _, cx| {
@@ -1038,7 +1042,7 @@ impl DiffView {
             })
             .when(f.can_stage, |d| {
                 d.child(
-                    tool_button(("stage-file", file), "Stage file", "check", !busy).when(
+                    tool_button(("stage-file", file), t("Stage file"), "check", !busy).when(
                         !busy,
                         |d| {
                             d.on_click(cx.listener(move |_, _, _, cx| {
@@ -1091,7 +1095,7 @@ impl DiffView {
                         .pl(px(3.))
                         .text_size(px(9.))
                         .text_color(content(0.35))
-                        .children(["Old", "New"].map(|label| {
+                        .children([t("Old"), t("New")].map(|label| {
                             div().w(px(number_width)).pr_2().text_right().child(label)
                         })),
                 )
@@ -1211,9 +1215,10 @@ impl DiffView {
                                     div()
                                         .id(("diff-comment", ix))
                                         .role(Role::Button)
-                                        .aria_label(SharedString::from(format!(
-                                            "Comment on line {}",
-                                            number.map(|n| n.to_string()).unwrap_or_default()
+                                        .aria_label(SharedString::from(tr!(
+                                            "Comment on line {line}",
+                                            line =
+                                                number.map(|n| n.to_string()).unwrap_or_default()
                                         )))
                                         .absolute()
                                         .top_0()
@@ -1242,7 +1247,7 @@ impl DiffView {
                                         div()
                                             .id(("diff-stage-hunk", ix))
                                             .role(Role::Button)
-                                            .aria_label("Stage hunk")
+                                            .aria_label(t("Stage hunk"))
                                             .absolute()
                                             .top_0()
                                             .bottom_0()
@@ -1345,7 +1350,7 @@ impl DiffView {
         div()
             .id("diff-horizontal-scroll")
             .role(Role::ScrollBar)
-            .aria_label("Scroll diff horizontally")
+            .aria_label(t("Scroll diff horizontally"))
             .h(px(14.))
             .flex_shrink_0()
             .relative()
@@ -1465,7 +1470,7 @@ impl Render for DiffView {
                 .py_6()
                 .text_size(px(13.))
                 .text_color(content(0.45))
-                .child("No file changes")
+                .child(t("No file changes"))
                 .into_any_element();
         }
         self.char_width(window);
@@ -1527,7 +1532,7 @@ impl Render for DiffView {
                                     .child(location),
                             )
                             .child(
-                                tool_button("cancel-comment", "Cancel comment", "x", true)
+                                tool_button("cancel-comment", t("Cancel comment"), "x", true)
                                     .size(px(20.))
                                     .on_click(cx.listener(|this, _, window, cx| {
                                         this.dismiss_comment(window, cx)
@@ -1556,16 +1561,16 @@ impl Render for DiffView {
                             .gap_3()
                             .child(div().text_size(px(10.)).text_color(content(0.35)).child(
                                 if cfg!(target_os = "macos") {
-                                    "⌘↩ to add"
+                                    t("⌘↩ to add")
                                 } else {
-                                    "Ctrl+↩ to add"
+                                    t("Ctrl+↩ to add")
                                 },
                             ))
                             .child(
                                 div()
                                     .id("add-comment")
                                     .role(Role::Button)
-                                    .aria_label("Add to chat")
+                                    .aria_label(t("Add to chat"))
                                     .h(px(28.))
                                     .flex()
                                     .items_center()
@@ -1582,7 +1587,7 @@ impl Render for DiffView {
                                         icon("comment-add", 14.)
                                             .text_color(rgb(crate::right_panel::BACKGROUND_BASE)),
                                     )
-                                    .child("Add to chat")
+                                    .child(t("Add to chat"))
                                     .when(can_add, |d| {
                                         d.on_click(cx.listener(|this, _, window, cx| {
                                             this.add_comment(window, cx)
@@ -1661,7 +1666,7 @@ impl Render for DiffView {
                 div()
                     .id("unified-diff")
                     .role(Role::Region)
-                    .aria_label("Unified diff")
+                    .aria_label(t("Unified diff"))
                     .relative()
                     .flex_1()
                     .min_h_0()

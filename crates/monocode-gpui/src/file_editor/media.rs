@@ -23,12 +23,12 @@ pub(super) fn prepare_document(doc: Document) -> Result<Document, String> {
         use objc2::AnyThread;
         use objc2_app_kit::NSImage;
         let data = objc2_foundation::NSData::with_bytes(bytes);
-        let image =
-            NSImage::initWithData(NSImage::alloc(), &data).ok_or("Couldn’t decode this image")?;
+        let image = NSImage::initWithData(NSImage::alloc(), &data)
+            .ok_or(t("Couldn’t decode this image"))?;
         let dimensions = image.size();
         let data = image
             .TIFFRepresentation()
-            .ok_or("Couldn’t decode this image")?;
+            .ok_or(t("Couldn’t decode this image"))?;
         return Ok(Document::Image {
             bytes: data.to_vec(),
             format: "tiff",
@@ -290,8 +290,8 @@ impl MediaPreview {
     fn image_menu(&mut self, at: Point<gpui::Pixels>, window: &mut Window, cx: &mut Context<Self>) {
         let menu = cx.new(|cx| {
             Menu::new(
-                "Image actions",
-                vec![MenuAction::new("copy", "Copy Original File").into()],
+                t("Image actions"),
+                vec![MenuAction::new("copy", t("Copy Original File")).into()],
                 window,
                 cx,
             )
@@ -469,8 +469,10 @@ impl gpui::Render for MediaPreview {
                 .p_6()
                 .text_size(px(12.))
                 .text_color(content(0.5))
-                .child("Couldn’t play this video")
-                .child("This video’s format or codec is unsupported, or the file is damaged.")
+                .child(t("Couldn’t play this video"))
+                .child(t(
+                    "This video’s format or codec is unsupported, or the file is damaged.",
+                ))
                 .child(
                     div()
                         .flex()
@@ -480,24 +482,24 @@ impl gpui::Render for MediaPreview {
                             div()
                                 .id("retry-video")
                                 .role(Role::Button)
-                                .aria_label("Retry")
+                                .aria_label(t("Retry"))
                                 .px_3()
                                 .py_1()
                                 .rounded_md()
                                 .bg(content(0.1))
-                                .child("Retry")
+                                .child(t("Retry"))
                                 .on_click(cx.listener(|_, _, _, cx| cx.emit(MediaEvent::Retry))),
                         )
                         .child(
                             div()
                                 .id("open-video-externally")
                                 .role(Role::Button)
-                                .aria_label("Open externally")
+                                .aria_label(t("Open externally"))
                                 .px_3()
                                 .py_1()
                                 .rounded_md()
                                 .bg(content(0.1))
-                                .child("Open externally")
+                                .child(t("Open externally"))
                                 .on_click(cx.listener(|this, _, _, cx| {
                                     cx.open_url(&format!(
                                         "file://{}",
@@ -513,12 +515,12 @@ impl gpui::Render for MediaPreview {
                             div()
                                 .id("reveal-video")
                                 .role(Role::Button)
-                                .aria_label("Reveal")
+                                .aria_label(t("Reveal"))
                                 .px_3()
                                 .py_1()
                                 .rounded_md()
                                 .bg(content(0.1))
-                                .child("Reveal")
+                                .child(t("Reveal"))
                                 .on_click(cx.listener(|this, _, _, cx| {
                                     let path = PathBuf::from(&this.path);
                                     cx.background_executor()
@@ -532,12 +534,12 @@ impl gpui::Render for MediaPreview {
                             div()
                                 .id("copy-video-path")
                                 .role(Role::Button)
-                                .aria_label("Copy path")
+                                .aria_label(t("Copy path"))
                                 .px_3()
                                 .py_1()
                                 .rounded_md()
                                 .bg(content(0.1))
-                                .child("Copy path")
+                                .child(t("Copy path"))
                                 .on_click(cx.listener(|this, _, _, cx| {
                                     cx.write_to_clipboard(ClipboardItem::new_string(
                                         this.path.clone(),
@@ -558,7 +560,7 @@ impl gpui::Render for MediaPreview {
             {
                 div()
                     .flex_1()
-                    .child("Video playback is unavailable on this platform")
+                    .child(t("Video playback is unavailable on this platform"))
                     .into_any_element()
             }
         };
@@ -597,9 +599,9 @@ impl gpui::Render for MediaPreview {
                         icon_action(
                             "copy-original-image",
                             if self.copied {
-                                "Copied"
+                                t("Copied")
                             } else {
-                                "Copy original file"
+                                t("Copy original file")
                             },
                             if self.copied { "check" } else { "copy" },
                             true,
@@ -608,25 +610,27 @@ impl gpui::Render for MediaPreview {
                     )
                 })
                 .child(
-                    icon_action("image-zoom-out", "Zoom out", "minus", true).on_click(cx.listener(
-                        |this, _, _, cx| this.zoom_at(Some(this.scale() / 1.5), None, cx),
-                    )),
+                    icon_action("image-zoom-out", t("Zoom out"), "minus", true).on_click(
+                        cx.listener(|this, _, _, cx| {
+                            this.zoom_at(Some(this.scale() / 1.5), None, cx)
+                        }),
+                    ),
                 )
                 .child(
                     div()
                         .id("image-fit")
                         .role(Role::Button)
-                        .aria_label("Fit to window")
+                        .aria_label(t("Fit to window"))
                         .w(px(44.))
                         .text_center()
                         .child(
                             self.zoom
-                                .map_or("Fit".into(), |z| format!("{:.0}%", z * 100.)),
+                                .map_or(t("Fit").into(), |z| format!("{:.0}%", z * 100.)),
                         )
                         .on_click(cx.listener(|this, _, _, cx| this.zoom_at(None, None, cx))),
                 )
                 .child(
-                    icon_action("image-zoom-in", "Zoom in", "plus", true).on_click(cx.listener(
+                    icon_action("image-zoom-in", t("Zoom in"), "plus", true).on_click(cx.listener(
                         |this, _, _, cx| this.zoom_at(Some(this.scale() * 1.5), None, cx),
                     )),
                 )

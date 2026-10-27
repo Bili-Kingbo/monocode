@@ -9,6 +9,7 @@ use gpui::{
     AnyElement, Bounds, Context, Focusable, MouseButton, Pixels, Role, Size, Window, div,
     prelude::*, px,
 };
+use monocode_core::i18n::t;
 use std::{ops::Range, path::Path};
 
 #[derive(Clone)]
@@ -183,13 +184,13 @@ impl FileEditor {
                     div()
                         .id("editor-selection-actions")
                         .role(Role::Toolbar)
-                        .aria_label("Selected code actions")
+                        .aria_label(t("Selected code actions"))
                         .p_1()
                         .child(
                             div()
                                 .id("editor-selection-chat")
                                 .role(Role::Button)
-                                .aria_label("Add to chat")
+                                .aria_label(t("Add to chat"))
                                 .tab_index(0)
                                 .flex()
                                 .items_center()
@@ -203,7 +204,7 @@ impl FileEditor {
                                 .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                                 .on_mouse_up(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                                 .child(icon("comment-add", 14.))
-                                .child("Add to chat")
+                                .child(t("Add to chat"))
                                 .on_click(cx.listener(move |this, _, _, cx| {
                                     // The menu never mutates the file buffer or copies its contents.
                                     if this.input.read(cx).selection_range() == target.range {
