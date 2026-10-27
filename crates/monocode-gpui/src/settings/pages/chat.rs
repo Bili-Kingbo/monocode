@@ -1,6 +1,7 @@
 //! ChatPage.
 use crate::settings::SettingsView;
 use gpui::{AnyElement, Context};
+use monocode_core::i18n::t;
 
 impl SettingsView {
     pub(super) fn chat_page(&mut self, cx: &mut Context<Self>) -> Vec<AnyElement> {
@@ -9,13 +10,13 @@ impl SettingsView {
             self.row(
                 Some("transcript-layout"),
                 true,
-                "Transcript layout",
-                Some("Show prompts at full width or as right-aligned chat bubbles.".into()),
+                t("Transcript layout"),
+                Some(t("Show prompts at full width or as right-aligned chat bubbles.").into()),
                 vec![self.segmented(
                     "transcript-layout",
-                    "Transcript layout",
+                    t("Transcript layout"),
                     &p.transcript_layout,
-                    &[("full", "Full width"), ("chat", "Chat")],
+                    &[("full", t("Full width")), ("chat", t("Chat"))],
                     cx,
                     |this, v, cx| this.update(cx, |p| p.transcript_layout = v.into()),
                 )],
@@ -23,11 +24,11 @@ impl SettingsView {
             self.row(
                 Some("anchor-prompts"),
                 false,
-                "Anchor prompts to top",
-                Some("Place new prompts at the top, with replies below.".into()),
+                t("Anchor prompts to top"),
+                Some(t("Place new prompts at the top, with replies below.").into()),
                 vec![self.toggle(
                     "anchor-prompts",
-                    "Anchor prompts to top",
+                    t("Anchor prompts to top"),
                     p.anchor_prompts,
                     false,
                     cx,
@@ -37,11 +38,11 @@ impl SettingsView {
             self.row(
                 Some("paced-reveal"),
                 false,
-                "Smooth text reveal",
-                Some("Reveal incoming text gradually.".into()),
+                t("Smooth text reveal"),
+                Some(t("Reveal incoming text gradually.").into()),
                 vec![self.toggle(
                     "paced-reveal",
-                    "Smooth text reveal",
+                    t("Smooth text reveal"),
                     p.paced_reveal,
                     false,
                     cx,
@@ -53,13 +54,13 @@ impl SettingsView {
             self.row(
                 Some("follow-up"),
                 true,
-                "Follow-up behavior",
-                Some("Queue follow-ups until the active turn finishes, or steer the active turn immediately.".into()),
+                t("Follow-up behavior"),
+                Some(t("Queue follow-ups until the active turn finishes, or steer the active turn immediately.").into()),
                 vec![self.segmented(
                     "follow-up",
-                    "Follow-up behavior",
+                    t("Follow-up behavior"),
                     &p.follow_up,
-                    &[("queue", "Queue"), ("steer", "Steer")],
+                    &[("queue", t("Queue")), ("steer", t("Steer"))],
                     cx,
                     |this, v, cx| this.update(cx, |p| p.follow_up = v.into()),
                 )],
@@ -67,13 +68,13 @@ impl SettingsView {
             self.row(
                 Some("model-controls"),
                 false,
-                "Model controls",
-                Some("Show model options beside the picker instead of inside the model menu.".into()),
+                t("Model controls"),
+                Some(t("Show model options beside the picker instead of inside the model menu.").into()),
                 vec![self.segmented(
                     "model-controls",
-                    "Model controls",
+                    t("Model controls"),
                     &p.model_controls,
-                    &[("menu", "Menu"), ("beside", "Beside")],
+                    &[("menu", t("Menu")), ("beside", t("Beside"))],
                     cx,
                     |this, v, cx| this.update(cx, |p| p.model_controls = v.into()),
                 )],
@@ -81,11 +82,11 @@ impl SettingsView {
             self.row(
                 Some("composer-autocorrect"),
                 false,
-                "Autocorrect",
-                Some("Spell check and autocorrect prompts.".into()),
+                t("Autocorrect"),
+                Some(t("Spell check and autocorrect prompts.").into()),
                 vec![self.toggle(
                     "composer-autocorrect",
-                    "Autocorrect",
+                    t("Autocorrect"),
                     p.autocorrect,
                     false,
                     cx,
@@ -96,11 +97,11 @@ impl SettingsView {
         let editor = vec![self.row(
             Some("format-on-save"),
             true,
-            "Format on save",
-            Some("Format supported files with Prettier before saving.".into()),
+            t("Format on save"),
+            Some(t("Format supported files with Prettier before saving.").into()),
             vec![self.toggle(
                 "format-on-save",
-                "Format on save",
+                t("Format on save"),
                 p.format_on_save,
                 false,
                 cx,
@@ -110,13 +111,13 @@ impl SettingsView {
         let review = vec![self.row(
             Some("diff-view"),
             true,
-            "Diff view",
-            Some("Review changes in the editor or in a combined diff.".into()),
+            t("Diff view"),
+            Some(t("Review changes in the editor or in a combined diff.").into()),
             vec![self.segmented(
                 "diff-view",
-                "Diff view",
+                t("Diff view"),
                 &p.diff_view,
-                &[("editor", "Editor"), ("unified", "Unified")],
+                &[("editor", t("Editor")), ("unified", t("Unified"))],
                 cx,
                 |this, v, cx| this.update(cx, |p| p.diff_view = v.into()),
             )],
@@ -125,11 +126,11 @@ impl SettingsView {
             self.row(
                 Some("composer-mascot"),
                 true,
-                "Composer mascot",
-                Some("Show the project mascot while an agent works.".into()),
+                t("Composer mascot"),
+                Some(t("Show the project mascot while an agent works.").into()),
                 vec![self.toggle(
                     "composer-mascot",
-                    "Composer mascot",
+                    t("Composer mascot"),
                     p.composer_mascot,
                     false,
                     cx,
@@ -139,11 +140,11 @@ impl SettingsView {
             self.row(
                 Some("empty-session-games"),
                 false,
-                "Empty session games",
-                Some("Show playable games in empty sessions.".into()),
+                t("Empty session games"),
+                Some(t("Show playable games in empty sessions.").into()),
                 vec![self.toggle(
                     "empty-session-games",
-                    "Empty session games",
+                    t("Empty session games"),
                     p.empty_session_games,
                     false,
                     cx,
@@ -152,11 +153,11 @@ impl SettingsView {
             ),
         ];
         vec![
-            self.group(None, true, "Transcript", None, None, transcript),
-            self.group(None, false, "Composer", None, None, composer),
-            self.group(None, false, "Editor", None, None, editor),
-            self.group(None, false, "Code review", None, None, review),
-            self.group(None, false, "Extras", None, None, extras),
+            self.group(None, true, t("Transcript"), None, None, transcript),
+            self.group(None, false, t("Composer"), None, None, composer),
+            self.group(None, false, t("Editor"), None, None, editor),
+            self.group(None, false, t("Code review"), None, None, review),
+            self.group(None, false, t("Extras"), None, None, extras),
         ]
     }
 }

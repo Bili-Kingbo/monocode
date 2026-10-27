@@ -9,6 +9,10 @@ use crate::{
 use gpui::{
     AnyElement, ClipboardItem, Context, Focusable, Role, SharedString, div, prelude::*, px,
 };
+use monocode_core::{
+    i18n::{t, tl},
+    n, tr,
+};
 impl SettingsView {
     fn skill_create_form(&mut self, cx: &mut Context<Self>) -> AnyElement {
         let e = self.management.as_ref().expect("open skill form");
@@ -30,7 +34,7 @@ impl SettingsView {
                     .text_size(px(11.))
                     .line_height(px(16.))
                     .text_color(content(0.5))
-                    .child("Create an editable SKILL.md."),
+                    .child(t("Create an editable SKILL.md.")),
             )
             .child(
                 div()
@@ -44,8 +48,8 @@ impl SettingsView {
             .child(
                 div().mb_2().flex().gap_1().children(
                     [
-                        ("project", "Project", ".agents/skills"),
-                        ("user", "Personal", "~/.agents/skills"),
+                        ("project", t("Project"), ".agents/skills"),
+                        ("user", t("Personal"), "~/.agents/skills"),
                     ]
                     .into_iter()
                     .map(|(value, label, hint)| {
@@ -98,7 +102,7 @@ impl SettingsView {
                         .mb_2()
                         .text_size(px(12.))
                         .text_color(content(0.5))
-                        .child("Use lowercase letters, numbers, and hyphens."),
+                        .child(t("Use lowercase letters, numbers, and hyphens.")),
                 )
             })
             .child(
@@ -111,7 +115,7 @@ impl SettingsView {
                         div()
                             .id("cancel-skill")
                             .role(Role::Button)
-                            .aria_label("Cancel")
+                            .aria_label(t("Cancel"))
                             .px_2()
                             .py_1()
                             .rounded_md()
@@ -131,7 +135,7 @@ impl SettingsView {
                         div()
                             .id("create-skill")
                             .role(Role::Button)
-                            .aria_label("Create skill")
+                            .aria_label(t("Create skill"))
                             .px_2()
                             .py_1()
                             .rounded_md()
@@ -145,7 +149,7 @@ impl SettingsView {
                                     cx.listener(|this, _, _, cx| this.submit_management(cx)),
                                 )
                             })
-                            .child(if busy { "Creating…" } else { "Create" }),
+                            .child(if busy { t("Creating…") } else { t("Create") }),
                     ),
             )
             .into_any_element()
@@ -159,11 +163,11 @@ impl SettingsView {
         let work = cx.background_executor().spawn(async move {
             let size = std::fs::metadata(&path).map_err(|e| e.to_string())?.len();
             if size > 8 * 1024 * 1024 {
-                return Err("SKILL.md is too large to preview.".into());
+                return Err(t("SKILL.md is too large to preview.").into());
             }
             std::fs::read_to_string(path)
                 .map(super::super::skill_document::DocumentData::new)
-                .map_err(|e| format!("Could not read SKILL.md. {e}"))
+                .map_err(|e| tr!("Could not read SKILL.md. {error}", error = e))
         });
         self.skill_preview_task = Some(cx.spawn(async move |this, cx| {
             let result = work.await;
@@ -216,8 +220,8 @@ impl SettingsView {
             .py_8()
             .map(|d| if preview_open { d.px_4() } else { d.px_8() })
             .child(page_header(
-                "Skills",
-                "Discover and manage file skills from project, personal, and harness folders.",
+                t("Skills"),
+                t("Discover and manage file skills from project, personal, and harness folders."),
             ))
             .child(
                 div()
@@ -242,11 +246,11 @@ impl SettingsView {
                                     .child(if self.discovery_loading {
                                         "…".into()
                                     } else {
-                                        format!(
-                                            "{} {}",
-                                            skills.len(),
-                                            if skills.len() == 1 { "skill" } else { "skills" }
-                                        )
+                                        if skills.len() == 1 {
+                                            tr!("{count} skill", count = skills.len())
+                                        } else {
+                                            tr!("{count} skills", count = skills.len())
+                                        }
                                     }),
                             )
                             .child(
@@ -270,7 +274,7 @@ impl SettingsView {
                             .child(
                                 icon_action(
                                     "refresh-skills",
-                                    "Refresh skills",
+                                    t("Refresh skills"),
                                     "refresh-cw",
                                     24.,
                                     14.,
@@ -290,15 +294,15 @@ impl SettingsView {
                         secondary_button(
                             "add-skill",
                             if adding {
-                                "Close skill form"
+                                t("Close skill form")
                             } else {
-                                "Add skill"
+                                t("Add skill")
                             },
                             false,
                             busy,
                         )
                         .debug_selector(|| "settings-add-skill".into())
-                        .child(if adding { "Close" } else { "Add skill" })
+                        .child(if adding { t("Close") } else { t("Add skill") })
                         .on_click(cx.listener(|this, _, window, cx| {
                             if this
                                 .management
@@ -330,7 +334,7 @@ impl SettingsView {
                     .text_size(px(12.))
                     .line_height(px(16.))
                     .text_color(content(0.45))
-                    .child("Loading skills…"),
+                    .child(t("Loading skills…")),
             );
         } else {
             let mut rows = Vec::new();
@@ -342,9 +346,9 @@ impl SettingsView {
                         .text_size(px(12.))
                         .text_color(content(0.45))
                         .child(if self.discovery.skills.is_empty() {
-                            "No skills yet."
+                            t("No skills yet.")
                         } else {
-                            "No matching skills"
+                            t("No matching skills")
                         })
                         .into_any_element(),
                 );
@@ -380,7 +384,7 @@ impl SettingsView {
                                     div()
                                         .id("preview-name")
                                         .role(Role::Button)
-                                        .aria_label(format!("Preview {}", skill.name))
+                                        .aria_label(tr!("Preview {name}", name = skill.name))
                                         .min_w_0()
                                         .flex_1()
                                         .truncate()
@@ -402,11 +406,11 @@ impl SettingsView {
                                         .text_size(px(10.))
                                         .text_color(content(0.6))
                                         .child(if skill.scope == "user" {
-                                            "PERSONAL"
+                                            t("PERSONAL")
                                         } else if skill.scope == "builtin" {
                                             "MONOCODE"
                                         } else {
-                                            "PROJECT"
+                                            t("PROJECT")
                                         }),
                                 )
                                 .child(
@@ -421,7 +425,7 @@ impl SettingsView {
                                 )
                                 .child(self.toggle(
                                     "include-skill",
-                                    format!("Include {} in MonoCode catalog", skill.name),
+                                    tr!("Include {name} in MonoCode catalog", name = skill.name),
                                     enabled,
                                     false,
                                     cx,
@@ -463,7 +467,7 @@ impl SettingsView {
                                 .child(
                                     icon_action(
                                         "skill-preview",
-                                        format!("Preview skill {name}"),
+                                        tr!("Preview skill {name}", name = name),
                                         "eye",
                                         20.,
                                         12.,
@@ -481,7 +485,7 @@ impl SettingsView {
                                 .child(
                                     icon_action(
                                         "skill-copy",
-                                        format!("Copy path of {name}"),
+                                        tr!("Copy path of {name}", name = name),
                                         "copy",
                                         20.,
                                         12.,
@@ -500,7 +504,7 @@ impl SettingsView {
                                 .child(
                                     icon_action(
                                         "skill-reveal",
-                                        format!("Reveal {name} in file explorer"),
+                                        tr!("Reveal {name} in file explorer", name = name),
                                         "folder-open",
                                         20.,
                                         12.,
@@ -524,7 +528,7 @@ impl SettingsView {
             );
         }
         list = list.child(div().pt_3().text_size(px(12.)).line_height(px(16.)).text_color(content(0.4))
-            .child("Hidden skills stay on disk but leave MonoCode's picker. Provider-managed skills and commands are unchanged."));
+            .child(t("Hidden skills stay on disk but leave MonoCode's picker. Provider-managed skills and commands are unchanged.")));
         let surface = self.skill_surface.clone();
         let view = cx.weak_entity();
         let mut layout = div()
@@ -598,7 +602,7 @@ impl SettingsView {
                     .id("skill-preview-pane")
                     .debug_selector(|| "skill-preview-pane".into())
                     .role(Role::Region)
-                    .aria_label("Skill preview")
+                    .aria_label(t("Skill preview"))
                     .flex_1()
                     .min_w_0()
                     .min_h_0()
@@ -628,7 +632,7 @@ impl SettingsView {
                             .child(
                                 icon_action(
                                     "close-skill-preview",
-                                    "Close skill preview",
+                                    t("Close skill preview"),
                                     "x",
                                     24.,
                                     14.,
@@ -684,7 +688,7 @@ impl SettingsView {
                         } else if let Some(document) = document {
                             document.into_any_element()
                         } else {
-                            note("Loading skill…")
+                            note(t("Loading skill…"))
                         },
                     )),
             );
@@ -695,7 +699,7 @@ impl SettingsView {
         div()
             .id("skill-document-mode")
             .role(Role::TabList)
-            .aria_label("Markdown view")
+            .aria_label(t("Markdown view"))
             .flex()
             .rounded_md()
             .border_1()
@@ -703,7 +707,7 @@ impl SettingsView {
             .bg(content(0.1))
             .p(px(2.))
             .children(
-                [(false, "Preview"), (true, "Source")]
+                [(false, n!("Preview")), (true, n!("Source"))]
                     .into_iter()
                     .map(|(value, label)| {
                         div()
@@ -712,7 +716,7 @@ impl SettingsView {
                                 format!("settings-skill-document-{}", label.to_lowercase())
                             })
                             .role(Role::Tab)
-                            .aria_label(label)
+                            .aria_label(tl(label))
                             .aria_selected(source == value)
                             .rounded(px(4.))
                             .px_2()
@@ -723,7 +727,7 @@ impl SettingsView {
                             .when(source == value, |d| d.bg(content(0.12)))
                             .cursor_pointer()
                             .hover(|s| s.text_color(content(0.8)))
-                            .child(label)
+                            .child(tl(label))
                             .on_click(cx.listener(move |this, _, _, cx| {
                                 if let Some(path) = &this.skill_preview {
                                     let path = path.display().to_string();

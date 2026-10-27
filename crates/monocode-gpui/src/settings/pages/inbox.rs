@@ -3,6 +3,7 @@ use crate::{
     theme::*,
 };
 use gpui::{AnyElement, Context, SharedString, div, prelude::*, px};
+use monocode_core::i18n::t;
 impl SettingsView {
     pub(super) fn inbox_page(&mut self, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let mut page = vec![self.project_notification_settings(cx)];
@@ -10,37 +11,45 @@ impl SettingsView {
             (
                 "github",
                 "GitHub",
-                "Pull requests, reviews, and issues, read through the GitHub CLI.",
-                "Connection",
-                "Install GitHub CLI from cli.github.com, run gh auth login in a terminal, then check again.",
+                t("Pull requests, reviews, and issues, read through the GitHub CLI."),
+                t("Connection"),
+                t(
+                    "Install GitHub CLI from cli.github.com, run gh auth login in a terminal, then check again.",
+                ),
             ),
             (
                 "gitlab",
                 "GitLab",
-                "Merge requests from GitLab.com or a self-managed instance.",
-                "Connection",
-                "Connect GitLab.com or a self-managed GitLab instance. Use a personal access token with API access; the token is stored locally and Disconnect deletes it.",
+                t("Merge requests from GitLab.com or a self-managed instance."),
+                t("Connection"),
+                t(
+                    "Connect GitLab.com or a self-managed GitLab instance. Use a personal access token with API access; the token is stored locally and Disconnect deletes it.",
+                ),
             ),
             (
                 "azuredevops",
                 "ADO",
-                "Pull requests and Boards work items from your ADO organization.",
-                "Connection",
-                "Connect your ADO organization with a personal access token (Boards + Repos read & write for comments). The token is stored locally and Disconnect deletes it.",
+                t("Pull requests and Boards work items from your ADO organization."),
+                t("Connection"),
+                t(
+                    "Connect your ADO organization with a personal access token (Boards + Repos read & write for comments). The token is stored locally and Disconnect deletes it.",
+                ),
             ),
             (
                 "jira",
                 "Jira",
-                "Jira Cloud issues from the projects you pick.",
-                "Connection",
-                "Connect your Jira Cloud site with your email and an API token.",
+                t("Jira Cloud issues from the projects you pick."),
+                t("Connection"),
+                t("Connect your Jira Cloud site with your email and an API token."),
             ),
             (
                 "linear",
                 "Linear",
-                "Issues assigned to you, from the teams you pick.",
-                "API key",
-                "Create a personal API key in Linear → Settings → Security & Access. Disconnect deletes it.",
+                t("Issues assigned to you, from the teams you pick."),
+                t("API key"),
+                t(
+                    "Create a personal API key in Linear → Settings → Security & Access. Disconnect deletes it.",
+                ),
             ),
         ] {
             let (connected, connection_label) = self
@@ -48,7 +57,7 @@ impl SettingsView {
                 .inbox_connections
                 .get(id)
                 .cloned()
-                .unwrap_or_else(|| (false, "Checking connection…".into()));
+                .unwrap_or_else(|| (false, t("Checking connection…").into()));
             let status = div()
                 .text_size(px(12.))
                 .text_color(content(if connected { 0.7 } else { 0.5 }))
@@ -59,15 +68,15 @@ impl SettingsView {
                     status,
                     secondary_button(
                         "github-installation-guide",
-                        "Installation guide",
+                        t("Installation guide"),
                         false,
                         false,
                     )
-                    .child("Installation guide")
+                    .child(t("Installation guide"))
                     .on_click(|_, _, cx| cx.open_url("https://cli.github.com/"))
                     .into_any_element(),
-                    secondary_button("github-check-again", "Check again", false, false)
-                        .child("Check again")
+                    secondary_button("github-check-again", t("Check again"), false, false)
+                        .child(t("Check again"))
                         .on_click(cx.listener(|_, _, _, cx| {
                             cx.emit(SettingsEvent::ManageInboxProvider("github".into()))
                         }))
@@ -78,11 +87,11 @@ impl SettingsView {
                     status,
                     secondary_button(
                         SharedString::from(format!("connect-{id}")),
-                        if connected { "Manage" } else { "Connect" },
+                        if connected { t("Manage") } else { t("Connect") },
                         false,
                         false,
                     )
-                    .child(if connected { "Manage" } else { "Connect" })
+                    .child(if connected { t("Manage") } else { t("Connect") })
                     .on_click(cx.listener(move |_, _, _, cx| {
                         cx.emit(SettingsEvent::ManageInboxProvider(id.into()))
                     }))
