@@ -1,7 +1,7 @@
 //! Pending approval/question cards and request-level announcement bookkeeping.
 use crate::theme::*;
 use gpui::{Context, EventEmitter, Role, div, prelude::*, px};
-use monocode_core::agent::Decision;
+use monocode_core::{agent::Decision, i18n::t};
 use std::{
     collections::{HashMap, HashSet},
     time::SystemTime,
@@ -221,9 +221,9 @@ impl Render for ApprovalNotices {
                                                             .text_color(gpui::rgb(0xffb900)),
                                                     )
                                                     .child(if input.kind == InputKind::Question {
-                                                        "Question"
+                                                        t("Question")
                                                     } else {
-                                                        "Approval"
+                                                        t("Approval")
                                                     }),
                                             ),
                                     )
@@ -255,7 +255,7 @@ impl Render for ApprovalNotices {
                                             div()
                                                 .id(("approval-toast-allow", ix))
                                                 .role(Role::Button)
-                                                .aria_label("Allow")
+                                                .aria_label(t("Allow"))
                                                 .cursor_pointer()
                                                 .flex_1()
                                                 .rounded_md()
@@ -270,7 +270,7 @@ impl Render for ApprovalNotices {
                                                     color
                                                 })
                                                 .hover(|s| s.bg(content(0.8)))
-                                                .child("Allow")
+                                                .child(t("Allow"))
                                                 .on_click(cx.listener(move |_, _, _, cx| {
                                                     cx.emit(Action::Decide {
                                                         session_id: allow_session.clone(),
@@ -283,7 +283,7 @@ impl Render for ApprovalNotices {
                                             div()
                                                 .id(("approval-toast-deny", ix))
                                                 .role(Role::Button)
-                                                .aria_label("Deny")
+                                                .aria_label(t("Deny"))
                                                 .cursor_pointer()
                                                 .flex_1()
                                                 .rounded_md()
@@ -294,7 +294,7 @@ impl Render for ApprovalNotices {
                                                 .bg(content(0.1))
                                                 .text_color(content(0.7))
                                                 .hover(|s| s.bg(content(0.2)))
-                                                .child("Deny")
+                                                .child(t("Deny"))
                                                 .on_click(cx.listener(move |_, _, _, cx| {
                                                     cx.emit(Action::Decide {
                                                         session_id: deny_session.clone(),

@@ -34,7 +34,7 @@ impl Render for FileActionError {
             message.clone(),
             icon_button(
                 "dismiss-file-action-error",
-                "Dismiss file action error",
+                monocode_core::i18n::t("Dismiss file action error"),
                 "close",
             )
             .debug_selector(|| "dismiss-file-action-error".into())

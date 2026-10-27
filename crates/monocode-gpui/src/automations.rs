@@ -16,8 +16,11 @@ use monocode_core::{
         self, Automation, AutomationRun, AutomationTrigger, AutomationUpsert, DueAutomationRun,
         Service,
     },
+    i18n::{t, tf, tl},
+    n,
     provider::Kind,
     session_groups::Folder,
+    tr,
 };
 use serde::Deserialize;
 use std::{
@@ -48,6 +51,51 @@ fn trigger_mark(kind: &str, side: f32) -> AnyElement {
     };
     icon(path, side).text_color(color).into_any_element()
 }
+
+/// `AutomationTrigger::label` as shown: the core keeps it English.
+fn trigger_text(trigger: &AutomationTrigger) -> String {
+    if trigger.kind != "time" {
+        return tl(&automations::event_label(&trigger.kind, &trigger.event)).to_owned();
+    }
+    match trigger.schedule_kind.as_str() {
+        "hourly" => tr!(
+            "Hourly at :{minute}",
+            minute = format!("{:02}", trigger.minute)
+        ),
+        "daily" => tr!("Daily at {time}", time = trigger.time),
+        "weekly" => tf(
+            WEEKLY_AT
+                .get(trigger.day_of_week as usize)
+                .copied()
+                .unwrap_or(n!("Weekly at {time}")),
+            &[("time", &trigger.time as &dyn std::fmt::Display)],
+        ),
+        _ => tr!("Weekdays at {time}", time = trigger.time),
+    }
+}
+/// `Automation::trigger_label` as shown.
+fn triggers_text(automation: &Automation) -> String {
+    let triggers = automation.triggers();
+    match triggers.len() {
+        0 => t("Manual only").into(),
+        1 => trigger_text(&triggers[0]),
+        count => tr!(
+            "{trigger} + {count} more",
+            trigger = trigger_text(&triggers[0]),
+            count = count - 1
+        ),
+    }
+}
+/// A weekly schedule per `automations::WEEKDAYS` entry.
+const WEEKLY_AT: [&str; 7] = [
+    n!("Sunday at {time}"),
+    n!("Monday at {time}"),
+    n!("Tuesday at {time}"),
+    n!("Wednesday at {time}"),
+    n!("Thursday at {time}"),
+    n!("Friday at {time}"),
+    n!("Saturday at {time}"),
+];
 
 pub(crate) enum Event {
     Close,
@@ -156,8 +204,14 @@ impl Automations {
         projects: Vec<String>,
         cx: &mut Context<Self>,
     ) -> Self {
-        let filter =
-            cx.new(|cx| Input::field("Filter automations", "Filter automations", content(0.4), cx));
+        let filter = cx.new(|cx| {
+            Input::field(
+                t("Filter automations"),
+                t("Filter automations"),
+                content(0.4),
+                cx,
+            )
+        });
         let subscription = cx.subscribe(&filter, |_, _, _: &input::Changed, cx| cx.notify());
         let mut this = Self {
             service,
@@ -257,7 +311,7 @@ impl Automations {
         let work = cx.background_executor().spawn(async move {
             let mut service = service
                 .lock()
-                .map_err(|_| "Automations unavailable".to_string())?;
+                .map_err(|_| t("Automations unavailable").to_string())?;
             let list = service.list()?;
             let runs = selected_for_work
                 .as_deref()
@@ -341,7 +395,7 @@ impl Automations {
             .unwrap_or_default();
         let mut draft = AutomationUpsert::new(self.cwd.clone(), kind.id().into(), model);
         if let Some(template) = template {
-            draft.name = template.name;
+            draft.name = tl(&template.name).to_owned();
             draft.prompt = template.prompt;
             let kind = template.trigger["kind"].as_str().unwrap_or("time");
             let event = template.trigger["event"].as_str().unwrap_or("weekdays");
@@ -451,10 +505,10 @@ impl Automations {
                     input
                 })
             };
-            let time = field("Trigger time", "09:00", trigger.time, cx);
+            let time = field(t("Trigger time"), "09:00", trigger.time, cx);
             let repos = field(
-                "Trigger repositories",
-                "Any repository",
+                t("Trigger repositories"),
+                t("Any repository"),
                 trigger
                     .repos
                     .iter()
@@ -465,7 +519,7 @@ impl Automations {
                     .join(", "),
                 cx,
             );
-            let actor = field("Trigger actor", "Anyone", trigger.actor, cx);
+            let actor = field(t("Trigger actor"), t("Anyone"), trigger.actor, cx);
             for input in [&time, &repos, &actor] {
                 editor._subscriptions.push(cx.subscribe(
                     input,
@@ -522,7 +576,7 @@ impl Automations {
         let work = cx.background_executor().spawn(async move {
             service
                 .lock()
-                .map_err(|_| "Automations unavailable".to_string())?
+                .map_err(|_| t("Automations unavailable").to_string())?
                 .upsert(draft)
         });
         cx.spawn(async move |this, cx| {
@@ -548,7 +602,7 @@ impl Automations {
         let work = cx.background_executor().spawn(async move {
             service
                 .lock()
-                .map_err(|_| "Automations unavailable".to_string())?
+                .map_err(|_| t("Automations unavailable").to_string())?
                 .set_enabled(&id, enabled)
         });
         cx.spawn(async move |this, cx| {
@@ -587,7 +641,7 @@ impl Automations {
         let work = cx.background_executor().spawn(async move {
             let run = service
                 .lock()
-                .map_err(|_| "Automations unavailable".to_string())?
+                .map_err(|_| t("Automations unavailable").to_string())?
                 .run_now(&automation.id, monocode_core::time::now_ms() as i64)?;
             Ok::<_, String>(DueAutomationRun { automation, run })
         });
@@ -609,9 +663,9 @@ impl Automations {
     fn ask_delete(&mut self, window: &mut Window, cx: &mut Context<Self>) {
         let prompt = window.prompt(
             gpui::PromptLevel::Warning,
-            "Delete this automation?",
-            Some("Its run history will be deleted too."),
-            &["Delete", "Cancel"],
+            t("Delete this automation?"),
+            Some(t("Its run history will be deleted too.")),
+            &[t("Delete"), t("Cancel")],
             cx,
         );
         cx.spawn(async move |this, cx| {
@@ -629,7 +683,7 @@ impl Automations {
         let work = cx.background_executor().spawn(async move {
             service
                 .lock()
-                .map_err(|_| "Automations unavailable".to_string())?
+                .map_err(|_| t("Automations unavailable").to_string())?
                 .delete(&id)
         });
         cx.spawn(async move |this, cx| {
@@ -690,7 +744,7 @@ impl Automations {
                         this.model_controls
                             .push(monocode_core::catalog::ModelControl {
                                 id: "reasoningEffort".into(),
-                                name: "Reasoning".into(),
+                                name: n!("Reasoning").into(),
                                 current: model
                                     .default_effort
                                     .clone()
@@ -708,12 +762,12 @@ impl Automations {
                             .iter()
                             .any(|c| c.id == "serviceTier" || c.id == "service_tier")
                     {
-                        let mut choices = vec![("default".into(), "Standard".into())];
+                        let mut choices = vec![("default".into(), n!("Standard").into())];
                         choices.extend(model.tiers.clone());
                         this.model_controls
                             .push(monocode_core::catalog::ModelControl {
                                 id: "serviceTier".into(),
-                                name: "Speed".into(),
+                                name: n!("Speed").into(),
                                 current: "default".into(),
                                 choices,
                             });
@@ -819,7 +873,7 @@ impl Automations {
             files: false,
             directories: true,
             multiple: false,
-            prompt: Some("Choose project".into()),
+            prompt: Some(t("Choose project").into()),
         });
         cx.spawn(async move |this, cx| {
             let result = prompt.await;
@@ -892,7 +946,7 @@ impl Render for Automations {
         let mut list = div()
             .id("automations-list")
             .role(Role::ListBox)
-            .aria_label("Automations")
+            .aria_label(t("Automations"))
             .flex_1()
             .min_h_0()
             .overflow_y_scroll()
@@ -908,11 +962,11 @@ impl Render for Automations {
                     .text_size(px(12.))
                     .text_color(content(0.45))
                     .child(if self.loading {
-                        "Loading automations…"
+                        t("Loading automations…")
                     } else if query.trim().is_empty() {
-                        "No automations yet"
+                        t("No automations yet")
                     } else {
-                        "No matching automations"
+                        t("No matching automations")
                     }),
             );
         }
@@ -934,7 +988,7 @@ impl Render for Automations {
                         div()
                             .id(SharedString::from(format!("open-{id}")))
                             .role(Role::Button)
-                            .aria_label(format!("Open {}", automation.name))
+                            .aria_label(tr!("Open {name}", name = automation.name))
                             .px(px(10.))
                             .py(px(8.))
                             .flex()
@@ -946,7 +1000,7 @@ impl Render for Automations {
                                     .truncate()
                                     .text_size(px(10.))
                                     .text_color(content(0.45))
-                                    .child(automation.trigger_label()),
+                                    .child(triggers_text(&automation)),
                             )
                             .child(
                                 div()
@@ -1013,7 +1067,7 @@ impl Render for Automations {
                     .child(icon("search", 12.))
                     .child(div().flex_1().min_w_0().child(self.filter.clone()))
                     .child(
-                        icon_button("new-automation", "New automation", "plus").on_click(
+                        icon_button("new-automation", t("New automation"), "plus").on_click(
                             cx.listener(|this, _, _, cx| {
                                 this.show_gallery(cx);
                             }),
@@ -1029,7 +1083,7 @@ impl Render for Automations {
         let mut root = div()
             .id("automations-view")
             .role(Role::Region)
-            .aria_label("Automations")
+            .aria_label(t("Automations"))
             .track_focus(&self.focus)
             .size_full()
             .min_h_0()
@@ -1168,5 +1222,81 @@ impl Render for Automations {
             );
         }
         root
+    }
+}
+
+/// What the gallery shows of each template in `templates.json`, so every one
+/// has a Chinese entry; the test below keeps this list complete.
+#[cfg(test)]
+const TEMPLATE_TEXT: &[&str] = &[
+    n!("Find critical bugs"),
+    n!("Analyze recent commits for high-severity correctness bugs and submit safe fixes"),
+    n!("Weekdays at 09:00"),
+    n!("Scan codebase for vulnerabilities"),
+    n!(
+        "Review the full repository on a schedule and alert on validated high-impact security issues"
+    ),
+    n!("Monday at 10:00"),
+    n!("Generate docs"),
+    n!("Create and update developer documentation for recently changed or under-documented code"),
+    n!("Monday at 09:00"),
+    n!("Add test coverage"),
+    n!("Review recent changes and add tests for high-risk logic that lacks adequate coverage"),
+    n!("Weekdays at 11:00"),
+    n!("Review pull requests"),
+    n!("When a pull request is opened, review the diff for bugs, regressions, and missing tests"),
+    n!("Pull request opened"),
+    n!("Review draft PRs"),
+    n!(
+        "Give early feedback when a draft pull request is opened so issues are caught before review"
+    ),
+    n!("Draft opened"),
+    n!("Audit dependencies"),
+    n!(
+        "Check lockfiles and manifests for vulnerable, abandoned, or unexpectedly upgraded packages"
+    ),
+    n!("Monday at 09:30"),
+    n!("Scan for secrets"),
+    n!("Search the working tree and recent history for committed credentials, tokens, and keys"),
+    n!("Triage GitHub issues"),
+    n!(
+        "When a GitHub issue is opened, inspect the repo and add a concrete reproduction or next step"
+    ),
+    n!("Issue opened"),
+    n!("Triage new issues"),
+    n!(
+        "When a Linear issue is created, inspect the repo and add a concrete reproduction or next step"
+    ),
+    n!("Issue created"),
+    n!("Watch failing checks"),
+    n!("On a weekday morning, run the project's tests and diagnose anything that is already red"),
+    n!("Weekdays at 08:30"),
+    n!("Weekly changelog"),
+    n!("Summarize the week's commits into a changelog humans can actually read"),
+    n!("Friday at 16:00"),
+    n!("Repo health check"),
+    n!("Inspect the working tree, stale branches, and obvious project-setup drift on a schedule"),
+    n!("Environment doctor"),
+    n!("Verify the project still installs and boots from a clean working copy"),
+];
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn every_template_text_is_listed_for_translation() {
+        let templates: Vec<Template> =
+            serde_json::from_str(include_str!("automations/templates.json")).unwrap();
+        assert_eq!(templates.len(), 14);
+        for template in &templates {
+            for text in [
+                &template.name,
+                &template.description,
+                &template.trigger_label,
+            ] {
+                assert!(TEMPLATE_TEXT.contains(&text.as_str()), "{text:?}");
+            }
+        }
     }
 }

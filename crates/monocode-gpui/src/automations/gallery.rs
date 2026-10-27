@@ -3,18 +3,18 @@ use super::*;
 impl Automations {
     pub(super) fn render_gallery(&self, cx: &mut Context<Self>) -> AnyElement {
         let categories = [
-            ("popular", "Popular"),
-            ("review", "Code Review"),
-            ("security", "Security"),
-            ("incidents", "Incidents & Triage"),
-            ("research", "Data & Research"),
-            ("environment", "Environment"),
+            ("popular", t("Popular")),
+            ("review", t("Code Review")),
+            ("security", t("Security")),
+            ("incidents", t("Incidents & Triage")),
+            ("research", t("Data & Research")),
+            ("environment", t("Environment")),
         ];
         let mut cards = vec![
             div()
                 .id("automation-scratch")
                 .role(Role::Button)
-                .aria_label("Start from scratch")
+                .aria_label(t("Start from scratch"))
                 .min_h(px(148.))
                 .p(px(16.))
                 .rounded(px(12.))
@@ -49,13 +49,12 @@ impl Automations {
                                     div()
                                         .text_size(px(13.))
                                         .font_weight(gpui::FontWeight::MEDIUM)
-                                        .child("Start from scratch"),
+                                        .child(t("Start from scratch")),
                                 )
                                 .child(
-                                    div()
-                                        .text_size(px(12.))
-                                        .text_color(content(0.5))
-                                        .child("Write your own instructions and choose a trigger."),
+                                    div().text_size(px(12.)).text_color(content(0.5)).child(t(
+                                        "Write your own instructions and choose a trigger.",
+                                    )),
                                 ),
                         ),
                 )
@@ -86,7 +85,7 @@ impl Automations {
                 div()
                     .id(SharedString::from(format!("template-{}", template.id)))
                     .role(Role::Button)
-                    .aria_label(template.name.clone())
+                    .aria_label(tl(&template.name).to_owned())
                     .min_h(px(148.))
                     .p(px(16.))
                     .rounded(px(12.))
@@ -122,13 +121,13 @@ impl Automations {
                                         div()
                                             .text_size(px(13.))
                                             .font_weight(gpui::FontWeight::MEDIUM)
-                                            .child(template.name.clone()),
+                                            .child(tl(&template.name).to_owned()),
                                     )
                                     .child(
                                         div()
                                             .text_size(px(12.))
                                             .text_color(content(0.5))
-                                            .child(template.description.clone()),
+                                            .child(tl(&template.description).to_owned()),
                                     ),
                             ),
                     )
@@ -144,7 +143,7 @@ impl Automations {
                                 template.trigger["kind"].as_str().unwrap_or("time"),
                                 12.,
                             ))
-                            .child(template.trigger_label.clone()),
+                            .child(tl(&template.trigger_label).to_owned()),
                     )
                     .on_click(
                         cx.listener(move |this, _, _, cx| this.begin(Some(selected.clone()), cx)),
@@ -182,14 +181,14 @@ impl Automations {
                         div()
                             .text_size(px(20.))
                             .font_weight(gpui::FontWeight::SEMIBOLD)
-                            .child("New automation"),
+                            .child(t("New automation")),
                     )
                     .child(
                         div()
                             .mt(px(6.))
                             .text_size(px(13.))
                             .text_color(content(0.5))
-                            .child("Pick an example or start from scratch."),
+                            .child(t("Pick an example or start from scratch.")),
                     )
                     .child(
                         div()
