@@ -5,7 +5,7 @@ use gpui::{
     SharedString, Stateful, Window, canvas, div, list, prelude::*, px, rgb,
 };
 use monocode_core::{
-    i18n::{t, tl},
+    i18n::{t, tc, tl},
     n, tr,
 };
 
@@ -261,7 +261,8 @@ fn status_text(item: &Item) -> &'static str {
         "Merged" => t("Merged"),
         "Closed" => t("Closed"),
         "Draft" => t("Draft"),
-        _ => t("Open"),
+        // A state, not the verb "Open" used on buttons.
+        _ => tc("status", "Open"),
     }
 }
 fn status_icon(item: &Item) -> &'static str {
@@ -2154,18 +2155,26 @@ impl Inbox {
                 _ => f.status.merged,
             };
             rows.push(
-                menu_row(format!("inbox-status-{status}"), tl(status), checked)
-                    .on_click(cx.listener(move |this, _, _, cx| {
-                        let s = &mut this.state.filters.status;
-                        match status {
-                            "Open" => s.open = !s.open,
-                            "Draft" => s.draft = !s.draft,
-                            "Closed" => s.closed = !s.closed,
-                            _ => s.merged = !s.merged,
-                        }
-                        this.filters_changed(true, cx);
-                    }))
-                    .into_any_element(),
+                menu_row(
+                    format!("inbox-status-{status}"),
+                    if status == "Open" {
+                        tc("status", "Open")
+                    } else {
+                        tl(status)
+                    },
+                    checked,
+                )
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    let s = &mut this.state.filters.status;
+                    match status {
+                        "Open" => s.open = !s.open,
+                        "Draft" => s.draft = !s.draft,
+                        "Closed" => s.closed = !s.closed,
+                        _ => s.merged = !s.merged,
+                    }
+                    this.filters_changed(true, cx);
+                }))
+                .into_any_element(),
             );
         }
         if !tracker {

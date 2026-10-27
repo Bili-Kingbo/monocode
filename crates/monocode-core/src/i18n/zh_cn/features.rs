@@ -737,4 +737,6 @@ pub(super) const ENTRIES: &[(&str, &str)] = &[
     ("Continue", "继续"),
     ("Retry sign-in", "重新登录"),
     ("Waiting for browser", "正在等待浏览器"),
+    // The state of an issue or pull request, not the verb.
+    ("status|Open", "开放"),
 ];
