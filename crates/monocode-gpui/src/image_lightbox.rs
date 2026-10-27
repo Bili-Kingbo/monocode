@@ -5,6 +5,7 @@ use gpui::{
     ImageFormat, ImgResourceLoader, KeyBinding, MouseButton, Pixels, Point, RenderImage, Role,
     SharedString, Size, Window, actions, canvas, div, img, point, prelude::*, px, size,
 };
+use monocode_core::{i18n::t, tr};
 use std::{path::PathBuf, sync::Arc, time::Instant};
 
 #[derive(Clone, Debug, PartialEq)]
@@ -265,7 +266,7 @@ impl Render for ImageLightbox {
             .id("image-lightbox")
             .debug_selector(|| "image-lightbox".into())
             .role(Role::Dialog)
-            .aria_label(format!("Image preview: {}", self.alt))
+            .aria_label(tr!("Image preview: {name}", name = self.alt))
             .key_context("ImageLightbox")
             .absolute()
             .top_0()
@@ -413,7 +414,7 @@ impl Render for ImageLightbox {
                         .items_center()
                         .justify_center()
                         .text_color(white(0.8))
-                        .child("Couldn’t load image"),
+                        .child(t("Couldn’t load image")),
                 )
             })
             .child(
@@ -422,7 +423,7 @@ impl Render for ImageLightbox {
                     .group("image-preview-close")
                     .debug_selector(|| "close-image-preview".into())
                     .role(Role::Button)
-                    .aria_label("Close image preview")
+                    .aria_label(t("Close image preview"))
                     .track_focus(&self.focus)
                     .absolute()
                     .top(px(16.))

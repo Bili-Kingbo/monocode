@@ -1,6 +1,7 @@
 //! Hover cards for unopened sessions do not construct conversation entities.
 use crate::{pickers::cached_model_name, theme::*};
 use gpui::{AnyElement, FontWeight, div, prelude::*, px};
+use monocode_core::i18n::t;
 use monocode_core::{
     provider::Kind,
     store::{Session, SessionPreviewData},
@@ -61,7 +62,7 @@ pub(super) fn render(
                             content(0.45)
                         })
                         .child(if done {
-                            "Done".to_owned()
+                            t("Done").to_owned()
                         } else {
                             monocode_core::time::relative(
                                 summary.updated_at,
@@ -77,10 +78,10 @@ pub(super) fn render(
                 .line_height(px(20.))
                 .font_weight(FontWeight::SEMIBOLD)
                 .text_color(content(1.))
-                .child(
+                .child(super::session_loading::shown(
                     monocode_core::session_title::display_title(&summary.title, &summary.provider)
                         .replace('\n', " "),
-                ),
+                )),
         )
         .child(
             div()
@@ -98,9 +99,9 @@ pub(super) fn render(
                         .flex_shrink_0()
                         .text_color(content(0.45))
                         .child(if worktree.is_some() {
-                            "Worktree"
+                            t("Worktree")
                         } else {
-                            "Directory"
+                            t("Directory")
                         }),
                 )
                 .child(

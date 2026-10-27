@@ -291,7 +291,8 @@ pub(crate) fn section_label(label: &'static str) -> Div {
         .text_size(px(12.))
         .font_weight(gpui::FontWeight::MEDIUM)
         .text_color(content(0.5))
-        .child(div().flex_1().child(label))
+        // Labels keep English and show in the interface language.
+        .child(div().flex_1().child(monocode_core::i18n::tl(label)))
 }
 pub(crate) fn icon(path: &'static str, side: f32) -> Svg {
     svg()

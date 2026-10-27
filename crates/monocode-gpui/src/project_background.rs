@@ -325,7 +325,7 @@ impl Render for ProjectBackground {
             .id("project-chat-background")
             .debug_selector(|| "project-chat-background".into())
             .role(Role::Image)
-            .aria_label("Project background")
+            .aria_label(monocode_core::i18n::t("Project background"))
             .absolute()
             .size_full()
             .overflow_hidden()

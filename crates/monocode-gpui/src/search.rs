@@ -10,6 +10,8 @@ use gpui::{
     Subscription, Task, Window, canvas, div, fill, point, prelude::*, px, relative, size,
 };
 use monocode_core::{
+    i18n::{t, tl},
+    n,
     search::{self, Hit, Scope, Target},
     store::Session,
     transcript::Row,
@@ -87,7 +89,8 @@ impl SearchView {
         sources: Sources,
         cx: &mut Context<Self>,
     ) -> Self {
-        let input = cx.new(|cx| Input::field("Search", "Search everything...", content(0.4), cx));
+        let input =
+            cx.new(|cx| Input::field(n!("Search"), n!("Search everything..."), content(0.4), cx));
         let changed = cx.subscribe(&input, |this, _, _: &input::Changed, cx| {
             this.query = this.input.read(cx).content.trim().to_owned();
             this.active = 0;
@@ -474,7 +477,7 @@ fn empty_state() -> AnyElement {
                         .max_w(px(320.))
                         .text_center()
                         .text_color(content(0.45))
-                        .child("Find files, conversations, messages, and projects."),
+                        .child(t("Find files, conversations, messages, and projects.")),
                 ),
         )
         .into_any_element()
@@ -584,7 +587,7 @@ impl Render for SearchView {
             .id("app-search")
             .key_context("Workspace")
             .debug_selector(|| "app-search".into())
-            .aria_label("Search")
+            .aria_label(t("Search"))
             .size_full()
             .min_h_0()
             .min_w_0()
@@ -667,8 +670,9 @@ impl Render for SearchView {
                                     .id(("app-search-scope", ix))
                                     .debug_selector(move || format!("app-search-scope-{ix}"))
                                     .role(Role::Button)
-                                    .aria_label(label)
-                                    .child(label)
+                                    // Core's scope labels, shown in the interface language.
+                                    .aria_label(tl(label))
+                                    .child(tl(label))
                                     .aria_selected(self.scope == scope)
                                     .rounded_md()
                                     .px_2()
@@ -690,7 +694,7 @@ impl Render for SearchView {
                 div()
                     .id("app-search-results")
                     .role(Role::ListBox)
-                    .aria_label("Search results")
+                    .aria_label(t("Search results"))
                     .flex_1()
                     .min_h_0()
                     .p_1p5()
@@ -703,7 +707,7 @@ impl Render for SearchView {
                                 .py_1()
                                 .text_size(px(11.))
                                 .text_color(content(0.45))
-                                .child("Results limited to the first matches"),
+                                .child(t("Results limited to the first matches")),
                         )
                     })
                     .children(rows)
@@ -714,7 +718,9 @@ impl Render for SearchView {
                                 .py_1p5()
                                 .text_size(px(12.))
                                 .text_color(content(0.5))
-                                .child(self.error.clone().unwrap_or_else(|| "No results".into())),
+                                .child(
+                                    self.error.clone().unwrap_or_else(|| t("No results").into()),
+                                ),
                         )
                     })
                     .into_any_element()

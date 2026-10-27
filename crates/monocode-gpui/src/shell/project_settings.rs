@@ -281,16 +281,16 @@ impl Shell {
                 || preference["mutedUntil"].as_u64().is_some_and(|at| at > now)
         });
         if muted {
-            MenuAction::new("mute:resume", "Resume notifications").icon("bell")
+            MenuAction::new("mute:resume", t("Resume notifications")).icon("bell")
         } else {
-            MenuAction::new("notifications-mute", "Mute notifications")
+            MenuAction::new("notifications-mute", t("Mute notifications"))
                 .icon("bell-off")
                 .submenu(vec![
-                    MenuAction::new("mute:1h", "For 1 hour"),
-                    MenuAction::new("mute:4h", "For 4 hours"),
-                    MenuAction::new("mute:8h", "For 8 hours"),
-                    MenuAction::new("mute:forever", "Until resumed"),
-                    MenuAction::new("mute:custom", "Custom…"),
+                    MenuAction::new("mute:1h", t("For 1 hour")),
+                    MenuAction::new("mute:4h", t("For 4 hours")),
+                    MenuAction::new("mute:8h", t("For 8 hours")),
+                    MenuAction::new("mute:forever", t("Until resumed")),
+                    MenuAction::new("mute:custom", t("Custom…")),
                 ])
         }
     }

@@ -162,7 +162,7 @@ impl Input {
         input.code.as_mut().unwrap().wrap = cx
             .try_global::<crate::settings::Preferences>()
             .is_none_or(|p| p.file_word_wrap);
-        input.label = "File editor".into();
+        input.label = n!("File editor").into();
         input.placeholder = "".into();
         input.font_size = 12.5;
         input.line_height = 20.;
@@ -427,7 +427,7 @@ impl Input {
             div()
                 .id("editor-completions")
                 .role(Role::List)
-                .aria_label("Autocomplete")
+                .aria_label(monocode_core::i18n::t("Autocomplete"))
                 .absolute()
                 .left(px(left))
                 .top(px(top))
@@ -653,7 +653,9 @@ impl Input {
     ) -> bool {
         use monocode_core::files::document::{MAX_LINE_BYTES, MAX_TEXT_BYTES};
         if self.content.len() - range.len() + text.len() > MAX_TEXT_BYTES {
-            cx.emit(Rejected("Edit exceeds the 2 MB file limit."));
+            cx.emit(Rejected(monocode_core::i18n::t(
+                "Edit exceeds the 2 MB file limit.",
+            )));
             return false;
         }
         let start = self.content[..range.start].rfind('\n').map_or(0, |n| n + 1);
@@ -667,7 +669,9 @@ impl Input {
             &self.content[range.end..end]
         );
         if changed.split('\n').any(|line| line.len() > MAX_LINE_BYTES) {
-            cx.emit(Rejected("Edit exceeds the 16 KB line limit."));
+            cx.emit(Rejected(monocode_core::i18n::t(
+                "Edit exceeds the 16 KB line limit.",
+            )));
             return false;
         }
         true
@@ -1116,7 +1120,7 @@ impl Input {
                     d.child(
                         crate::right_panel::icon_action(
                             "stage-change",
-                            "Stage change",
+                            monocode_core::i18n::t("Stage change"),
                             "plus",
                             true,
                         )
@@ -1129,7 +1133,7 @@ impl Input {
                 .child(
                     crate::right_panel::icon_action(
                         "revert-change",
-                        "Revert change",
+                        monocode_core::i18n::t("Revert change"),
                         "rotate-ccw",
                         true,
                     )

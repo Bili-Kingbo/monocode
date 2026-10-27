@@ -8,6 +8,7 @@ use gpui::{
 };
 use monocode_core::catalog::{self, Model};
 use monocode_core::provider::Kind;
+use monocode_core::{i18n::t, n, tr};
 
 /// Friendly names used before a provider's live catalog arrives.
 pub(crate) const CLAUDE_MODELS: &[(&str, &str)] = &[
@@ -280,7 +281,7 @@ impl ModelList {
             })
             .unwrap_or_default();
         profiles.insert(provider, profile);
-        let search = search_field("Search models", "Search models", 0.4, cx);
+        let search = search_field(n!("Search models"), n!("Search models"), 0.4, cx);
         let changed = cx.subscribe(&search, |this, _, _: &input::Changed, cx| {
             this.highlighted = this.current_index(cx);
             cx.notify();
@@ -343,7 +344,7 @@ impl ModelList {
     pub(crate) fn quick(mut self, cx: &mut Context<Self>) -> Self {
         self.quick = true;
         self.search.update(cx, |search, cx| {
-            search.set_placeholder("Search models…", cx)
+            search.set_placeholder(n!("Search models…"), cx)
         });
         self
     }
@@ -543,7 +544,7 @@ impl ModelList {
         let mut entries = vec![ModelEntry {
             kind,
             id: None,
-            name: "Default".into(),
+            name: t("Default").into(),
             enabled,
         }];
         if let Some(prefs) = cx.try_global::<crate::settings::Preferences>() {
@@ -609,7 +610,8 @@ impl ModelList {
             .into_iter()
             .filter(|e| {
                 query.is_empty()
-                    || format!("{} {}", e.name, kind.label())
+                    // The default entry still matches in English.
+                    || format!("{} {} {}", e.name, kind.label(), if e.id.is_none() { "Default" } else { "" })
                         .to_lowercase()
                         .contains(&query)
             })
@@ -686,7 +688,7 @@ impl ModelList {
     fn tab(&self, tab: ModelTab, cx: &mut Context<Self>) -> AnyElement {
         let selected = self.tab == tab;
         let (id, label): (&'static str, SharedString) = match tab {
-            ModelTab::Favorites => ("model-tab-favorites", "Favorites".into()),
+            ModelTab::Favorites => ("model-tab-favorites", t("Favorites").into()),
             ModelTab::Harness(kind) => (
                 if kind == Kind::Claude {
                     "model-tab-claude"
@@ -748,8 +750,8 @@ impl Render for ModelList {
                 .map(|(_, error)| error.clone())
         });
         let empty = match (self.tab, self.query(cx).is_empty()) {
-            (ModelTab::Favorites, true) if entries.is_empty() => Some("No favorite models"),
-            _ if entries.is_empty() => Some("No matching models"),
+            (ModelTab::Favorites, true) if entries.is_empty() => Some(t("No favorite models")),
+            _ if entries.is_empty() => Some(t("No matching models")),
             _ => None,
         };
         let rows: Vec<AnyElement> = entries
@@ -765,9 +767,9 @@ impl Render for ModelList {
                     .aria_selected(current)
                     .when(!entry.enabled, |d| {
                         d.aria_description(if self.missing.contains(&entry.kind) {
-                            if self.remote_project.is_some() { "Install this provider's CLI and sign in on the connected machine, then retry model discovery" } else { "Install this provider's CLI and sign in, then retry model discovery" }
+                            if self.remote_project.is_some() { t("Install this provider's CLI and sign in on the connected machine, then retry model discovery") } else { t("Install this provider's CLI and sign in, then retry model discovery") }
                         } else {
-                            "Wait for the current turn to finish before switching providers"
+                            t("Wait for the current turn to finish before switching providers")
                         })
                     })
                     .cursor_pointer()
@@ -815,7 +817,7 @@ impl Render for ModelList {
         div()
             .id("model-flyout")
             .role(Role::Dialog)
-            .aria_label("Models")
+            .aria_label(t("Models"))
             .size_full()
             .min_h_0()
             .flex()
@@ -835,7 +837,7 @@ impl Render for ModelList {
                 div()
                     .id("model-providers")
                     .role(Role::TabList)
-                    .aria_label("Providers")
+                    .aria_label(t("Providers"))
                     .w(px(44.))
                     .flex_shrink_0()
                     .flex()
@@ -891,7 +893,7 @@ impl Render for ModelList {
                         div()
                             .id("model-list")
                             .role(Role::ListBox)
-                            .aria_label("Models")
+                            .aria_label(t("Models"))
                             .flex_1()
                             .min_h_0()
                             .overflow_y_scroll()
@@ -916,7 +918,7 @@ impl Render for ModelList {
                                         .py_2()
                                         .text_size(px(12.))
                                         .text_color(content(0.5))
-                                        .child("Loading models…"),
+                                        .child(t("Loading models…")),
                                 )
                             })
                             .when_some(error, |d, error| {
@@ -931,9 +933,9 @@ impl Render for ModelList {
                                             div()
                                                 .id("retry-models")
                                                 .role(Role::Button)
-                                                .aria_label("Retry model discovery")
+                                                .aria_label(t("Retry model discovery"))
                                                 .py_2()
-                                                .child("Retry")
+                                                .child(t("Retry"))
                                                 .on_click(cx.listener(move |this, _, _, cx| {
                                                     if let Some(kind) = kind {
                                                         this.discover(kind, cx);
@@ -959,13 +961,13 @@ impl ModelList {
         let query = !self.query(cx).is_empty();
         let empty = entries.is_empty().then(|| {
             if query {
-                "No matching models"
+                t("No matching models")
             } else if kind.is_none() {
-                "No favorite models"
+                t("No favorite models")
             } else if loading {
-                "Loading models…"
+                t("Loading models…")
             } else {
-                "No models"
+                t("No models")
             }
         });
         let favorites = kind.is_none();
@@ -1021,12 +1023,11 @@ impl ModelList {
                         div()
                             .id(("quick-model-star", ix))
                             .role(Role::Button)
-                            .aria_label(format!(
-                                "{} {} {} favorites",
-                                if starred { "Remove" } else { "Add" },
-                                entry.name,
-                                if starred { "from" } else { "to" }
-                            ))
+                            .aria_label(if starred {
+                                tr!("Remove {name} from favorites", name = entry.name)
+                            } else {
+                                tr!("Add {name} to favorites", name = entry.name)
+                            })
                             .group("quick-model-star")
                             .cursor_pointer()
                             .size(px(32.))
@@ -1061,7 +1062,7 @@ impl ModelList {
         div()
             .id("quick-model-selector")
             .role(Role::Group)
-            .aria_label("Model selector")
+            .aria_label(t("Model selector"))
             .w_full()
             .flex()
             .flex_col()
@@ -1081,7 +1082,7 @@ impl ModelList {
                 div()
                     .id("quick-model-providers")
                     .role(Role::TabList)
-                    .aria_label("Providers")
+                    .aria_label(t("Providers"))
                     .h(px(44.))
                     .flex_shrink_0()
                     .flex()
@@ -1097,7 +1098,7 @@ impl ModelList {
                             ModelTab::Harness(kind) => format!("quick-tab-{}", kind.id()).into(),
                         };
                         let label = match tab {
-                            ModelTab::Favorites => "Favorites",
+                            ModelTab::Favorites => t("Favorites"),
                             ModelTab::Harness(kind) => kind.label(),
                         };
                         div()
@@ -1152,7 +1153,7 @@ impl ModelList {
                 div()
                     .id("quick-model-list")
                     .role(Role::ListBox)
-                    .aria_label("Models")
+                    .aria_label(t("Models"))
                     .h(px(240.))
                     .flex_shrink_0()
                     .overflow_y_scroll()
@@ -1208,7 +1209,7 @@ pub(crate) struct ProjectPicker {
 impl EventEmitter<ProjectPicked> for ProjectPicker {}
 impl ProjectPicker {
     pub(crate) fn new(projects: &[String], current: &str, cx: &mut Context<Self>) -> Self {
-        let search = search_field("Search projects", "Search projects...", 0.35, cx);
+        let search = search_field(n!("Search projects"), n!("Search projects..."), 0.35, cx);
         let changed = cx.subscribe(&search, |this, _, _: &input::Changed, cx| {
             this.active = 0;
             cx.notify();
@@ -1256,7 +1257,7 @@ impl ProjectPicker {
         self.active_mono = active.filter(|id| monos.iter().any(|mono| &mono.id == id));
         if !monos.is_empty() {
             self.search.update(cx, |search, cx| {
-                search.set_placeholder("Search monos and projects...", cx)
+                search.set_placeholder(n!("Search monos and projects..."), cx)
             });
         }
         self.monos = monos;
@@ -1339,7 +1340,7 @@ impl Render for ProjectPicker {
                         move || format!("project-picker-mono-{id}")
                     })
                     .role(Role::ListBoxOption)
-                    .aria_label(format!("{}, Mono", mono.name))
+                    .aria_label(tr!("{name}, Mono", name = mono.name))
                     .aria_selected(current)
                     .cursor_pointer()
                     .flex_shrink_0()
@@ -1485,7 +1486,7 @@ impl Render for ProjectPicker {
             .id("project-picker")
             .debug_selector(|| "project-picker".into())
             .role(Role::Dialog)
-            .aria_label("Project picker")
+            .aria_label(t("Project picker"))
             .size_full()
             .min_h_0()
             .flex()
@@ -1526,9 +1527,9 @@ impl Render for ProjectPicker {
                     .id("project-list")
                     .role(Role::ListBox)
                     .aria_label(if self.monos.is_empty() {
-                        "Projects"
+                        t("Projects")
                     } else {
-                        "Monos and projects"
+                        t("Monos and projects")
                     })
                     .flex_1()
                     .min_h_0()
@@ -1546,9 +1547,9 @@ impl Render for ProjectPicker {
                                 .text_size(px(12.))
                                 .text_color(content(0.45))
                                 .child(if self.monos.is_empty() {
-                                    "No projects found"
+                                    t("No projects found")
                                 } else {
-                                    "No monos or projects found"
+                                    t("No monos or projects found")
                                 }),
                         )
                     })
@@ -1564,7 +1565,7 @@ impl Render for ProjectPicker {
                         div()
                             .id("project-new")
                             .role(Role::Button)
-                            .aria_label("New project")
+                            .aria_label(t("New project"))
                             .group("project-new")
                             .cursor_pointer()
                             .h(px(36.))
@@ -1581,7 +1582,7 @@ impl Render for ProjectPicker {
                                     .text_color(content(0.75))
                                     .group_hover("project-new", |s| s.text_color(content(1.))),
                             )
-                            .child("New project")
+                            .child(t("New project"))
                             .on_click(cx.listener(|_, _, _, cx| cx.emit(ProjectPicked::New))),
                     )
                     .when(self.allow_remote, |d| {
@@ -1589,7 +1590,7 @@ impl Render for ProjectPicker {
                             div()
                                 .id("project-remote")
                                 .role(Role::Button)
-                                .aria_label("Open folder on a machine")
+                                .aria_label(t("Open folder on a machine"))
                                 .cursor_pointer()
                                 .h(px(36.))
                                 .px(px(10.))
@@ -1601,7 +1602,7 @@ impl Render for ProjectPicker {
                                 .text_color(content(0.75))
                                 .hover(|s| s.bg(content(0.08)).text_color(content(1.)))
                                 .child(icon("globe", 16.).text_color(content(0.75)))
-                                .child("Open folder on a machine…")
+                                .child(t("Open folder on a machine…"))
                                 .on_click(
                                     cx.listener(|_, _, _, cx| cx.emit(ProjectPicked::Remote)),
                                 ),

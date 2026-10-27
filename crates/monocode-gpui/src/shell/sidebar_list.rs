@@ -128,10 +128,10 @@ fn age_label(updated_at: u64, now: u64) -> &'static str {
     let day = chrono::DateTime::from_timestamp_millis(updated_at.min(i64::MAX as u64) as i64)
         .map(|t| t.with_timezone(&chrono::Local).date_naive());
     match today.zip(day).map(|(today, day)| (today - day).num_days()) {
-        Some(days) if days <= 0 => "Today",
-        Some(1) => "Yesterday",
-        Some(2..=6) => "Last 7 days",
-        _ => "Older",
+        Some(days) if days <= 0 => n!("Today"),
+        Some(1) => n!("Yesterday"),
+        Some(2..=6) => n!("Last 7 days"),
+        _ => n!("Older"),
     }
 }
 
@@ -355,7 +355,7 @@ impl Shell {
         }
         if first {
             rows.push(Row::Heading {
-                label: "Sessions",
+                label: n!("Sessions"),
                 first: true,
             });
             if entries.is_empty() {
@@ -485,8 +485,8 @@ impl Shell {
                     })
                     .unwrap_or_else(|| div().into_any());
             }
-            Row::Pinned => section_label("Pinned").into_any(),
-            Row::Folders => section_label("Folders").into_any(),
+            Row::Pinned => section_label(n!("Pinned")).into_any(),
+            Row::Folders => section_label(n!("Folders")).into_any(),
             Row::Group(entry) => {
                 if let Entry::Folder { id, .. } = &entry
                     && let Some(anchor) = self.folder_bounds.get(id)
@@ -536,9 +536,9 @@ impl Shell {
                 .text_size(px(12.))
                 .text_color(rgb(MUTED))
                 .child(if self.query.is_empty() {
-                    "No sessions yet"
+                    t("No sessions yet")
                 } else {
-                    "No matching sessions"
+                    t("No matching sessions")
                 })
                 .into_any(),
         };
@@ -553,30 +553,30 @@ impl Shell {
 impl Shell {
     pub(super) fn sidebar_options_menu_items(&self) -> Vec<MenuItem> {
         vec![
-            MenuAction::new("sidebar-notes", "Notes")
+            MenuAction::new("sidebar-notes", t("Notes"))
                 .icon("note")
                 .toggle(self.workspace.sidebar_notes_visible)
                 .disabled(!self.workspace.preferences.notes)
                 .into(),
-            MenuAction::new("sidebar-automations", "Automations")
+            MenuAction::new("sidebar-automations", t("Automations"))
                 .icon("zap")
                 .toggle(self.workspace.sidebar_automations_visible)
                 .into(),
-            MenuAction::new("sidebar-inbox", "Inbox")
+            MenuAction::new("sidebar-inbox", t("Inbox"))
                 .icon("inbox")
                 .toggle(self.workspace.sidebar_inbox_visible)
                 .into(),
-            MenuAction::new("sidebar-monos", "Monos")
+            MenuAction::new("sidebar-monos", t("Monos"))
                 .icon("ghost")
                 .toggle(self.workspace.preferences.monos)
                 .into(),
-            MenuAction::new("sidebar-activity", "Activity")
+            MenuAction::new("sidebar-activity", t("Activity"))
                 .icon("response-activity")
                 .toggle(self.workspace.sidebar_activity_visible)
                 .disabled(!self.workspace.preferences.working_agents)
                 .into(),
             MenuItem::Separator,
-            MenuAction::new("compact-session-cards", "Compact view")
+            MenuAction::new("compact-session-cards", t("Compact view"))
                 .icon("list-bullet")
                 .toggle(self.workspace.compact_session_cards)
                 .into(),
@@ -673,7 +673,7 @@ impl Shell {
                             .text_color(content(0.35))
                             .group_hover("rail-search", |s| s.text_color(content(0.7))),
                     )
-                    .child(div().flex_1().min_w_0().h(px(20.)).child("Search"))
+                    .child(div().flex_1().min_w_0().h(px(20.)).child(t("Search")))
                     .child(
                         // The shortcut span sits outside the label's `font-medium`.
                         div()
@@ -689,9 +689,9 @@ impl Shell {
             )
             .children(
                 [
-                    ("Inbox", "inbox"),
-                    ("Notes", "note"),
-                    ("Automations", "zap"),
+                    (n!("Inbox"), "inbox"),
+                    (n!("Notes"), "note"),
+                    (n!("Automations"), "zap"),
                 ]
                 .into_iter()
                 .filter(|(label, _)| match *label {
@@ -718,7 +718,11 @@ impl Shell {
                         .id(label)
                         .debug_selector(move || format!("sidebar-navigation-{label}"))
                         .role(Role::Button)
-                        .aria_label(if unread { "Inbox, new items" } else { label })
+                        .aria_label(if unread {
+                            t("Inbox, new items")
+                        } else {
+                            tl(label)
+                        })
                         .aria_selected(selected)
                         .cursor_pointer()
                         .group("rail-action")
@@ -742,7 +746,7 @@ impl Shell {
                         } else {
                             0.35
                         })))
-                        .child(div().flex_1().child(label))
+                        .child(div().flex_1().child(tl(label)))
                         .when(unread, |row| {
                             row.child(
                                 div()
@@ -790,7 +794,7 @@ impl Shell {
             div()
                 .id("filter-sessions")
                 .role(Role::Button)
-                .aria_label("Filter sessions")
+                .aria_label(t("Filter sessions"))
                 .aria_expanded(self.menu_open(&MenuTarget::SessionFilter))
                 .cursor_pointer()
                 .group("classic-filter")
@@ -807,7 +811,7 @@ impl Shell {
                         .group_hover("classic-filter", |s| s.text_color(content(1.))),
                 )
         } else {
-            icon_button("filter-sessions", "Filter sessions", "filter")
+            icon_button("filter-sessions", t("Filter sessions"), "filter")
         };
         button
             .debug_selector(|| "sidebar-filter-button".into())

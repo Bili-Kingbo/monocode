@@ -8,6 +8,7 @@ use gpui::{
     TextAlign, TextRun, UTF16Selection, UnderlineStyle, Window, WrappedLine, actions, div, fill,
     point, prelude::*, px, relative, rgb, size,
 };
+use monocode_core::{i18n::tl, n, tr};
 use std::{borrow::Cow, ops::Range};
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -254,9 +255,9 @@ impl Input {
             secret: false,
             max_chars: None,
             centered: false,
-            placeholder: "Ask, build, or describe a change…".into(),
+            placeholder: n!("Ask, build, or describe a change…").into(),
             placeholder_alpha: None,
-            label: "Message composer".into(),
+            label: n!("Message composer").into(),
             font_size: FONT_SIZE,
             line_height: LINE_HEIGHT,
             min_height: MIN_HEIGHT,
@@ -285,8 +286,8 @@ impl Input {
         let mut input = Self::new(cx);
         input.height = 20.;
         input.single_line = true;
-        input.placeholder = "Search".into();
-        input.label = "Search sessions".into();
+        input.placeholder = n!("Search").into();
+        input.label = n!("Search sessions").into();
         input
     }
     /// A one-line field inside a popover, such as a picker's search box.
@@ -309,7 +310,7 @@ impl Input {
     /// textarea growing to `max-h-40` less its `py-1`.
     pub fn commit_message(cx: &mut Context<Self>) -> Self {
         let mut input = Self::new(cx);
-        input.label = "Commit message".into();
+        input.label = n!("Commit message").into();
         input.font_size = 13.;
         input.line_height = 20.;
         input.height = 20.;
@@ -332,7 +333,7 @@ impl Input {
     /// An action's shell command: three rows growing to six.
     pub(crate) fn action_command(cx: &mut Context<Self>) -> Self {
         let mut input = Self::commit_message(cx);
-        input.label = "Command".into();
+        input.label = n!("Command").into();
         input.placeholder = "bun test".into();
         input.height = 60.;
         input.min_height = 60.;
@@ -342,11 +343,11 @@ impl Input {
     /// InboxComments' two-row textarea grows within the discussion page.
     pub(crate) fn inbox_comment(cx: &mut Context<Self>) -> Self {
         let mut input = Self::commit_message(cx);
-        input.label = "Comment".into();
+        input.label = n!("Comment").into();
         input.placeholder = if cfg!(target_os = "macos") {
-            "Leave a comment (⌘↩)"
+            n!("Leave a comment (⌘↩)")
         } else {
-            "Leave a comment (Ctrl+Enter)"
+            n!("Leave a comment (Ctrl+Enter)")
         }
         .into();
         input.height = 40.;
@@ -357,8 +358,8 @@ impl Input {
     /// AutomationEditor uses a proportional, naturally growing prompt field.
     pub(crate) fn automation_instructions(cx: &mut Context<Self>) -> Self {
         let mut input = Self::commit_message(cx);
-        input.label = "Instructions".into();
-        input.placeholder = "Tell the agent what to do when this automation runs…".into();
+        input.label = n!("Instructions").into();
+        input.placeholder = n!("Tell the agent what to do when this automation runs…").into();
         input.font_size = 14.;
         input.line_height = 22.;
         input.height = 88.;
@@ -369,8 +370,8 @@ impl Input {
     }
     pub(crate) fn automation_name(cx: &mut Context<Self>) -> Self {
         let mut input = Self::search(cx);
-        input.label = "Automation name".into();
-        input.placeholder = "Untitled".into();
+        input.label = n!("Automation name").into();
+        input.placeholder = n!("Untitled").into();
         input.font_size = 20.;
         input.line_height = 25.;
         input.height = 25.;
@@ -380,7 +381,7 @@ impl Input {
         if self.min_height != 18. {
             self.height = 18.;
         }
-        self.label = format!("Message {name}").into();
+        self.label = tr!("Message {name}", name = name).into();
         self.placeholder = self.label.clone();
         self.font_size = 13.;
         self.line_height = 18.;
@@ -392,9 +393,9 @@ impl Input {
     /// NewHabitPage's three-row AutoTextarea, capped like React's AutoTextarea.
     pub(crate) fn habit_instructions(cx: &mut Context<Self>) -> Self {
         let mut input = Self::commit_message(cx);
-        input.label = "What it does".into();
+        input.label = n!("What it does").into();
         input.placeholder =
-            "What it should do on each run, and when it's worth telling you about.".into();
+            n!("What it should do on each run, and when it's worth telling you about.").into();
         input.font_size = 12.;
         input.line_height = 20.;
         input.height = 60.;
@@ -458,7 +459,7 @@ impl Input {
     /// MessageQueue.tsx keeps its one-row textarea height while Shift+Enter
     /// inserts newlines; the field scrolls to the caret within that row.
     pub(crate) fn queued_message(cx: &mut Context<Self>) -> Self {
-        let mut input = Self::memory_fact("Edit queued message", cx);
+        let mut input = Self::memory_fact(n!("Edit queued message"), cx);
         input.max_height = input.min_height;
         input
     }
@@ -1750,7 +1751,8 @@ impl Render for Input {
             } else {
                 Role::MultilineTextInput
             })
-            .aria_label(self.label.clone())
+            // Labels and placeholders keep English, shown in the interface language.
+            .aria_label(SharedString::from(tl(&self.label).to_owned()))
             .aria_value(if self.secret {
                 "*".repeat(self.content.chars().count()).into()
             } else {

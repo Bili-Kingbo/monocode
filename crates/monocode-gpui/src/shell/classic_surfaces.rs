@@ -93,9 +93,9 @@ impl Shell {
                             .debug_selector(|| "classic-mono-overview".into())
                             .role(Role::Button)
                             .aria_label(if open {
-                                "Hide overview"
+                                t("Hide overview")
                             } else {
-                                "Show overview"
+                                t("Show overview")
                             })
                             .h(px(24.))
                             .px_2()
@@ -108,14 +108,14 @@ impl Shell {
                             .bg(content(if open { 0.1 } else { 0.05 }))
                             .hover(|s| s.bg(content(0.1)))
                             .child(icon("dashboard", 14.))
-                            .child("Overview")
+                            .child(t("Overview"))
                             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                             .on_click(cx.listener(|this, _, window, cx| {
                                 this.toggle_right_panel(window, cx)
                             })),
                     )
                     .child(
-                        icon_button("classic-mono-settings", "Mono settings", "settings")
+                        icon_button("classic-mono-settings", t("Mono settings"), "settings")
                             .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
                             .on_click(cx.listener(move |_, _, window, cx| {
                                 monos

@@ -28,8 +28,8 @@ impl Picker {
     fn new(folders: Vec<Folder>, cx: &mut Context<Self>) -> Self {
         let input = cx.new(|cx| {
             input::Input::field(
-                "Session folder",
-                "Choose or name a session folder…",
+                n!("Session folder"),
+                n!("Choose or name a session folder…"),
                 content(0.35),
                 cx,
             )
@@ -62,7 +62,11 @@ impl Picker {
             })
             .collect();
         if !name.is_empty() && !self.folders.iter().any(|f| f.name.to_lowercase() == query) {
-            rows.push((Target::New(name.into()), format!("Create “{name}”"), None));
+            rows.push((
+                Target::New(name.into()),
+                tr!("Create “{name}”", name = name),
+                None,
+            ));
         }
         rows
     }
@@ -87,7 +91,7 @@ impl Render for Picker {
             .id("session-folder-picker")
             .debug_selector(|| "session-folder-picker".into())
             .role(Role::Dialog)
-            .aria_label("Choose a session folder")
+            .aria_label(t("Choose a session folder"))
             .key_context("SessionFolderPicker")
             .capture_action(cx.listener(|_, _: &Dismiss, _, cx| {
                 cx.emit(Target::Dismiss);
@@ -123,7 +127,7 @@ impl Render for Picker {
                     .child(icon("folder", 14.).text_color(content(0.5)))
                     .child(div().min_w_0().flex_1().child(self.input.clone()))
                     .child(
-                        icon_button("cancel-session-folder", "Cancel", "x")
+                        icon_button("cancel-session-folder", t("Cancel"), "x")
                             .on_click(cx.listener(|_, _, _, cx| cx.emit(Target::Dismiss))),
                     ),
             )
@@ -131,7 +135,7 @@ impl Render for Picker {
                 div()
                     .id("session-folders")
                     .role(Role::ListBox)
-                    .aria_label("Session folders")
+                    .aria_label(t("Session folders"))
                     .max_h(px(240.))
                     .overflow_y_scroll()
                     .track_scroll(&self.scroll)
@@ -143,7 +147,7 @@ impl Render for Picker {
                                 .py_2()
                                 .text_size(px(12.))
                                 .text_color(content(0.5))
-                                .child("Type a name to create the first folder"),
+                                .child(t("Type a name to create the first folder")),
                         )
                     })
                     .children(rows.into_iter().enumerate().map(|(ix, (_, label, count))| {
@@ -242,7 +246,7 @@ impl Shell {
                     }
                     let groups = groups.clone();
                     let project = project.clone();
-                    this.store_write("save the session folder", cx, move |store| {
+                    this.store_write(n!("save the session folder"), cx, move |store| {
                         store.save_groups(&project, &groups)
                     });
                     this.sessions[&id].update(cx, |session, cx| session.folder_chosen(cx));

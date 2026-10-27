@@ -2,6 +2,7 @@ use gpui::{
     AnyElement, Bounds, CursorStyle, MouseButton, Pixels, ResizeEdge, Size, Window, div, point,
     prelude::*, px, size,
 };
+use monocode_core::i18n::t;
 
 pub(super) const CONTROLS_WIDTH: f32 = 106.;
 
@@ -21,7 +22,7 @@ pub(super) fn controls(
         .items_center()
         .occlude()
         .child(
-            crate::theme::icon_button("window-minimize", "Minimize window", "minus")
+            crate::theme::icon_button("window-minimize", t("Minimize window"), "minus")
                 .debug_selector(|| "window-minimize".into())
                 .w(px(30.))
                 .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())
@@ -31,9 +32,9 @@ pub(super) fn controls(
             crate::theme::icon_button(
                 "window-maximize",
                 if maximized {
-                    "Restore window"
+                    t("Restore window")
                 } else {
-                    "Maximize window"
+                    t("Maximize window")
                 },
                 if maximized { "copy" } else { "square" },
             )
@@ -43,7 +44,7 @@ pub(super) fn controls(
             .on_click(|_, window, _| window.zoom_window()),
         )
         .child(
-            crate::theme::icon_button("window-close", "Close window", "close")
+            crate::theme::icon_button("window-close", t("Close window"), "close")
                 .debug_selector(|| "window-close".into())
                 .w(px(30.))
                 .on_mouse_down(MouseButton::Left, |_, _, cx| cx.stop_propagation())

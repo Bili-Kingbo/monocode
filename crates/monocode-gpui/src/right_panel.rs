@@ -14,6 +14,7 @@ use gpui::{
     FontWeight, Hsla, MouseButton, MouseDownEvent, MouseMoveEvent, Pixels, Role, SharedString,
     Stateful, StyleRefinement, Subscription, WeakEntity, Window, div, prelude::*, px,
 };
+use monocode_core::{i18n::t, n, tr};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
@@ -69,10 +70,10 @@ pub(crate) enum RightTab {
 impl RightTab {
     fn label(self) -> &'static str {
         match self {
-            Self::Files => "Explorer",
-            Self::Changes => "Changes",
-            Self::Graph => "History",
-            Self::Terminal => "Terminal",
+            Self::Files => n!("Explorer"),
+            Self::Changes => n!("Changes"),
+            Self::Graph => n!("History"),
+            Self::Terminal => n!("Terminal"),
         }
     }
     /// loadRightPanelTabOrder: unique known tabs, the missing ones appended.
@@ -195,8 +196,10 @@ pub(crate) fn diff_stat(
         .id("project-diff-stat")
         .debug_selector(|| "project-diff-stat".into())
         .role(Role::Button)
-        .aria_label(format!(
-            "Open Changes: {added} lines added, {deleted} lines deleted"
+        .aria_label(tr!(
+            "Open Changes: {added} lines added, {deleted} lines deleted",
+            added = added,
+            deleted = deleted
         ))
         .w(px(width))
         .h(px(24.))
@@ -566,7 +569,7 @@ impl RightPanel {
             .id("right-panel-tabs")
             .debug_selector(|| "right-panel-tabs".into())
             .role(Role::TabList)
-            .aria_label("Project")
+            .aria_label(t("Project"))
             .h(px(TITLE_BAR_HEIGHT))
             .w_full()
             .flex_shrink_0()
@@ -614,7 +617,7 @@ impl Render for RightPanel {
             .id("right-panel")
             .track_focus(&self.focus)
             .role(Role::Group)
-            .aria_label("Project tools")
+            .aria_label(t("Project tools"))
             .size_full()
             .min_h_0()
             .flex()

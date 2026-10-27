@@ -14,6 +14,7 @@ use gpui::{
     AnyElement, Context, CursorStyle, Entity, MouseButton, MouseDownEvent, Role, StyleRefinement,
     Window, div, prelude::*, px,
 };
+use monocode_core::{i18n::t, n};
 use std::collections::HashMap;
 
 const CARD_RADIUS: f32 = 10.;
@@ -101,7 +102,7 @@ fn panel_button(enabled: bool, dot: bool) -> gpui::Stateful<gpui::Div> {
         .id(id)
         .debug_selector(move || id.into())
         .role(Role::Button)
-        .aria_label(super::TOGGLE_RIGHT_PANEL_LABEL)
+        .aria_label(monocode_core::i18n::tl(super::TOGGLE_RIGHT_PANEL_LABEL))
         .group(id)
         .cursor_pointer()
         .size(px(24.))
@@ -559,18 +560,23 @@ impl Shell {
         let mut tabs = vec![
             (
                 "right-panel-explorer",
-                "Explorer",
+                n!("Explorer"),
                 "file-script",
                 RightTab::Files,
             ),
-            ("right-panel-history", "History", "clock", RightTab::Graph),
+            (
+                "right-panel-history",
+                n!("History"),
+                "clock",
+                RightTab::Graph,
+            ),
         ];
         if self.terminal_in_panel(cx) {
             tabs.insert(
                 1,
                 (
                     "right-panel-terminal",
-                    "Terminal",
+                    n!("Terminal"),
                     "terminal",
                     RightTab::Terminal,
                 ),
@@ -587,7 +593,7 @@ impl Shell {
                         div()
                             .id("right-panel-corner-tabs")
                             .role(Role::TabList)
-                            .aria_label("Project")
+                            .aria_label(t("Project"))
                             .flex_shrink_0()
                             .flex()
                             .items_center()

@@ -3,6 +3,7 @@
 //! pane keeps its split tree in `layouts` and its last focused pane in
 //! `focused`. `active` is always the focused session.
 use crate::pane_layout::{Edge, PaneNode, SplitDir, leaf};
+use monocode_core::n;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 
@@ -15,9 +16,9 @@ pub(crate) enum AppView {
 impl AppView {
     pub fn label(self) -> &'static str {
         match self {
-            Self::Inbox => "Inbox",
-            Self::Notes => "Notes",
-            Self::Automations => "Automations",
+            Self::Inbox => n!("Inbox"),
+            Self::Notes => n!("Notes"),
+            Self::Automations => n!("Automations"),
         }
     }
     pub fn icon(self) -> &'static str {

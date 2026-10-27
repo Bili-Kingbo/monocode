@@ -33,7 +33,7 @@ impl Shell {
             .debug_selector(move || format!("app-title-tab-{}", view.label()))
             .group("app-title-tab")
             .role(Role::Tab)
-            .aria_label(view.label())
+            .aria_label(tl(view.label()))
             .aria_selected(active)
             .cursor_pointer()
             .w(px(width))
@@ -60,7 +60,7 @@ impl Shell {
                             .flex_1()
                             .truncate()
                             .text_size(px(TITLE_TAB_TEXT_SIZE))
-                            .child(view.label()),
+                            .child(tl(view.label())),
                     ),
             )
             .when(close, |d| {
@@ -72,7 +72,7 @@ impl Shell {
                         )))
                         .debug_selector(move || format!("close-app-tab-{}", view.label()))
                         .role(Role::Button)
-                        .aria_label(format!("Close {}", view.label()))
+                        .aria_label(tr!("Close {name}", name = tl(view.label())))
                         .absolute()
                         .right_1()
                         .top(px(10.))
@@ -461,7 +461,7 @@ impl Shell {
         let revision = self.navigation_revision;
         let work = cx.background_executor().spawn(async move {
             if !std::path::Path::new(&cwd).is_dir() {
-                return Err("Choose a project folder before starting work on this item".into());
+                return Err(t("Choose a project folder before starting work on this item").into());
             }
             let store = locked(&store)?;
             let mut summary = store.create(kind.id(), &cwd)?;

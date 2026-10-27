@@ -348,7 +348,7 @@ impl Shell {
             .and_then(|name| name.to_str())
             .unwrap_or(&session.summary.cwd);
         let git_label = if saved.is_some_and(|details| details.worktree_removed) {
-            "No branch".to_string()
+            t("No branch").to_string()
         } else {
             match branch.filter(|branch| !branch.is_empty()) {
                 Some(branch) if !repo.is_empty() => format!("{repo}/{branch}"),
@@ -374,7 +374,7 @@ impl Shell {
             .line_height(px(17.875))
             .font_weight(FontWeight::SEMIBOLD)
             .text_color(content(1.))
-            .child(crate::particle_text::particle_text(session.display_title()));
+            .child(crate::particle_text::particle_text(session.shown_title()));
         let body = div()
             .w_full()
             .min_w_0()
@@ -500,11 +500,11 @@ impl Shell {
             .debug_selector(move || format!("sidebar-session-{id}"))
             .group("session-row")
             .role(Role::Button)
-            .aria_label(session.display_title())
+            .aria_label(session.shown_title())
             .aria_selected(selected || active)
-            .aria_description(format!(
-                "{} conversation",
-                Kind::from_id(&session.summary.provider).label()
+            .aria_description(tr!(
+                "{provider} conversation",
+                provider = Kind::from_id(&session.summary.provider).label()
             ))
             .cursor_pointer()
             .relative()
@@ -648,6 +648,7 @@ impl Shell {
         };
         [
             session.display_title(),
+            session.shown_title(),
             session.summary.title.clone(),
             saved
                 .and_then(|details| details.model.clone())
@@ -679,28 +680,28 @@ impl Shell {
                 .text_color(rgb(0xfbbf24))
                 .child(icon("circle-alert", 12.))
                 .child(if self.orchestration_summaries.contains_key(&id) {
-                    "Needs input"
+                    t("Needs input")
                 } else {
-                    "Need approval"
+                    t("Need approval")
                 })
                 .into_any_element()
         } else if session.responding() {
             status
                 .text_color(crate::theme::accent_color())
                 .children(self.session_marks.get(&id).cloned())
-                .child("Working...")
+                .child(t("Working..."))
                 .into_any_element()
         } else if self.unseen_finished.contains(&id) {
             status
                 .text_color(rgb(0x34d399))
                 .child(icon("check", 12.))
-                .child("Done")
+                .child(t("Done"))
                 .into_any_element()
         } else if session.has_saved_draft() {
             status
                 .text_color(content(0.55))
                 .child(icon("circle-dashed-hi", 12.))
-                .child("Draft")
+                .child(t("Draft"))
                 .into_any_element()
         } else {
             status
@@ -732,23 +733,19 @@ impl Shell {
                         .text_size(px(11.))
                         .line_height(px(16.5))
                         .text_color(content(0.45))
-                        .child(format!(
-                            "{} {}",
-                            summary.tasks.len(),
-                            if summary.tasks.len() == 1 {
-                                "agent"
-                            } else {
-                                "agents"
-                            }
-                        ))
-                        .child(format!(
-                            "{}/{} done",
-                            summary
+                        .child(if summary.tasks.len() == 1 {
+                            tr!("{count} agent", count = summary.tasks.len())
+                        } else {
+                            tr!("{count} agents", count = summary.tasks.len())
+                        })
+                        .child(tr!(
+                            "{done}/{total} done",
+                            done = summary
                                 .tasks
                                 .iter()
                                 .filter(|task| task.status == "completed")
                                 .count(),
-                            summary.tasks.len()
+                            total = summary.tasks.len()
                         )),
                 )
             })
@@ -790,7 +787,7 @@ impl Shell {
                             .id(("rail-agent", (lead as usize) << 8 | ix))
                             .debug_selector(move || format!("rail-agent-{lead}-{ix}"))
                             .role(Role::Button)
-                            .aria_label(format!("Agent details: {}", task.title))
+                            .aria_label(tr!("Agent details: {title}", title = task.title))
                             .aria_expanded(open)
                             .group(group.clone())
                             .h(px(if classic { 28.5 } else { 28. }))
@@ -948,26 +945,28 @@ impl Shell {
                                         .gap_1()
                                         .when_some(worker, |d, worker| {
                                             d.child(
-                                                solid("rail-agent-open", "See details").on_click(
-                                                    cx.listener(move |this, _, window, cx| {
-                                                        this.open(worker, window, cx)
-                                                    }),
-                                                ),
+                                                solid("rail-agent-open", t("See details"))
+                                                    .on_click(cx.listener(
+                                                        move |this, _, window, cx| {
+                                                            this.open(worker, window, cx)
+                                                        },
+                                                    )),
                                             )
                                         })
                                         .when_some(worker.filter(|_| running), |d, worker| {
                                             d.child(
-                                                solid("rail-agent-cancel", "Cancel task").on_click(
-                                                    cx.listener(move |this, _, _, cx| {
-                                                        if let Some(view) =
-                                                            this.sessions.get(&worker)
-                                                        {
-                                                            view.update(cx, |v, cx| {
-                                                                v.stop_if_busy(cx)
-                                                            });
-                                                        }
-                                                    }),
-                                                ),
+                                                solid("rail-agent-cancel", t("Cancel task"))
+                                                    .on_click(cx.listener(
+                                                        move |this, _, _, cx| {
+                                                            if let Some(view) =
+                                                                this.sessions.get(&worker)
+                                                            {
+                                                                view.update(cx, |v, cx| {
+                                                                    v.stop_if_busy(cx)
+                                                                });
+                                                            }
+                                                        },
+                                                    )),
                                             )
                                         }),
                                 )

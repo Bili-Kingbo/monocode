@@ -419,9 +419,9 @@ impl Shell {
                     Err(error) => {
                         let prompt = window.prompt(
                             gpui::PromptLevel::Critical,
-                            "Cannot use this image",
+                            n!("Cannot use this image"),
                             Some(&error),
-                            &["OK"],
+                            &[n!("OK")],
                             cx,
                         );
                         cx.spawn(async move |_, _| {
@@ -459,7 +459,7 @@ impl Shell {
             .any(|t| is_equal_or_inside(&t.read(cx).cwd, &path))
         {
             self.finish_worktree_action(
-                Err("Close the terminals using this worktree first.".into()),
+                Err(t("Close the terminals using this worktree first.").into()),
                 cx,
             );
             return;
@@ -475,7 +475,7 @@ impl Shell {
             .any(|id| self.sessions.get(id).is_some_and(|v| v.read(cx).busy))
         {
             self.finish_worktree_action(
-                Err("Stop the running sessions using this worktree first.".into()),
+                Err(t("Stop the running sessions using this worktree first.").into()),
                 cx,
             );
             return;
@@ -490,16 +490,16 @@ impl Shell {
             if let Err(e)=result {let _=this.update(cx,|this,cx|this.finish_worktree_action(Err(e),cx));return;}
             let pending=match this.update_in(cx,|this,window,cx| {
                 // Recheck before deleting any conversations after the preflight worker.
-                if this.terminals.values().flatten().any(|t|is_equal_or_inside(&t.read(cx).cwd,&path))||ids.iter().any(|id|this.sessions.get(id).is_some_and(|s|s.read(cx).busy)) {return Err("This worktree is now in use. Close its terminals and stop its sessions first.".to_owned());}
+                if this.terminals.values().flatten().any(|t|is_equal_or_inside(&t.read(cx).cwd,&path))||ids.iter().any(|id|this.sessions.get(id).is_some_and(|s|s.read(cx).busy)) {return Err(t("This worktree is now in use. Close its terminals and stop its sessions first.").to_owned());}
                 if delete_sessions {for id in &ids{this.delete_session(*id,window,cx);}}
                 Ok((this.group_writes.take(),this.store.clone()))
             }) {Ok(Ok(v))=>v,Ok(Err(e))=>{let _=this.update(cx,|this,cx|this.finish_worktree_action(Err(e),cx));return;},Err(_)=>return};
             if let Some(task)=pending.0 {task.await;}
             let worker_cwd=cwd.clone();let worker_path=path.clone();let store=pending.1;
             let work=cx.background_executor().spawn(async move{
-                if delete_sessions {let store=locked(&store)?;let paths=store.session_worktrees()?;if store.sessions()?.iter().any(|s|is_equal_or_inside(paths.get(&s.id).and_then(|p|p.as_deref()).unwrap_or(&s.cwd),&worker_path)){return Err("Some sessions could not be deleted, so the worktree was kept.".into());}}
+                if delete_sessions {let store=locked(&store)?;let paths=store.session_worktrees()?;if store.sessions()?.iter().any(|s|is_equal_or_inside(paths.get(&s.id).and_then(|p|p.as_deref()).unwrap_or(&s.cwd),&worker_path)){return Err(t("Some sessions could not be deleted, so the worktree was kept.").into());}}
                 let snapshot=monocode_core::git::snapshot(Path::new(&worker_cwd))?;
-                let main=snapshot.worktrees.first().ok_or("No main working copy found")?;
+                let main=snapshot.worktrees.first().ok_or(t("No main working copy found"))?;
                 monocode_core::worktree_management::remove(Path::new(&main.path),Path::new(&worker_path))?;
                 locked(&store)?.detach_worktree(&worker_path,&main.path)
             });let result=work.await;
@@ -510,9 +510,9 @@ impl Shell {
     fn delete_from_settings(&mut self, id: i64, window: &mut Window, cx: &mut Context<Self>) {
         let prompt = window.prompt(
             gpui::PromptLevel::Warning,
-            "Delete this conversation permanently?",
-            Some("Its messages and saved settings will be removed."),
-            &["Delete", "Cancel"],
+            n!("Delete this conversation permanently?"),
+            Some(n!("Its messages and saved settings will be removed.")),
+            &[n!("Delete"), n!("Cancel")],
             cx,
         );
         cx.spawn(async move |this, cx| {

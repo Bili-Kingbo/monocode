@@ -378,7 +378,7 @@ impl Shell {
                 let chat = view.read(cx);
                 SessionInputs {
                     session_id: chat.summary.id.to_string(),
-                    title: chat.display_title().to_owned(),
+                    title: session_loading::shown(chat.display_title()),
                     provider: chat.summary.provider.clone(),
                     harness: Kind::from_id(&chat.summary.provider).label().to_owned(),
                     pending: chat.pending_notification_inputs(cx),
@@ -406,7 +406,7 @@ impl Shell {
             {
                 let summary = view.read(cx).summary.clone();
                 let body = if input.kind == approvals::InputKind::Approval {
-                    format!("Approve: {}", input.label)
+                    tr!("Approve: {label}", label = input.label)
                 } else {
                     input.label
                 };
@@ -480,7 +480,7 @@ impl Shell {
             let mono_visible = self.mono_active(cx) && self.notice_session_visible(id, cx);
             snapshots.push(SessionInputs {
                 session_id: id.to_string(),
-                title: chat.display_title().to_owned(),
+                title: session_loading::shown(chat.display_title()),
                 provider: chat.summary.provider.clone(),
                 harness: Kind::from_id(&chat.summary.provider).label().to_owned(),
                 pending: chat.pending_notification_inputs(cx),
@@ -643,14 +643,17 @@ impl Shell {
         }
         self.notification_state.sequence = self.notification_state.sequence.wrapping_add(1);
         let body = if body.trim().is_empty() && category == "agentFinished" {
-            format!("{} finished", Kind::from_id(&summary.provider).label())
+            tr!(
+                "{harness} finished",
+                harness = Kind::from_id(&summary.provider).label()
+            )
         } else {
             body.to_owned()
         };
         let receiver = platform::show(platform::Notification {
             tag: target.tag(self.notification_state.sequence),
             subtitle: if category == "reminders" {
-                "Session reminder".into()
+                t("Session reminder").into()
             } else {
                 summary.title.clone()
             },
@@ -929,7 +932,7 @@ impl Shell {
                 stack.child(errors::card(
                     "app-error",
                     message,
-                    icon_button("dismiss-error", "Dismiss error", "close")
+                    icon_button("dismiss-error", t("Dismiss error"), "close")
                         .debug_selector(|| "dismiss-error".into())
                         .on_click(cx.listener(|this, _, _, cx| {
                             this.error = None;
@@ -941,7 +944,7 @@ impl Shell {
                 stack.child(errors::card(
                     "mono-error",
                     message,
-                    icon_button("mono-error-close", "Dismiss Mono error", "close")
+                    icon_button("mono-error-close", t("Dismiss Mono error"), "close")
                         .debug_selector(|| "mono-error-close".into())
                         .on_click(cx.listener(move |_, _, _, cx| {
                             monos.update(cx, |monos, cx| monos.dismiss_error(cx));
@@ -1299,9 +1302,9 @@ impl Shell {
                     let prompt = this.update_in(cx, |_, window, cx| {
                         window.prompt(
                             gpui::PromptLevel::Warning,
-                            "Delete this conversation permanently?",
-                            Some("Its messages and saved settings will be removed."),
-                            &["Delete", "Cancel"],
+                            n!("Delete this conversation permanently?"),
+                            Some(n!("Its messages and saved settings will be removed.")),
+                            &[n!("Delete"), n!("Cancel")],
                             cx,
                         )
                     });
