@@ -161,7 +161,12 @@ impl InboxDocument {
         match row {
             Row::Image { url, alt } => {
                 let source = attachment(url, window, cx);
-                let label = if alt.trim().is_empty() { "Image" } else { alt }.to_string();
+                let label = if alt.trim().is_empty() {
+                    monocode_core::i18n::t("Image")
+                } else {
+                    alt
+                }
+                .to_string();
                 let url = url.clone();
                 let media = match source {
                     Some(Ok(image)) => img(image)

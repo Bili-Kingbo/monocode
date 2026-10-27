@@ -37,11 +37,11 @@ impl Accounts {
             .is_some_and(|s| !s.complete && s.error.is_none());
         let disabled = auth_running || complete || self.working;
         let label: SharedString = if running {
-            "Waiting for browser…".into()
+            t("Waiting for browser…").into()
         } else if complete {
-            "Signed in".into()
+            t("Signed in").into()
         } else {
-            format!("Sign in to {}", kind.label()).into()
+            tr!("Sign in to {provider}", provider = kind.label()).into()
         };
         let click_id = id.to_owned();
         let keyboard_id = id.to_owned();
@@ -51,9 +51,9 @@ impl Accounts {
             .id("footer-provider-signin-panel")
             .role(Role::Status)
             .aria_label(if complete {
-                "Signed in"
+                t("Signed in")
             } else {
-                "Authentication required"
+                t("Authentication required")
             })
             .min_h(px(272.))
             .px(px(20.))
@@ -84,9 +84,9 @@ impl Accounts {
                     .font_weight(FontWeight::MEDIUM)
                     .text_center()
                     .child(if complete {
-                        format!("Signed in to {}", kind.label())
+                        tr!("Signed in to {provider}", provider = kind.label())
                     } else {
-                        "Authentication required".into()
+                        t("Authentication required").into()
                     }),
             )
             .child(
@@ -98,9 +98,12 @@ impl Accounts {
                     .text_color(content(0.45))
                     .text_center()
                     .child(if complete {
-                        "You can retry your last message now.".into()
+                        t("You can retry your last message now.").into()
                     } else {
-                        format!("Sign in to continue using {}.", kind.label())
+                        tr!(
+                            "Sign in to continue using {provider}.",
+                            provider = kind.label()
+                        )
                     }),
             )
             .child(

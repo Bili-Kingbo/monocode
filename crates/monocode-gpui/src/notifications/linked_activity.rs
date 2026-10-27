@@ -2,6 +2,7 @@
 use super::github_activity::Card;
 use crate::theme::*;
 use gpui::{Context, EventEmitter, Render, Role, Window, div, prelude::*, px};
+use monocode_core::{i18n::t, tr};
 #[derive(Clone)]
 pub(crate) enum LinkedActivityEvent {
     Acknowledge(i64),
@@ -68,27 +69,27 @@ impl Render for LinkedActivity {
         let session = card.session;
         let number = card.item.number;
         let kind = if card.item.kind == "pr" {
-            "Pull request"
+            t("Pull request")
         } else {
-            "Issue"
+            t("Issue")
         };
         let latest = card.entries.first();
         let discussion = latest
             .is_some_and(|e| matches!(e.kind.as_str(), "comment" | "review" | "review_comment"));
         let commit = latest.is_some_and(|e| e.kind == "commit");
         let agent_label = if discussion {
-            "Address with agent"
+            t("Address with agent")
         } else if commit {
-            "Review with agent"
+            t("Review with agent")
         } else {
-            "Continue with agent"
+            t("Continue with agent")
         };
         let open_label = if commit {
-            "Open commit"
+            t("Open commit")
         } else if card.item.kind == "pr" {
-            "Open PR"
+            t("Open PR")
         } else {
-            "Open issue"
+            t("Open issue")
         };
         let item_url = card.item.url.clone();
         let open_url = latest
@@ -118,13 +119,17 @@ impl Render for LinkedActivity {
                     .flex_1()
                     .text_size(px(12.))
                     .font_weight(gpui::FontWeight::SEMIBOLD)
-                    .child("GitHub activity"),
+                    .child(t("GitHub activity")),
             )
             .child(
                 div()
                     .id("dismiss-linked-activity")
                     .role(Role::Button)
-                    .aria_label(format!("Dismiss updates for {kind} {number}"))
+                    .aria_label(tr!(
+                        "Dismiss updates for {kind} {number}",
+                        kind = kind,
+                        number = number
+                    ))
                     .cursor_pointer()
                     .size(px(24.))
                     .flex()
@@ -168,29 +173,32 @@ impl Render for LinkedActivity {
                         .mt(px(6.))
                         .text_size(px(11.))
                         .text_color(content(0.55))
-                        .child(card.summary()),
+                        .child(card.shown_summary()),
                 ),
         );
         for (ix, entry) in card.entries.iter().take(3).enumerate() {
             let url = entry.url.clone();
             let label = match entry.kind.as_str() {
-                "commit" => format!("Commit {}", entry.id.chars().take(7).collect::<String>()),
-                "review" => "Review".into(),
-                "review_comment" => "Review comment".into(),
-                _ => "Comment".into(),
+                "commit" => tr!(
+                    "Commit {sha}",
+                    sha = entry.id.chars().take(7).collect::<String>()
+                ),
+                "review" => t("Review").into(),
+                "review_comment" => t("Review comment").into(),
+                _ => t("Comment").into(),
             };
             let relative = chrono::DateTime::parse_from_rfc3339(&entry.created_at)
                 .ok()
                 .map(|at| {
                     let minutes = (chrono::Utc::now().timestamp() - at.timestamp()).max(0) / 60;
                     if minutes < 1 {
-                        "just now".into()
+                        t("just now").into()
                     } else if minutes < 60 {
-                        format!("{minutes}m ago")
+                        tr!("{count}m ago", count = minutes)
                     } else if minutes < 1440 {
-                        format!("{}h ago", minutes / 60)
+                        tr!("{count}h ago", count = minutes / 60)
                     } else {
-                        format!("{}d ago", minutes / 1440)
+                        tr!("{count}d ago", count = minutes / 1440)
                     }
                 })
                 .unwrap_or_default();
@@ -232,7 +240,7 @@ impl Render for LinkedActivity {
                             .line_height(px(19.5))
                             .text_color(content(0.65))
                             .child(if entry.text.is_empty() {
-                                "No message".to_owned()
+                                t("No message").to_owned()
                             } else {
                                 entry.text.clone()
                             }),
@@ -251,7 +259,10 @@ impl Render for LinkedActivity {
                         div()
                             .text_size(px(11.))
                             .text_color(content(0.75))
-                            .child(format!("{terminal}   Clean up this session")),
+                            .child(tr!(
+                                "{terminal}   Clean up this session",
+                                terminal = terminal
+                            )),
                     )
                     .child(
                         div()
@@ -278,9 +289,9 @@ impl Render for LinkedActivity {
                                         ))
                                     })
                                     .child(if self.cleanup == Some(Cleanup::Archive) {
-                                        "Archiving…"
+                                        t("Archiving…")
                                     } else {
-                                        "Archive session"
+                                        t("Archive session")
                                     }),
                             )
                             .child(
@@ -303,9 +314,9 @@ impl Render for LinkedActivity {
                                         ))
                                     })
                                     .child(if self.cleanup == Some(Cleanup::Delete) {
-                                        "Deleting…"
+                                        t("Deleting…")
                                     } else {
-                                        "Delete…"
+                                        t("Delete…")
                                     }),
                             ),
                     ),
@@ -373,7 +384,11 @@ impl Render for LinkedActivity {
         super::surface::glass_frame()
             .id("linked-work-item-update-notice")
             .role(Role::Status)
-            .aria_label(format!("New activity on {kind} {number}"))
+            .aria_label(tr!(
+                "New activity on {kind} {number}",
+                kind = kind,
+                number = number
+            ))
             .w(px(320.))
             .child(body)
             .into_any_element()

@@ -5,6 +5,7 @@ use crate::{
     theme::*,
 };
 use gpui::{AnyElement, App, Div, FontWeight, MouseButton, Role, SharedString, div, px};
+use monocode_core::i18n::tl;
 fn account_button(
     id: SharedString,
     label: SharedString,
@@ -42,8 +43,8 @@ impl Accounts {
             return div()
                 .child(back_header(
                     "cancel-account-edit",
-                    "Back to accounts",
-                    format!("Add {} account", editor.kind.label()),
+                    t("Back to accounts"),
+                    tr!("Add {provider} account", provider = editor.kind.label()),
                     move |window, cx| back(&(), window, cx),
                 ))
                 .child(
@@ -53,9 +54,9 @@ impl Accounts {
                         .text_size(px(10.))
                         .line_height(px(16.))
                         .text_color(content(0.4))
-                        .child(
+                        .child(t(
                             "Give this account a local name, then finish sign-in in your browser.",
-                        ),
+                        )),
                 )
                 .child(
                     div()
@@ -63,7 +64,7 @@ impl Accounts {
                         .text_size(px(10.))
                         .font_weight(FontWeight::MEDIUM)
                         .text_color(content(0.55))
-                        .child("Account name"),
+                        .child(t("Account name")),
                 )
                 .child(
                     div()
@@ -84,7 +85,7 @@ impl Accounts {
                 .child(
                     primary_button(
                         "save-account-edit",
-                        "Sign in and add account",
+                        t("Sign in and add account"),
                         self.working || editor.input.read(cx).content.trim().is_empty(),
                     )
                     .mt_3()
@@ -107,9 +108,9 @@ impl Accounts {
                         ))
                     })
                     .child(if self.working {
-                        "Waiting for browser…"
+                        t("Waiting for browser…")
                     } else {
-                        "Sign in and add account"
+                        t("Sign in and add account")
                     })
                     .on_click(cx.listener(|this, _, _, cx| this.submit_editor(cx))),
                 )
@@ -154,7 +155,7 @@ impl Accounts {
                             .child(editor.input.clone()),
                     )
                     .child(
-                        secondary_button("cancel-account-edit", "Cancel", false, self.working)
+                        secondary_button("cancel-account-edit", t("Cancel"), false, self.working)
                             .h_6()
                             .border_0()
                             .px(px(10.))
@@ -162,7 +163,7 @@ impl Accounts {
                             .bg(content(0.05))
                             .text_size(px(11.))
                             .text_color(content(0.45))
-                            .child("Cancel")
+                            .child(t("Cancel"))
                             .on_click(cx.listener(|this, _, window, cx| {
                                 if !this.working {
                                     if let Some(focus) =
@@ -180,9 +181,9 @@ impl Accounts {
                         primary_button(
                             "save-account-edit",
                             if adding {
-                                "Sign in and add"
+                                t("Sign in and add")
                             } else {
-                                "Save account"
+                                t("Save account")
                             },
                             self.working || editor.input.read(cx).content.trim().is_empty(),
                         )
@@ -206,12 +207,12 @@ impl Accounts {
                         })
                         .child(if adding {
                             if self.working {
-                                "Waiting for browser…"
+                                t("Waiting for browser…")
                             } else {
-                                "Sign in and add"
+                                t("Sign in and add")
                             }
                         } else {
-                            "Save"
+                            t("Save")
                         })
                         .on_click(cx.listener(|this, _, _, cx| this.submit_editor(cx))),
                     ),
@@ -265,10 +266,11 @@ impl Accounts {
                                         .mt(px(2.))
                                         .text_size(px(11.))
                                         .text_color(content(0.4))
-                                        .child(format!(
-                                            "{count} {}",
-                                            if count == 1 { "account" } else { "accounts" }
-                                        )),
+                                        .child(if count == 1 {
+                                            tr!("{count} account", count = count)
+                                        } else {
+                                            tr!("{count} accounts", count = count)
+                                        }),
                                 ),
                         ),
                 )
@@ -276,12 +278,12 @@ impl Accounts {
                     d.child(
                         secondary_button(
                             SharedString::from(format!("add-account-{}", kind.id())),
-                            "Add account",
+                            t("Add account"),
                             false,
                             self.working,
                         )
                         .child(icon("plus", 14.))
-                        .child("Add account")
+                        .child(t("Add account"))
                         .on_click(cx.listener(
                             move |this, _, window, cx| {
                                 this.start_edit(kind, None, Surface::Settings, window, cx)
@@ -312,9 +314,9 @@ impl Accounts {
                     .and_then(|i| i.email.clone().or(i.name.clone()))
                     .unwrap_or_else(|| {
                         if account.is_default() {
-                            "Provider CLI profile".into()
+                            t("Provider CLI profile").into()
                         } else {
-                            "Isolated profile".into()
+                            t("Isolated profile").into()
                         }
                     });
                 let masked = self.mask_emails
@@ -336,13 +338,13 @@ impl Accounts {
                             .mr_1()
                             .text_size(px(10.))
                             .text_color(content(0.3))
-                            .child("DEFAULT"),
+                            .child(t("DEFAULT")),
                     );
                 }
                 controls = controls.child(
                     account_button(
                         SharedString::from(format!("rename-{id}-{}", kind.id())),
-                        SharedString::from(format!("Rename {}", account.label)),
+                        SharedString::from(tr!("Rename {account}", account = account.label)),
                         "pencil-edit-02",
                     )
                     .size_7()
@@ -361,7 +363,7 @@ impl Accounts {
                     controls = controls.child(
                         account_button(
                             SharedString::from(format!("remove-{id}-{}", kind.id())),
-                            SharedString::from(format!("Remove {}", account.label)),
+                            SharedString::from(tr!("Remove {account}", account = account.label)),
                             "delete-02",
                         )
                         .size_7()
@@ -425,9 +427,9 @@ impl Accounts {
                                                         .is_some(),
                                                 |d| {
                                                     d.role(Role::Button).aria_label(if masked {
-                                                        "Reveal email"
+                                                        t("Reveal email")
                                                     } else {
-                                                        "Hide email"
+                                                        t("Hide email")
                                                     })
                                                 },
                                             )
@@ -559,7 +561,11 @@ impl Accounts {
                             kind.id()
                         )))
                         .role(Role::Button)
-                        .aria_label(if masked { "Reveal email" } else { "Hide email" })
+                        .aria_label(if masked {
+                            t("Reveal email")
+                        } else {
+                            t("Hide email")
+                        })
                         .min_w_0()
                         .relative()
                         .truncate()
@@ -594,7 +600,7 @@ impl Accounts {
         let mut rows = div()
             .id("provider-account-choices")
             .role(Role::Group)
-            .aria_label(format!("{} accounts", kind.label()))
+            .aria_label(tr!("{provider} accounts", provider = kind.label()))
             .mt_2()
             .flex()
             .flex_col()
@@ -726,8 +732,8 @@ impl Accounts {
             .on_key_down(cx.listener(Self::picker_key))
             .child(back_header(
                 "back-to-usage",
-                "Back to usage",
-                format!("{} accounts", kind.label()),
+                t("Back to usage"),
+                tr!("{provider} accounts", provider = kind.label()),
                 on_back,
             ))
             .child(
@@ -737,16 +743,18 @@ impl Accounts {
                     .text_size(px(10.))
                     .line_height(px(16.))
                     .text_color(content(0.4))
-                    .child("Choosing an account moves the current conversation to it."),
+                    .child(t(
+                        "Choosing an account moves the current conversation to it.",
+                    )),
             )
             .child(rows)
             .when(accounts::supports_profiles(kind), |d| {
                 d.child(
-                    list_row("footer-add-account", "Add account", 0.55)
+                    list_row("footer-add-account", t("Add account"), 0.55)
                         .mt_2()
                         .when(self.working, |d| d.opacity(0.4))
                         .child(icon("plus", 14.))
-                        .child("Add account")
+                        .child(t("Add account"))
                         .on_click(cx.listener(move |this, _, window, cx| {
                             if !this.working {
                                 this.start_edit(kind, None, Surface::Footer, window, cx)
@@ -755,9 +763,9 @@ impl Accounts {
                 )
             })
             .child(
-                list_row("manage-provider-accounts", "Manage accounts", 0.45)
+                list_row("manage-provider-accounts", t("Manage accounts"), 0.45)
                     .mt(px(2.))
-                    .child("Manage accounts…")
+                    .child(t("Manage accounts…"))
                     .on_click(cx.listener(|_, _, _, cx| cx.emit(AccountEvent::Manage))),
             )
             .into_any_element()
@@ -805,7 +813,7 @@ fn organization_tag(identity: &accounts::Identity) -> Option<String> {
     if name.is_empty() {
         None
     } else if name.ends_with("'s Organization") || name.ends_with("’s Organization") {
-        Some("Personal".into())
+        Some(t("Personal").into())
     } else {
         Some(name.into())
     }
@@ -857,9 +865,9 @@ pub(crate) fn status_label(status: &Status) -> Div {
                         d.flex_shrink_0()
                     }
                 })
-                .child(status.label.clone()),
+                .child(tl(&status.label).to_owned()),
         )
-        .children(status.detail.clone().map(|detail| {
+        .children(status.shown_detail.clone().map(|detail| {
             div()
                 .min_w_0()
                 .truncate()
@@ -876,7 +884,7 @@ fn meter(w: &usage::Window, now: i64, show_remaining: bool) -> Div {
     let full = used >= 100. && w.resets_at.is_none_or(|at| at > now);
     let reset = match w.resets_at {
         None => w.label(),
-        Some(at) if at <= now => "reset due".into(),
+        Some(at) if at <= now => t("reset due").into(),
         Some(at) => usage::duration(at - now),
     };
     div()
@@ -909,9 +917,9 @@ fn meter(w: &usage::Window, now: i64, show_remaining: bool) -> Div {
                             }
                         })
                         .child(if show_remaining {
-                            format!("{remaining:.0}% left")
+                            tr!("{percent}% left", percent = format!("{remaining:.0}"))
                         } else if full {
-                            "Full".into()
+                            t("Full").into()
                         } else {
                             format!("{used:.0}%")
                         }),
@@ -947,19 +955,15 @@ impl Render for Accounts {
         let failed = signin.error.is_some();
         let action = signin.action;
         let title = if complete {
-            format!(
-                "Signed {} {}",
-                if action == AuthAction::SignIn {
-                    "in to"
-                } else {
-                    "out of"
-                },
-                kind.label()
-            )
+            if action == AuthAction::SignIn {
+                tr!("Signed in to {provider}", provider = kind.label())
+            } else {
+                tr!("Signed out of {provider}", provider = kind.label())
+            }
         } else if failed {
-            "Authentication required".into()
+            t("Authentication required").into()
         } else {
-            "Waiting for browser…".into()
+            t("Waiting for browser…").into()
         };
         let error = signin.error.clone();
         let retry_id = signin.profile.id.clone();
@@ -987,7 +991,7 @@ impl Render for Accounts {
                 div()
                     .id("provider-signin-panel")
                     .role(Role::Dialog)
-                    .aria_label("Authentication required")
+                    .aria_label(t("Authentication required"))
                     .track_focus(&self.dialog_focus)
                     .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, window, cx| {
                         if event.keystroke.key == "escape" {
@@ -1006,7 +1010,7 @@ impl Render for Accounts {
                     .flex_col()
                     .items_center()
                     .child(div().w_full().flex().justify_end().child(
-                        icon_button("close-provider-signin", "Close sign-in", "close").on_click(
+                        icon_button("close-provider-signin", t("Close sign-in"), "close").on_click(
                             cx.listener(|this, _, window, cx| {
                                 this.close_auth(window, cx);
                             }),
@@ -1035,31 +1039,31 @@ impl Render for Accounts {
                             .text_size(px(11.))
                             .text_color(content(0.45))
                             .child(if complete {
-                                "You can retry your last message now."
+                                t("You can retry your last message now.")
                             } else {
-                                "The provider CLI opens its browser to complete sign-in."
+                                t("The provider CLI opens its browser to complete sign-in.")
                             }),
                     )
                     .child(
                         secondary_button(
                             "provider-auth-action",
                             if complete {
-                                "Continue"
+                                t("Continue")
                             } else if failed {
-                                "Retry sign-in"
+                                t("Retry sign-in")
                             } else {
-                                "Waiting for browser"
+                                t("Waiting for browser")
                             },
                             true,
                             (!complete && !failed) || self.working,
                         )
                         .mt_4()
                         .child(if complete {
-                            "Continue"
+                            t("Continue")
                         } else if failed {
-                            "Retry sign-in"
+                            t("Retry sign-in")
                         } else {
-                            "Waiting for browser…"
+                            t("Waiting for browser…")
                         })
                         .on_click(cx.listener(
                             move |this, _, window, cx| {

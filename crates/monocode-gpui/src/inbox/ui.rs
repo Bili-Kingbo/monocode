@@ -4,6 +4,10 @@ use gpui::{
     AnyElement, ClipboardItem, CursorStyle, Div, FontWeight, Hsla, MouseButton, Pixels, Role,
     SharedString, Stateful, Window, canvas, div, list, prelude::*, px, rgb,
 };
+use monocode_core::{
+    i18n::{t, tl},
+    n, tr,
+};
 
 fn action(id: impl Into<SharedString>, label: impl Into<SharedString>) -> Stateful<Div> {
     plain_action(id, label).hover(|s| s.bg(content(0.07)).text_color(content(1.)))
@@ -89,31 +93,52 @@ pub(crate) fn relative_time(iso: &str) -> String {
         value = ((value / step) + 0.5).floor();
     }
     let amount = value as i64;
+    let count = amount.unsigned_abs();
     match (unit, amount) {
-        ("second", 0) => "now".into(),
-        ("day", -1) => "yesterday".into(),
-        ("day", 1) => "tomorrow".into(),
-        ("week" | "month" | "year", -1) => format!("last {unit}"),
-        ("week" | "month" | "year", 1) => format!("next {unit}"),
-        _ => {
-            let count = amount.unsigned_abs();
-            let label = format!("{count} {unit}{}", if count == 1 { "" } else { "s" });
-            if amount > 0 {
-                format!("in {label}")
-            } else {
-                format!("{label} ago")
-            }
-        }
+        ("second", 0) => t("now").into(),
+        ("day", -1) => t("yesterday").into(),
+        ("day", 1) => t("tomorrow").into(),
+        ("week", -1) => t("last week").into(),
+        ("month", -1) => t("last month").into(),
+        ("year", -1) => t("last year").into(),
+        ("week", 1) => t("next week").into(),
+        ("month", 1) => t("next month").into(),
+        ("year", 1) => t("next year").into(),
+        // Only seconds, minutes and hours reach here with a count of one.
+        _ if amount > 0 => match (unit, count == 1) {
+            ("second", true) => tr!("in {count} second", count = count),
+            ("second", false) => tr!("in {count} seconds", count = count),
+            ("minute", true) => tr!("in {count} minute", count = count),
+            ("minute", false) => tr!("in {count} minutes", count = count),
+            ("hour", true) => tr!("in {count} hour", count = count),
+            ("hour", false) => tr!("in {count} hours", count = count),
+            ("day", _) => tr!("in {count} days", count = count),
+            ("week", _) => tr!("in {count} weeks", count = count),
+            ("month", _) => tr!("in {count} months", count = count),
+            _ => tr!("in {count} years", count = count),
+        },
+        _ => match (unit, count == 1) {
+            ("second", true) => tr!("{count} second ago", count = count),
+            ("second", false) => tr!("{count} seconds ago", count = count),
+            ("minute", true) => tr!("{count} minute ago", count = count),
+            ("minute", false) => tr!("{count} minutes ago", count = count),
+            ("hour", true) => tr!("{count} hour ago", count = count),
+            ("hour", false) => tr!("{count} hours ago", count = count),
+            ("day", _) => tr!("{count} days ago", count = count),
+            ("week", _) => tr!("{count} weeks ago", count = count),
+            ("month", _) => tr!("{count} months ago", count = count),
+            _ => tr!("{count} years ago", count = count),
+        },
     }
 }
 fn review_label(state: &str) -> String {
     match state.trim().to_uppercase().as_str() {
-        "APPROVED" => "Approved".into(),
-        "CHANGES_REQUESTED" => "Changes requested".into(),
-        "COMMENTED" => "Commented".into(),
-        "DISMISSED" => "Dismissed".into(),
-        "PENDING" => "Pending".into(),
-        "REVIEW_REQUIRED" => "Review required".into(),
+        "APPROVED" => t("Approved").into(),
+        "CHANGES_REQUESTED" => t("Changes requested").into(),
+        "COMMENTED" => t("Commented").into(),
+        "DISMISSED" => t("Dismissed").into(),
+        "PENDING" => t("Pending").into(),
+        "REVIEW_REQUIRED" => t("Review required").into(),
         _ => state.replace('_', " ").to_lowercase(),
     }
 }
@@ -230,6 +255,15 @@ fn status_color(item: &Item) -> Hsla {
         _ => rgb(0x4ade80).into(),
     }
 }
+/// `Item::status`, which stays English for the comparisons above, as shown.
+fn status_text(item: &Item) -> &'static str {
+    match item.status() {
+        "Merged" => t("Merged"),
+        "Closed" => t("Closed"),
+        "Draft" => t("Draft"),
+        _ => t("Open"),
+    }
+}
 fn status_icon(item: &Item) -> &'static str {
     if item.kind == "pr" {
         "git-pull-request"
@@ -242,16 +276,16 @@ fn status_icon(item: &Item) -> &'static str {
 fn attention_label(reason: &str) -> String {
     let reason = reason.trim().to_lowercase();
     match reason.as_str() {
-        "assigned" => "Assigned to you",
-        "mentioned" | "directly_addressed" => "Mentioned you",
-        "review_requested" => "Review requested",
-        "review_submitted" => "Review submitted",
-        "approval_required" => "Approval required",
-        "build_failed" => "Pipeline failed",
-        "unmergeable" => "Cannot be merged",
-        "merge_train_removed" => "Removed from merge train",
-        "member_access_requested" => "Access requested",
-        "marked" => "Added to your to-dos",
+        "assigned" => t("Assigned to you"),
+        "mentioned" | "directly_addressed" => t("Mentioned you"),
+        "review_requested" => t("Review requested"),
+        "review_submitted" => t("Review submitted"),
+        "approval_required" => t("Approval required"),
+        "build_failed" => t("Pipeline failed"),
+        "unmergeable" => t("Cannot be merged"),
+        "merge_train_removed" => t("Removed from merge train"),
+        "member_access_requested" => t("Access requested"),
+        "marked" => t("Added to your to-dos"),
         _ => {
             return reason
                 .split('_')
@@ -383,7 +417,7 @@ impl Inbox {
                 div()
                     .id("inbox-add-connection")
                     .role(Role::Button)
-                    .aria_label("Add connection")
+                    .aria_label(t("Add connection"))
                     .relative()
                     .h(px(24.))
                     .flex_1()
@@ -400,7 +434,7 @@ impl Inbox {
                     .child(self.connection_anchor.probe())
                     .child(icon("plus", 14.))
                     .when(connected.len() < 2, |d| {
-                        d.child(div().truncate().child("Add connection"))
+                        d.child(div().truncate().child(t("Add connection")))
                     })
                     .on_click(cx.listener(|this, _, _, cx| {
                         this.connections_open = !this.connections_open;
@@ -430,7 +464,7 @@ impl Inbox {
                     .child(self.search.clone()),
             )
             .child(
-                icon_button("inbox-filter", "Filter inbox", "filter")
+                icon_button("inbox-filter", t("Filter inbox"), "filter")
                     .relative()
                     .child(self.filter_anchor.probe())
                     .when(self.filters_open || self.filters_active(), |d| {
@@ -443,8 +477,8 @@ impl Inbox {
                     })),
             )
             .child(
-                icon_button("inbox-read-all", "Mark all as read", "check-2").on_click(cx.listener(
-                    |this, _, _, cx| {
+                icon_button("inbox-read-all", t("Mark all as read"), "check-2").on_click(
+                    cx.listener(|this, _, _, cx| {
                         for item in &this.snapshot.items {
                             if item.provider == this.state.source {
                                 this.state.seen.mark(item);
@@ -452,13 +486,13 @@ impl Inbox {
                         }
                         this.save();
                         cx.notify();
-                    },
-                )),
+                    }),
+                ),
             )
             .child(
                 icon_button(
                     "inbox-refresh",
-                    "Refresh",
+                    t("Refresh"),
                     if self.loading { "loader" } else { "refresh-cw" },
                 )
                 .on_click(cx.listener(|this, _, _, cx| {
@@ -467,19 +501,22 @@ impl Inbox {
                 })),
             );
         let empty = if connected.is_empty() && !self.loading {
-            "Add a connection to start using the Inbox.".into()
+            t("Add a connection to start using the Inbox.").into()
         } else if self.loading && self.snapshot.items.is_empty() {
-            "Loading inbox…".into()
+            t("Loading inbox…").into()
         } else if let Some(error) = self.snapshot.errors.get(&self.state.source) {
             error.clone()
         } else if self.projects.is_empty() && !model::is_tracker(&self.state.source) {
-            "Open a project to fill the inbox".into()
+            t("Open a project to fill the inbox").into()
         } else if self.filters_active() || !self.search.read(cx).content.is_empty() {
-            "No items match these filters".into()
+            t("No items match these filters").into()
         } else if model::is_tracker(&self.state.source) {
-            format!("No {} issues", model::provider_label(&self.state.source))
+            tr!(
+                "No {provider} issues",
+                provider = model::provider_label(&self.state.source)
+            )
         } else {
-            "No matching issues or pull requests".into()
+            t("No matching issues or pull requests").into()
         };
         let rows = items
             .into_iter()
@@ -491,12 +528,12 @@ impl Inbox {
                 let tracker = model::is_tracker(&item.provider);
                 let kind = if item.kind == "pr" {
                     if item.provider == "gitlab" {
-                        "Merge request"
+                        t("Merge request")
                     } else {
-                        "Pull request"
+                        t("Pull request")
                     }
                 } else {
-                    "Issue"
+                    t("Issue")
                 };
                 let source = if tracker && !item.team_name.is_empty() {
                     item.team_name.clone()
@@ -614,7 +651,7 @@ impl Inbox {
                 div()
                     .id("inbox-list-scroll")
                     .role(Role::ListBox)
-                    .aria_label("Inbox items")
+                    .aria_label(t("Inbox items"))
                     .min_h_0()
                     .flex_1()
                     .overflow_y_scroll()
@@ -629,7 +666,7 @@ impl Inbox {
                 div()
                     .id("inbox-list-resize")
                     .role(Role::Splitter)
-                    .aria_label("Resize inbox list")
+                    .aria_label(t("Resize inbox list"))
                     .absolute()
                     .right(px(-3.))
                     .top_0()
@@ -674,7 +711,7 @@ impl Inbox {
                 .justify_center()
                 .gap(px(12.))
                 .child(icon("inbox", 24.).text_color(content(0.3)))
-                .child(message("Select an inbox item").text_size(px(13.)))
+                .child(message(t("Select an inbox item")).text_size(px(13.)))
                 .into_any_element();
         };
         let is_pr = item.kind == "pr";
@@ -730,12 +767,12 @@ impl Inbox {
                             .child(provider_mark(&item.provider))
                             .child(if is_pr {
                                 if item.provider == "gitlab" {
-                                    "Merge request"
+                                    t("Merge request")
                                 } else {
-                                    "Pull request"
+                                    t("Pull request")
                                 }
                             } else {
-                                "Issue"
+                                t("Issue")
                             })
                             .child(item.reference())
                             .child(
@@ -748,7 +785,7 @@ impl Inbox {
                                         icon(status_icon(&item), 14.)
                                             .text_color(status_color(&item)),
                                     )
-                                    .child(item.status()),
+                                    .child(status_text(&item)),
                             )
                             .when(!item.attention_reason.is_empty(), |d| {
                                 d.child(
@@ -811,15 +848,19 @@ impl Inbox {
                                         item.provider.as_str(),
                                         "github" | "gitlab" | "azuredevops"
                                     ),
-                                |d| d.child("·").child("Unassigned"),
+                                |d| d.child("·").child(t("Unassigned")),
                             )
                             .when(!item.created_at.is_empty(), |d| {
-                                d.child("·")
-                                    .child(format!("Created {}", relative_time(&item.created_at)))
+                                d.child("·").child(tr!(
+                                    "Created {time}",
+                                    time = relative_time(&item.created_at)
+                                ))
                             })
                             .when(!item.updated_at.is_empty(), |d| {
-                                d.child("·")
-                                    .child(format!("Updated {}", relative_time(&item.updated_at)))
+                                d.child("·").child(tr!(
+                                    "Updated {time}",
+                                    time = relative_time(&item.updated_at)
+                                ))
                             })
                             .when(!base_ref.is_empty() && !head_ref.is_empty(), |d| {
                                 let branch = head_ref.to_owned();
@@ -839,7 +880,7 @@ impl Inbox {
                                         .child(
                                             icon_button(
                                                 "inbox-copy-branch",
-                                                "Copy branch name",
+                                                t("Copy branch name"),
                                                 "response-copy",
                                             )
                                             .size(px(18.))
@@ -870,7 +911,7 @@ impl Inbox {
                                     div()
                                         .text_size(px(11.))
                                         .text_color(content(0.45))
-                                        .child("Related threads"),
+                                        .child(t("Related threads")),
                                 )
                                 .children(self.related_sessions(&item).into_iter().map(
                                     |session| {
@@ -900,7 +941,7 @@ impl Inbox {
                             .gap(px(8.))
                             .when(!is_pr, |d| {
                                 d.child(
-                                    action("inbox-send-agent", "Send to agent")
+                                    action("inbox-send-agent", t("Send to agent"))
                                         .px(px(12.))
                                         .bg(content(1.))
                                         .text_color(shell_fill())
@@ -941,11 +982,17 @@ impl Inbox {
                             .child(
                                 icon_action(
                                     "inbox-open-external",
-                                    &format!(
-                                        "{} {}",
-                                        if is_pr { "Review on" } else { "Open in" },
-                                        model::provider_label(&item.provider)
-                                    ),
+                                    &if is_pr {
+                                        tr!(
+                                            "Review on {provider}",
+                                            provider = model::provider_label(&item.provider)
+                                        )
+                                    } else {
+                                        tr!(
+                                            "Open in {provider}",
+                                            provider = model::provider_label(&item.provider)
+                                        )
+                                    },
                                     "external-link",
                                 )
                                 .when(item.url.is_empty(), |d| d.opacity(0.4))
@@ -964,23 +1011,23 @@ impl Inbox {
                             div()
                                 .id("inbox-pr-tabs")
                                 .role(Role::TabList)
-                                .aria_label("Pull request details")
+                                .aria_label(t("Pull request details"))
                                 .h(px(36.))
                                 .flex()
                                 .items_stretch()
                                 .gap(px(16.))
                                 .children(
                                     [
-                                        (Tab::Summary, "Summary"),
-                                        (Tab::Code, "Code"),
-                                        (Tab::Checks, "Checks"),
+                                        (Tab::Summary, n!("Summary")),
+                                        (Tab::Code, n!("Code")),
+                                        (Tab::Checks, n!("Checks")),
                                     ]
                                     .into_iter()
                                     .filter(|(tab, _)| {
                                         *tab != Tab::Checks || item.provider == "github"
                                     })
                                     .map(|(tab, label)| {
-                                        plain_action(format!("inbox-tab-{label}"), label)
+                                        plain_action(format!("inbox-tab-{label}"), tl(label))
                                             .role(Role::Tab)
                                             .h_full()
                                             .px_0()
@@ -1046,9 +1093,9 @@ impl Inbox {
         let open = item.state.eq_ignore_ascii_case("open");
         let selected = self.merge_action.clone();
         let merge_label = match selected.as_str() {
-            "squash" => "Squash and merge",
-            "rebase" => "Rebase and merge",
-            _ => "Merge pull request",
+            "squash" => t("Squash and merge"),
+            "rebase" => t("Rebase and merge"),
+            _ => t("Merge pull request"),
         };
         div()
             .flex()
@@ -1092,7 +1139,7 @@ impl Inbox {
                             div()
                                 .id("inbox-merge-options")
                                 .role(Role::Button)
-                                .aria_label("Merge options")
+                                .aria_label(t("Merge options"))
                                 .h_full()
                                 .w(px(28.))
                                 .flex()
@@ -1113,13 +1160,13 @@ impl Inbox {
             })
             .children(
                 [
-                    (open && item.draft, "ready", "Ready for review"),
-                    (open && !item.draft, "draft", "Convert to draft"),
-                    (open, "close", "Close pull request"),
+                    (open && item.draft, "ready", t("Ready for review")),
+                    (open && !item.draft, "draft", t("Convert to draft")),
+                    (open, "close", t("Close pull request")),
                     (
                         item.state.eq_ignore_ascii_case("closed"),
                         "reopen",
-                        "Reopen pull request",
+                        t("Reopen pull request"),
                     ),
                 ]
                 .into_iter()
@@ -1259,7 +1306,7 @@ impl Inbox {
             })
             .when(comment.resolved, |d| {
                 d.child("·")
-                    .child(div().text_color(rgb(0x4ade80)).child("Resolved"))
+                    .child(div().text_color(rgb(0x4ade80)).child(t("Resolved")))
             })
             .when(!comment.created_at.is_empty(), |d| {
                 d.child("·").child(
@@ -1283,7 +1330,7 @@ impl Inbox {
             .when(!reply_id.is_empty(), |d| {
                 let name = author.to_string();
                 d.child("·").child(
-                    action(format!("inbox-reply-{}", comment.id), "Reply")
+                    action(format!("inbox-reply-{}", comment.id), t("Reply"))
                         .h_auto()
                         .px_0()
                         .text_color(content(0.5))
@@ -1334,7 +1381,11 @@ impl Inbox {
                             d.child(
                                 action(
                                     format!("inbox-expand-comment-{}", comment.id),
-                                    if clamped { "Show more" } else { "Show less" },
+                                    if clamped {
+                                        t("Show more")
+                                    } else {
+                                        t("Show less")
+                                    },
                                 )
                                 .mt(px(6.))
                                 .h_auto()
@@ -1524,10 +1575,10 @@ impl Inbox {
                 };
                 let body = if event {
                     let verb = match state.as_str() {
-                        "APPROVED" => "approved",
-                        "CHANGES_REQUESTED" => "requested changes",
-                        "DISMISSED" => "had a review dismissed",
-                        _ => "reviewed",
+                        "APPROVED" => t("approved"),
+                        "CHANGES_REQUESTED" => t("requested changes"),
+                        "DISMISSED" => t("had a review dismissed"),
+                        _ => t("reviewed"),
                     };
                     timeline_event(&comment.author, verb, &comment.created_at).into_any_element()
                 } else {
@@ -1571,14 +1622,11 @@ impl Inbox {
                         .child(self.timeline_rail(node, first, false, false))
                         .child(div().min_w_0().flex_1().pb(px(12.)).child(timeline_event(
                             &author,
-                            &format!(
-                                "added {}",
-                                if commits.len() == 1 {
-                                    "a commit".into()
-                                } else {
-                                    format!("{} commits", commits.len())
-                                }
-                            ),
+                            &if commits.len() == 1 {
+                                t("added a commit").to_owned()
+                            } else {
+                                tr!("added {count} commits", count = commits.len())
+                            },
                             &time,
                         )))
                         .into_any_element(),
@@ -1620,7 +1668,7 @@ impl Inbox {
                                         div()
                                             .id(format!("inbox-commit-{}", commit.oid))
                                             .role(Role::Button)
-                                            .aria_label("Open commit")
+                                            .aria_label(t("Open commit"))
                                             .h(px(20.))
                                             .flex()
                                             .items_center()
@@ -1685,6 +1733,11 @@ impl Inbox {
             .filter(|comment| !(timeline && review_event(comment)))
             .map(|comment| 1 + comment.replies.len())
             .sum::<usize>();
+        let comments = if count == 1 {
+            tr!("{count} comment", count = count)
+        } else {
+            tr!("{count} comments", count = count)
+        };
         Some(
             div()
                 .w_full()
@@ -1703,36 +1756,29 @@ impl Inbox {
                         .text_size(px(12.))
                         .text_color(content(0.5))
                         .child(div().text_color(content(0.7)).child(if timeline {
-                            "Activity".into()
+                            t("Activity").into()
                         } else {
-                            format!(
-                                "{count} {}",
-                                if count == 1 { "comment" } else { "comments" }
-                            )
+                            comments.clone()
                         }))
                         .when(timeline, |d| {
-                            d.child(format!(
-                                "{count} {}{}",
-                                if count == 1 { "comment" } else { "comments" },
-                                if thread.commits.is_empty() {
-                                    String::new()
-                                } else {
-                                    format!(
-                                        " · {} {}",
-                                        thread.commits.len(),
-                                        if thread.commits.len() == 1 {
-                                            "commit"
-                                        } else {
-                                            "commits"
-                                        }
-                                    )
-                                }
-                            ))
+                            d.child(if thread.commits.is_empty() {
+                                comments
+                            } else {
+                                let commits = thread.commits.len();
+                                format!(
+                                    "{comments} · {}",
+                                    if commits == 1 {
+                                        tr!("{count} commit", count = commits)
+                                    } else {
+                                        tr!("{count} commits", count = commits)
+                                    }
+                                )
+                            })
                         })
                         .when(thread.truncated, |d| {
-                            d.child(format!(
-                                "Latest comments · more on {}",
-                                model::provider_label(&item.provider)
+                            d.child(tr!(
+                                "Latest comments · more on {provider}",
+                                provider = model::provider_label(&item.provider)
                             ))
                         }),
                 )
@@ -1834,143 +1880,145 @@ impl Inbox {
         cx: &mut Context<Self>,
     ) -> AnyElement {
         let can_post = !self.posting && !self.comment.read(cx).content.trim().is_empty();
-        let body = if ix == 0 {
-            div()
-                .pt(px(20.))
-                .pb(px(20.))
-                .flex()
-                .flex_col()
-                .gap(px(20.))
-                .when(!item.labels.is_empty(), |d| {
-                    d.child(
-                        div()
-                            .flex()
-                            .flex_wrap()
-                            .gap(px(4.))
-                            .children(item.labels.iter().map(|label| label_badge(label, false))),
-                    )
-                })
-                .when(self.detail_loading && self.details.is_none(), |d| {
-                    d.child(message("Loading description…"))
-                })
-                .when(
-                    self.details
-                        .as_ref()
-                        .is_some_and(|d| d.body.trim().is_empty()),
-                    |d| {
+        let body =
+            if ix == 0 {
+                div()
+                    .pt(px(20.))
+                    .pb(px(20.))
+                    .flex()
+                    .flex_col()
+                    .gap(px(20.))
+                    .when(!item.labels.is_empty(), |d| {
                         d.child(
-                            div()
-                                .text_size(px(13.))
-                                .text_color(content(0.45))
-                                .child("No description"),
+                            div().flex().flex_wrap().gap(px(4.)).children(
+                                item.labels.iter().map(|label| label_badge(label, false)),
+                            ),
                         )
-                    },
-                )
-                .when_some(self.document.clone(), |d, document| {
-                    d.child(
-                        div()
-                            .w_full()
-                            .flex_shrink_0()
-                            .child(document::DocumentElement::new(
+                    })
+                    .when(self.detail_loading && self.details.is_none(), |d| {
+                        d.child(message(t("Loading description…")))
+                    })
+                    .when(
+                        self.details
+                            .as_ref()
+                            .is_some_and(|d| d.body.trim().is_empty()),
+                        |d| {
+                            d.child(
+                                div()
+                                    .text_size(px(13.))
+                                    .text_color(content(0.45))
+                                    .child(t("No description")),
+                            )
+                        },
+                    )
+                    .when_some(self.document.clone(), |d, document| {
+                        d.child(div().w_full().flex_shrink_0().child(
+                            document::DocumentElement::new(
                                 document,
                                 self.summary_body_width(),
                                 None,
-                            )),
-                    )
-                })
-                .when(self.thread.is_none(), |d| {
-                    d.when_some(self.thread_error.clone(), |d, text| d.child(error(text)))
-                })
-                .into_any_element()
-        } else if ix + 1 == count {
-            div()
-                .pb(px(20.))
-                .child(
-                    div()
-                        .w_full()
-                        .flex_shrink_0()
-                        .border_t_1()
-                        .border_color(content(0.07))
-                        .pt(px(20.))
-                        .flex()
-                        .flex_col()
-                        .gap(px(8.))
-                        .when_some(self.reply.clone(), |d, (_, author)| {
-                            d.child(
+                            ),
+                        ))
+                    })
+                    .when(self.thread.is_none(), |d| {
+                        d.when_some(self.thread_error.clone(), |d, text| d.child(error(text)))
+                    })
+                    .into_any_element()
+            } else if ix + 1 == count {
+                div()
+                    .pb(px(20.))
+                    .child(
+                        div()
+                            .w_full()
+                            .flex_shrink_0()
+                            .border_t_1()
+                            .border_color(content(0.07))
+                            .pt(px(20.))
+                            .flex()
+                            .flex_col()
+                            .gap(px(8.))
+                            .when_some(self.reply.clone(), |d, (_, author)| {
+                                d.child(
+                                    div()
+                                        .flex()
+                                        .items_center()
+                                        .gap(px(8.))
+                                        .text_size(px(12.))
+                                        .text_color(content(0.5))
+                                        .child(
+                                            div().min_w_0().truncate().child(tr!(
+                                                "Replying to {author}",
+                                                author = author
+                                            )),
+                                        )
+                                        .child(
+                                            icon_button(
+                                                "inbox-cancel-reply",
+                                                t("Cancel reply"),
+                                                "close",
+                                            )
+                                            .size(px(20.))
+                                            .on_click(
+                                                cx.listener(|this, _, _, cx| {
+                                                    this.reply = None;
+                                                    this.post_error = None;
+                                                    cx.notify();
+                                                }),
+                                            ),
+                                        ),
+                                )
+                            })
+                            .child(
                                 div()
+                                    .rounded(px(6.))
+                                    .border_1()
+                                    .border_color(content(0.1))
+                                    .bg(content(0.05))
                                     .flex()
-                                    .items_center()
-                                    .gap(px(8.))
-                                    .text_size(px(12.))
-                                    .text_color(content(0.5))
+                                    .flex_col()
                                     .child(
                                         div()
-                                            .min_w_0()
-                                            .truncate()
-                                            .child(format!("Replying to {author}")),
+                                            .px(px(12.))
+                                            .py(px(8.))
+                                            .when(self.posting, |d| d.opacity(0.4))
+                                            .child(self.comment.clone()),
                                     )
                                     .child(
-                                        icon_button("inbox-cancel-reply", "Cancel reply", "close")
-                                            .size(px(20.))
-                                            .on_click(cx.listener(|this, _, _, cx| {
-                                                this.reply = None;
-                                                this.post_error = None;
-                                                cx.notify();
-                                            })),
-                                    ),
-                            )
-                        })
-                        .child(
-                            div()
-                                .rounded(px(6.))
-                                .border_1()
-                                .border_color(content(0.1))
-                                .bg(content(0.05))
-                                .flex()
-                                .flex_col()
-                                .child(
-                                    div()
-                                        .px(px(12.))
-                                        .py(px(8.))
-                                        .when(self.posting, |d| d.opacity(0.4))
-                                        .child(self.comment.clone()),
-                                )
-                                .child(
-                                    div().px(px(8.)).pb(px(8.)).flex().justify_end().child(
-                                        action(
-                                            "inbox-post-comment",
-                                            if self.posting {
-                                                "Posting..."
-                                            } else if self.reply.is_some() {
-                                                "Reply"
-                                            } else {
-                                                "Comment"
-                                            },
-                                        )
-                                        .px(px(12.))
-                                        .bg(content(1.))
-                                        .text_color(shell_fill())
-                                        .when(!can_post, |d| d.opacity(0.4))
-                                        .on_click(
-                                            cx.listener(|this, _, _, cx| this.post_comment(cx)),
+                                        div().px(px(8.)).pb(px(8.)).flex().justify_end().child(
+                                            action(
+                                                "inbox-post-comment",
+                                                if self.posting {
+                                                    t("Posting...")
+                                                } else if self.reply.is_some() {
+                                                    t("Reply")
+                                                } else {
+                                                    t("Comment")
+                                                },
+                                            )
+                                            .px(px(12.))
+                                            .bg(content(1.))
+                                            .text_color(shell_fill())
+                                            .when(!can_post, |d| d.opacity(0.4))
+                                            .on_click(
+                                                cx.listener(|this, _, _, cx| this.post_comment(cx)),
+                                            ),
                                         ),
                                     ),
-                                ),
-                        )
-                        .when_some(self.post_error.clone(), |d, text| d.child(error(text))),
-                )
-                .into_any_element()
-        } else if discussion && ix == 1 {
-            div()
-                .pb(px(if self.activity.is_empty() { 20. } else { 12. }))
-                .children(self.discussion_heading(item, window, cx))
-                .into_any_element()
-        } else {
-            div()
-                .pb(px(if ix + 2 == count { 20. } else { 0. }))
-                .child(self.discussion_row(item, ix - 2, window, cx))
-                .into_any_element()
-        };
+                            )
+                            .when_some(self.post_error.clone(), |d, text| d.child(error(text))),
+                    )
+                    .into_any_element()
+            } else if discussion && ix == 1 {
+                div()
+                    .pb(px(if self.activity.is_empty() { 20. } else { 12. }))
+                    .children(self.discussion_heading(item, window, cx))
+                    .into_any_element()
+            } else {
+                div()
+                    .pb(px(if ix + 2 == count { 20. } else { 0. }))
+                    .child(self.discussion_row(item, ix - 2, window, cx))
+                    .into_any_element()
+            };
         div()
             .id(("inbox-summary-row", ix))
             .w_full()
@@ -1985,29 +2033,31 @@ impl Inbox {
             .flex_1()
             .flex()
             .flex_col()
-            .when(self.extra_loading, |d| d.child(message("Loading changes…")))
+            .when(self.extra_loading, |d| {
+                d.child(message(t("Loading changes…")))
+            })
             .when_some(self.extra_error.clone(), |d, text| d.child(error(text)))
             .when(self.diff.is_some(), |d| {
                 d.child(div().flex_1().min_h_0().child(self.diff_view.clone()))
             })
             .when(self.diff.as_ref().is_some_and(|diff| diff.truncated), |d| {
-                d.child(message(
+                d.child(message(t(
                     "This diff is truncated. Open the pull request to see all changes.",
-                ))
+                )))
             })
             .into_any_element()
     }
 
     fn checks_view(&self, cx: &mut Context<Self>) -> AnyElement {
         div().id("inbox-checks-scroll").min_h_0().flex_1().overflow_y_scroll().px(px(12.)).py(px(20.))
-            .when(self.extra_loading, |d| d.child(message("Loading checks…")))
+            .when(self.extra_loading, |d| d.child(message(t("Loading checks…"))))
             .when_some(self.extra_error.clone(), |d, text| d.child(error(text)))
             .when_some(self.checks.clone(), |d, checks| {
                 let failed = checks.checks.iter().filter(|c| matches!(c.state.to_lowercase().as_str(), "failure" | "failed" | "error" | "timed_out" | "cancelled" | "action_required")).cloned().collect::<Vec<_>>();
-                d.when(checks.checks.is_empty(), |d| d.child(message("No checks reported")))
+                d.when(checks.checks.is_empty(), |d| d.child(message(t("No checks reported"))))
                     .when(!failed.is_empty(), |d| d.child(div().mb(px(12.)).flex().items_center().gap(px(8.))
-                        .child(div().flex_1().text_size(px(12.)).text_color(content(0.7)).child(format!("{} failing checks", failed.len())))
-                        .child(action("inbox-fix-checks", "Fix with agent").bg(content(0.1)).on_click(cx.listener(move |this, _, _, cx| {
+                        .child(div().flex_1().text_size(px(12.)).text_color(content(0.7)).child(tr!("{count} failing checks", count = failed.len())))
+                        .child(action("inbox-fix-checks", t("Fix with agent")).bg(content(0.1)).on_click(cx.listener(move |this, _, _, cx| {
                             if let Some(mut item) = this.item() {
                                 if item.project_path.is_empty() { item.project_path = this.start_project.to_string_lossy().into_owned(); }
                                 let evidence = failed.iter().map(|check| format!("{}: {} {}", check.name, check.state, check.url.as_deref().unwrap_or(""))).collect::<Vec<_>>().join("\n");
@@ -2026,7 +2076,7 @@ impl Inbox {
                             .child(div().flex_1().min_w_0().child(div().text_size(px(12.)).text_color(content(0.85)).child(check.name.clone()))
                                 .child(div().text_size(px(11.)).text_color(content(0.4)).child(check.workflow.clone())))
                             .child(div().text_size(px(11.)).text_color(color).child(check.state.replace('_', " ").to_lowercase()))
-                            .when(url.is_some(), |d| d.child(action(format!("inbox-check-link-{ix}"), "Details ↗").on_click(move |_, _, cx| { if let Some(url) = &url { cx.open_url(url); } })))
+                            .when(url.is_some(), |d| d.child(action(format!("inbox-check-link-{ix}"), t("Details ↗")).on_click(move |_, _, cx| { if let Some(url) = &url { cx.open_url(url); } })))
                     }))
             }).into_any_element()
     }
@@ -2060,13 +2110,13 @@ impl Inbox {
         let f = &self.state.filters;
         let tracker = model::is_tracker(&self.state.source);
         let mut rows = vec![
-            caption("FILTER INBOX").into_any_element(),
+            caption(t("FILTER INBOX")).into_any_element(),
             menu_row(
                 "inbox-assigned",
                 if matches!(self.state.source.as_str(), "gitlab" | "azuredevops") {
-                    "Needs my attention"
+                    t("Needs my attention")
                 } else {
-                    "Assigned to me"
+                    t("Assigned to me")
                 },
                 f.assigned_to_me,
             )
@@ -2075,13 +2125,13 @@ impl Inbox {
                 this.filters_changed(true, cx);
             }))
             .into_any_element(),
-            caption("UPDATED").into_any_element(),
+            caption(t("UPDATED")).into_any_element(),
         ];
         for (time, label) in [
-            ("all", "Any time"),
-            ("today", "Today"),
-            ("7d", "Last 7 days"),
-            ("30d", "Last 30 days"),
+            ("all", t("Any time")),
+            ("today", t("Today")),
+            ("7d", t("Last 7 days")),
+            ("30d", t("Last 30 days")),
         ] {
             rows.push(
                 menu_row(format!("inbox-time-{time}"), label, f.time == time)
@@ -2092,8 +2142,8 @@ impl Inbox {
                     .into_any_element(),
             );
         }
-        rows.push(caption("STATUS").into_any_element());
-        for status in ["Open", "Draft", "Closed", "Merged"]
+        rows.push(caption(t("STATUS")).into_any_element());
+        for status in [n!("Open"), n!("Draft"), n!("Closed"), n!("Merged")]
             .into_iter()
             .filter(|s| !tracker || matches!(*s, "Open" | "Closed"))
         {
@@ -2104,7 +2154,7 @@ impl Inbox {
                 _ => f.status.merged,
             };
             rows.push(
-                menu_row(format!("inbox-status-{status}"), status, checked)
+                menu_row(format!("inbox-status-{status}"), tl(status), checked)
                     .on_click(cx.listener(move |this, _, _, cx| {
                         let s = &mut this.state.filters.status;
                         match status {
@@ -2119,15 +2169,15 @@ impl Inbox {
             );
         }
         if !tracker {
-            rows.push(caption("TYPE").into_any_element());
+            rows.push(caption(t("TYPE")).into_any_element());
             for (kind, label) in [
-                ("issue", "Issues"),
+                ("issue", t("Issues")),
                 (
                     "pr",
                     if self.state.source == "gitlab" {
-                        "Merge requests"
+                        t("Merge requests")
                     } else {
-                        "Pull requests"
+                        t("Pull requests")
                     },
                 ),
             ] {
@@ -2144,7 +2194,7 @@ impl Inbox {
                     .into_any_element(),
                 );
             }
-            rows.push(caption("PROJECTS").into_any_element());
+            rows.push(caption(t("PROJECTS")).into_any_element());
             for (ix, project) in self.projects.iter().enumerate() {
                 let key = project.to_string_lossy().into_owned();
                 rows.push(
@@ -2170,9 +2220,9 @@ impl Inbox {
         if tracker && !provider_options.is_empty() {
             rows.push(
                 caption(if self.state.source == "linear" {
-                    "TEAMS"
+                    t("TEAMS")
                 } else {
-                    "PROJECTS"
+                    t("PROJECTS")
                 })
                 .into_any_element(),
             );
@@ -2217,13 +2267,13 @@ impl Inbox {
                     })
                     .or_insert_with(|| {
                         if item.project_name.is_empty() {
-                            "No project".into()
+                            t("No project").into()
                         } else {
                             item.project_name.clone()
                         }
                     });
             }
-            rows.push(caption("LINEAR PROJECTS").into_any_element());
+            rows.push(caption(t("LINEAR PROJECTS")).into_any_element());
             for (ix, (id, name)) in projects.into_iter().enumerate() {
                 rows.push(
                     menu_row(
@@ -2240,7 +2290,7 @@ impl Inbox {
             }
         }
         rows.push(
-            action("inbox-clear-filters", "Clear filters")
+            action("inbox-clear-filters", t("Clear filters"))
                 .w_full()
                 .justify_start()
                 .mt(px(8.))
@@ -2289,18 +2339,24 @@ impl Inbox {
                 cx.notify();
             });
         })
-        .child(caption("CONNECTIONS"))
+        .child(caption(t("CONNECTIONS")))
         .children(model::PROVIDERS.into_iter().map(|provider| {
             let connected = self
                 .snapshot
                 .connections
                 .get(provider)
                 .is_some_and(|s| s.connected);
-            let label = format!(
-                "{} {}",
-                if connected { "Manage" } else { "Connect" },
-                model::provider_label(provider)
-            );
+            let label = if connected {
+                tr!(
+                    "Manage {provider}",
+                    provider = model::provider_label(provider)
+                )
+            } else {
+                tr!(
+                    "Connect {provider}",
+                    provider = model::provider_label(provider)
+                )
+            };
             div()
                 .id(SharedString::from(format!("inbox-connect-{provider}")))
                 .role(Role::Button)
@@ -2332,23 +2388,29 @@ impl Inbox {
             .connections
             .get(&provider)
             .is_some_and(|s| s.connected);
-        let title = format!(
-            "{} {}",
-            if connected { "Manage" } else { "Connect" },
-            model::provider_label(&provider)
-        );
+        let title = if connected {
+            tr!(
+                "Manage {provider}",
+                provider = model::provider_label(&provider)
+            )
+        } else {
+            tr!(
+                "Connect {provider}",
+                provider = model::provider_label(&provider)
+            )
+        };
         let hint = match provider.as_str() {
-            "github" => {
-                "Install GitHub CLI, then run gh auth login in a terminal. Check again when signed in."
-            }
-            "linear" => "Create a personal API key in Linear → Settings → Security & Access.",
-            "jira" => "Connect your Jira Cloud site with your Atlassian email and an API token.",
-            "gitlab" => {
-                "Connect GitLab.com or your GitLab instance with a personal access token with API access."
-            }
-            _ => {
-                "Connect your ADO organization using a personal access token with Boards and Repos read & write access."
-            }
+            "github" => t(
+                "Install GitHub CLI, then run gh auth login in a terminal. Check again when signed in.",
+            ),
+            "linear" => t("Create a personal API key in Linear → Settings → Security & Access."),
+            "jira" => t("Connect your Jira Cloud site with your Atlassian email and an API token."),
+            "gitlab" => t(
+                "Connect GitLab.com or your GitLab instance with a personal access token with API access.",
+            ),
+            _ => t(
+                "Connect your ADO organization using a personal access token with Boards and Repos read & write access.",
+            ),
         };
         div()
             .absolute()
@@ -2386,7 +2448,7 @@ impl Inbox {
                                     .child(title),
                             )
                             .child(
-                                icon_button("inbox-close-connect", "Close connection", "close")
+                                icon_button("inbox-close-connect", t("Close connection"), "close")
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         if !this.connecting {
                                             this.connect_provider = None;
@@ -2446,7 +2508,7 @@ impl Inbox {
                             .gap(px(8.))
                             .when(connected && provider != "github", |d| {
                                 d.child(
-                                    action("inbox-disconnect", "Disconnect")
+                                    action("inbox-disconnect", t("Disconnect"))
                                         .text_color(rgb(0xf87171))
                                         .on_click(
                                             cx.listener(|this, _, _, cx| this.connect(true, cx)),
@@ -2455,7 +2517,7 @@ impl Inbox {
                             })
                             .when(provider == "github", |d| {
                                 d.child(
-                                    action("inbox-gh-guide", "Installation guide").on_click(
+                                    action("inbox-gh-guide", t("Installation guide")).on_click(
                                         |_, _, cx| cx.open_url("https://cli.github.com/"),
                                     ),
                                 )
@@ -2466,11 +2528,11 @@ impl Inbox {
                                     crate::modal::primary_button(
                                         "inbox-connect-submit",
                                         if self.connecting {
-                                            "Connecting…"
+                                            t("Connecting…")
                                         } else if provider == "github" {
-                                            "Check again"
+                                            t("Check again")
                                         } else {
-                                            "Connect"
+                                            t("Connect")
                                         },
                                     ),
                                     self.connecting,
@@ -2531,18 +2593,18 @@ impl Inbox {
             [
                 (
                     "merge",
-                    "Create a merge commit",
-                    "Add every commit to the base branch.",
+                    t("Create a merge commit"),
+                    t("Add every commit to the base branch."),
                 ),
                 (
                     "squash",
-                    "Squash and merge",
-                    "Combine the commits into one.",
+                    t("Squash and merge"),
+                    t("Combine the commits into one."),
                 ),
                 (
                     "rebase",
-                    "Rebase and merge",
-                    "Add the commits without a merge commit.",
+                    t("Rebase and merge"),
+                    t("Add the commits without a merge commit."),
                 ),
             ]
             .into_iter()
@@ -2599,63 +2661,69 @@ impl Inbox {
         let action_name = self.confirm_action.clone().unwrap_or_default();
         let details = self.details.clone().unwrap_or_default();
         let source = if details.head_ref_name.is_empty() {
-            "this branch".into()
+            t("this branch").into()
         } else {
             format!("“{}”", details.head_ref_name)
         };
         let destination = if details.base_ref_name.is_empty() {
-            "the base branch".into()
+            t("the base branch").into()
         } else {
             format!("“{}”", details.base_ref_name)
         };
         let (title, detail, label, progress) = match action_name.as_str() {
             "merge" => (
-                "Merge this pull request?",
-                format!(
-                    "Every commit from {source} will be added to {destination} with a merge commit."
+                t("Merge this pull request?"),
+                tr!(
+                    "Every commit from {source} will be added to {destination} with a merge commit.",
+                    source = source,
+                    destination = destination
                 ),
-                "Merge pull request",
-                "Merging…",
+                t("Merge pull request"),
+                t("Merging…"),
             ),
             "squash" => (
-                "Squash and merge?",
-                format!(
-                    "The commits from {source} will be combined into one commit on {destination}."
+                t("Squash and merge?"),
+                tr!(
+                    "The commits from {source} will be combined into one commit on {destination}.",
+                    source = source,
+                    destination = destination
                 ),
-                "Squash and merge",
-                "Merging…",
+                t("Squash and merge"),
+                t("Merging…"),
             ),
             "rebase" => (
-                "Rebase and merge?",
-                format!(
-                    "The commits from {source} will be rebased individually onto {destination}."
+                t("Rebase and merge?"),
+                tr!(
+                    "The commits from {source} will be rebased individually onto {destination}.",
+                    source = source,
+                    destination = destination
                 ),
-                "Rebase and merge",
-                "Merging…",
+                t("Rebase and merge"),
+                t("Merging…"),
             ),
             "close" => (
-                "Close this pull request?",
-                "The pull request will close without merging. You can reopen it later.".into(),
-                "Close pull request",
-                "Closing…",
+                t("Close this pull request?"),
+                t("The pull request will close without merging. You can reopen it later.").into(),
+                t("Close pull request"),
+                t("Closing…"),
             ),
             "reopen" => (
-                "Reopen this pull request?",
-                "The pull request will return to the open state.".into(),
-                "Reopen pull request",
-                "Reopening…",
+                t("Reopen this pull request?"),
+                t("The pull request will return to the open state.").into(),
+                t("Reopen pull request"),
+                t("Reopening…"),
             ),
             "ready" => (
-                "Mark as ready for review?",
-                "Reviewers will see that this pull request is ready for feedback.".into(),
-                "Ready for review",
-                "Updating…",
+                t("Mark as ready for review?"),
+                t("Reviewers will see that this pull request is ready for feedback.").into(),
+                t("Ready for review"),
+                t("Updating…"),
             ),
             _ => (
-                "Convert to draft?",
-                "Reviewers will see that this pull request is not ready to merge.".into(),
-                "Convert to draft",
-                "Converting…",
+                t("Convert to draft?"),
+                t("Reviewers will see that this pull request is not ready to merge.").into(),
+                t("Convert to draft"),
+                t("Converting…"),
             ),
         };
         let anchor = match action_name.as_str() {
@@ -2718,7 +2786,7 @@ impl Inbox {
                     .justify_end()
                     .gap(px(8.))
                     .child(
-                        action("inbox-action-cancel", "Cancel")
+                        action("inbox-action-cancel", t("Cancel"))
                             .when(self.acting, |d| d.opacity(0.4))
                             .on_click(cx.listener(|this, _, _, cx| {
                                 if !this.acting {
@@ -2767,7 +2835,7 @@ impl gpui::Render for Inbox {
         div()
             .id("inbox-view")
             .role(Role::Group)
-            .aria_label("Inbox")
+            .aria_label(t("Inbox"))
             .track_focus(&self.focus)
             .relative()
             .size_full()

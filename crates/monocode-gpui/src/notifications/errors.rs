@@ -33,7 +33,7 @@ pub(crate) fn card(id: &'static str, message: String, dismiss: impl IntoElement)
                                 .min_w_0()
                                 .text_size(px(13.))
                                 .font_weight(FontWeight::SEMIBOLD)
-                                .child("Error"),
+                                .child(monocode_core::i18n::t("Error")),
                         )
                         .child(dismiss),
                 )
