@@ -8161,7 +8161,7 @@ impl Render for Shell {
             .size_full()
             .bg(shell_fill())
             .text_color(content(1.))
-            .font_family(crate::fonts::UI)
+            .font(crate::fonts::ui())
             .capture_any_mouse_down(cx.listener(|this, event: &MouseDownEvent, _, cx| {
                 if this.session_preview.as_ref().is_some_and(|preview| {
                     !preview

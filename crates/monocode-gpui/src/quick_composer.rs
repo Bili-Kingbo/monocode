@@ -1866,7 +1866,7 @@ impl Render for QuickComposer {
             .key_context("QuickComposer")
             .w_full()
             .text_color(content(1.))
-            .font_family(crate::fonts::UI)
+            .font(crate::fonts::ui())
             .capture_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, window, cx| {
                 let key = event.keystroke.key.as_str();
                 let m = &event.keystroke.modifiers;

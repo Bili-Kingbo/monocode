@@ -240,7 +240,7 @@ impl gpui::RenderOnce for ChangeStats {
             .whitespace_nowrap()
             .gap(px(layout.gap))
             .text_size(px(layout.font_size))
-            .font_family(crate::fonts::UI)
+            .font(crate::fonts::ui())
             .font_weight(FontWeight::SEMIBOLD)
             .font_features(crate::right_panel::tabular())
             .when(!self.added.is_empty(), |d| {

@@ -6,10 +6,30 @@ use crate::settings::{
 };
 use crate::theme::*;
 use gpui::{AnyElement, Context, FontWeight, div, prelude::*, px};
+use monocode_core::i18n::t;
 
 impl SettingsView {
     pub(super) fn general_page(&mut self, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let p = self.prefs.clone();
+        let language = vec![self.row(
+            Some("language"),
+            true,
+            t("Language"),
+            Some(t("System follows your Mac's preferred language.").into()),
+            vec![self.segmented(
+                "language",
+                t("Language"),
+                &p.language,
+                // Each language keeps its own name.
+                &[
+                    ("system", t("System")),
+                    ("en", "English"),
+                    ("zh-CN", "简体中文"),
+                ],
+                cx,
+                |this, v, cx| this.update(cx, |p| p.language = v.into()),
+            )],
+        )];
         let alerts = vec![
             self.row(
                 Some("sounds"),
@@ -236,7 +256,8 @@ impl SettingsView {
             ),
         ];
         vec![
-            self.group(None, true, "Alerts", None, None, alerts),
+            self.group(None, true, t("Language"), None, None, language),
+            self.group(None, false, "Alerts", None, None, alerts),
             self.group(None, false, "Workspace", None, None, workspace),
             self.group(None, false, "About", None, None, about),
         ]

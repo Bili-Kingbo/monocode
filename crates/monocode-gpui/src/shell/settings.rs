@@ -356,9 +356,19 @@ impl Shell {
             monos.update(cx, |m, cx| m.set_preferences(prefs, cx));
         }
         crate::settings::apply_keybindings(&self.workspace.preferences, cx);
+        // Tests keep English, whatever this machine prefers.
+        let relabelled = monocode_core::i18n::set_language(if cfg!(test) {
+            "en"
+        } else {
+            &self.workspace.preferences.language
+        });
         // After the keymap, so the menu shows rebound shortcuts.
         crate::app_menu::install(&self.workspace.preferences, cx);
         cx.set_global(self.workspace.preferences.clone());
+        if relabelled {
+            // Cached views redraw too, in the new language.
+            cx.refresh_windows();
+        }
         self.sync_right_panel(cx);
         if let Some(center) = crate::accounts::get(cx) {
             center.update(cx, |center, cx| {

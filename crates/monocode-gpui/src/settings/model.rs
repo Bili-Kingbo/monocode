@@ -219,6 +219,12 @@ pub(crate) const INDEX: &[(&str, Section, &str, &str)] = &[
         "git branch working copy create delete manage",
     ),
     (
+        "language",
+        Section::General,
+        "Language",
+        "language locale translation chinese english 语言 中文 简体中文 英文",
+    ),
+    (
         "update",
         Section::General,
         "Version",

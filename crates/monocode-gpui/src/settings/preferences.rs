@@ -7,6 +7,8 @@ use std::collections::HashMap;
 #[serde(default)]
 pub(crate) struct Preferences {
     // General
+    /// The interface language: "system", "en" or "zh-CN".
+    pub language: String,
     pub sounds: bool,
     pub notifications: bool,
     pub project_notifications: serde_json::Value,
@@ -95,6 +97,7 @@ pub(crate) const UI_SCALE_PERCENTS: [u32; 16] = [
 impl Default for Preferences {
     fn default() -> Self {
         Self {
+            language: "system".into(),
             sounds: true,
             notifications: false,
             project_notifications: serde_json::json!({}),

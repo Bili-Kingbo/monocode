@@ -85,7 +85,10 @@ impl LineWrapper {
                             }
                         } else {
                             // CJK may not be space separated, e.g.: `Hello world你好世界`
-                            if c != ' ' && first_non_whitespace_ix.is_some() {
+                            if c != ' '
+                                && first_non_whitespace_ix.is_some()
+                                && !Self::opens(prev_c)
+                            {
                                 last_candidate_ix = ix;
                                 last_candidate_width = width;
                             }
@@ -433,7 +436,7 @@ impl LineWrapper {
                     last_candidate_ix = ix;
                     last_candidate_width = width;
                 }
-            } else if c != ' ' && first_non_whitespace_ix.is_some() {
+            } else if c != ' ' && first_non_whitespace_ix.is_some() && !Self::opens(prev_c) {
                 last_candidate_ix = ix;
                 last_candidate_width = width;
             }
@@ -496,6 +499,12 @@ impl LineWrapper {
         (text, Cow::Borrowed(runs))
     }
 
+    /// Full-width CJK opening punctuation never ends a line: `（说明）`
+    /// wraps before its bracket, not after it.
+    pub(crate) fn opens(c: char) -> bool {
+        matches!(c, '（' | '《' | '「' | '『' | '【' | '〔' | '〈' | '“' | '‘')
+    }
+
     /// Any character in this list should be treated as a word character,
     /// meaning it can be part of a word that should not be wrapped.
     pub(crate) fn is_word_char(c: char) -> bool {
@@ -533,6 +542,9 @@ impl LineWrapper {
         // the next line. `/` and `?` stay break opportunities so long paths
         // and URLs (`a/b`, `foo?b=2`) can wrap.
         matches!(c, '!' | ')' | ']' | '}' | '"' | '”' | '»' | '…') ||
+        // The same for full-width CJK closing punctuation (JIS X 4051 line
+        // start rules): `中文，` keeps its comma off the next line.
+        matches!(c, '，' | '。' | '、' | '：' | '；' | '！' | '？' | '）' | '》' | '」' | '』' | '】' | '〕' | '〉' | '’') ||
         // `⋯` character is special used in Zed, to keep this at the end of the line.
         matches!(c, '⋯') ||
 
@@ -1235,6 +1247,7 @@ mod tests {
         assert_word("see)");
         assert_word("quoted”");
         assert_word("well…");
+        assert_word("，。、：；！？）》」");
 
         // Space
         assert_not_word("foo bar");

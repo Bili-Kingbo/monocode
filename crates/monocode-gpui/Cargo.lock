@@ -3660,6 +3660,7 @@ dependencies = [
  "sha2",
  "shlex",
  "similar",
+ "sys-locale",
  "tar",
  "tempfile",
  "tokio",

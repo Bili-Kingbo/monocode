@@ -8,6 +8,7 @@ use crate::{
     shell::*,
 };
 use gpui::{App, KeyBinding, Menu, MenuItem, actions};
+use monocode_core::i18n::t;
 
 actions!(application, [Hide, HideOthers, ShowAll]);
 
@@ -35,106 +36,107 @@ pub(crate) fn bind(cx: &mut App) {
 pub(crate) fn install(prefs: &crate::settings::Preferences, cx: &mut App) {
     cx.set_menus(vec![
         Menu::new("Monocode Native").items([
-            MenuItem::action("About Monocode Native", About),
+            MenuItem::action(t("About Monocode Native"), About),
             MenuItem::separator(),
-            MenuItem::action("Settings…", OpenSettings),
-            MenuItem::action("Check for Updates…", CheckForUpdates),
+            MenuItem::action(t("Settings…"), OpenSettings),
+            MenuItem::action(t("Check for Updates…"), CheckForUpdates),
             MenuItem::separator(),
-            MenuItem::action("Hide Monocode Native", Hide),
-            MenuItem::action("Hide Others", HideOthers),
-            MenuItem::action("Show All", ShowAll),
+            MenuItem::action(t("Hide Monocode Native"), Hide),
+            MenuItem::action(t("Hide Others"), HideOthers),
+            MenuItem::action(t("Show All"), ShowAll),
             MenuItem::separator(),
-            MenuItem::action("Quit Monocode Native", Quit),
+            MenuItem::action(t("Quit Monocode Native"), Quit),
         ]),
-        Menu::new("File").items([
-            MenuItem::action("Open Project…", OpenProject),
-            MenuItem::action("Search…", FocusSearch),
-            MenuItem::action("Go to File…", GoToFile),
-            MenuItem::action("Command Palette…", OpenCommandPalette),
-            MenuItem::action("Find in Files…", SearchFiles),
+        Menu::new(t("File")).items([
+            MenuItem::action(t("Open Project…"), OpenProject),
+            MenuItem::action(t("Search…"), FocusSearch),
+            MenuItem::action(t("Go to File…"), GoToFile),
+            MenuItem::action(t("Command Palette…"), OpenCommandPalette),
+            MenuItem::action(t("Find in Files…"), SearchFiles),
             MenuItem::separator(),
-            MenuItem::action("Save", Save),
-            MenuItem::action("Reload File", ReloadFile),
-            MenuItem::action("Autosave", ToggleAutosave).checked(prefs.autosave),
+            MenuItem::action(t("Save"), Save),
+            MenuItem::action(t("Reload File"), ReloadFile),
+            MenuItem::action(t("Autosave"), ToggleAutosave).checked(prefs.autosave),
             MenuItem::separator(),
-            MenuItem::action("New Tab", NewCodex),
-            MenuItem::action("New Claude Tab", NewClaude),
-            MenuItem::action("New Terminal", NewTerminal),
-            MenuItem::action("Split Pane Right", SplitRight),
-            MenuItem::action("Split Pane Down", SplitDown),
-            MenuItem::action("Close Pane", CloseTab),
-            MenuItem::action("Close Other Tabs", CloseOtherTabs),
-            MenuItem::action("Close All Tabs", CloseAllTabs),
+            MenuItem::action(t("New Tab"), NewCodex),
+            MenuItem::action(t("New Claude Tab"), NewClaude),
+            MenuItem::action(t("New Terminal"), NewTerminal),
+            MenuItem::action(t("Split Pane Right"), SplitRight),
+            MenuItem::action(t("Split Pane Down"), SplitDown),
+            MenuItem::action(t("Close Pane"), CloseTab),
+            MenuItem::action(t("Close Other Tabs"), CloseOtherTabs),
+            MenuItem::action(t("Close All Tabs"), CloseAllTabs),
             MenuItem::separator(),
-            MenuItem::action("Previous Tab", PreviousTab),
-            MenuItem::action("Next Tab", NextTab),
-            MenuItem::action("Back", VisitBack),
-            MenuItem::action("Forward", VisitForward),
+            MenuItem::action(t("Previous Tab"), PreviousTab),
+            MenuItem::action(t("Next Tab"), NextTab),
+            MenuItem::action(t("Back"), VisitBack),
+            MenuItem::action(t("Forward"), VisitForward),
         ]),
-        Menu::new("Edit").items([
-            MenuItem::action("Undo", input::Undo),
-            MenuItem::action("Redo", input::Redo),
+        Menu::new(t("Edit")).items([
+            MenuItem::action(t("Undo"), input::Undo),
+            MenuItem::action(t("Redo"), input::Redo),
             MenuItem::separator(),
-            MenuItem::action("Cut", input::Cut),
-            MenuItem::action("Copy", input::Copy),
-            MenuItem::action("Paste", input::Paste),
-            MenuItem::action("Select All", input::SelectAll),
+            MenuItem::action(t("Cut"), input::Cut),
+            MenuItem::action(t("Copy"), input::Copy),
+            MenuItem::action(t("Paste"), input::Paste),
+            MenuItem::action(t("Select All"), input::SelectAll),
             MenuItem::separator(),
-            MenuItem::action("Find", Find),
-            MenuItem::action("Replace", Replace),
-            MenuItem::action("Format Document", Format),
-            MenuItem::action("Word Wrap", ToggleWordWrap).checked(prefs.file_word_wrap),
+            MenuItem::action(t("Find"), Find),
+            MenuItem::action(t("Replace"), Replace),
+            MenuItem::action(t("Format Document"), Format),
+            MenuItem::action(t("Word Wrap"), ToggleWordWrap).checked(prefs.file_word_wrap),
             MenuItem::separator(),
-            MenuItem::action("Fold", input::FoldCode),
-            MenuItem::action("Unfold", input::UnfoldCode),
-            MenuItem::action("Fold All", input::FoldAll),
-            MenuItem::action("Unfold All", input::UnfoldAll),
+            MenuItem::action(t("Fold"), input::FoldCode),
+            MenuItem::action(t("Unfold"), input::UnfoldCode),
+            MenuItem::action(t("Fold All"), input::FoldAll),
+            MenuItem::action(t("Unfold All"), input::UnfoldAll),
         ]),
-        Menu::new("View").items([
-            MenuItem::action("Toggle Sidebar", ToggleSidebar),
-            MenuItem::action("Toggle Session Sidebar", ToggleRightPanel),
-            MenuItem::action("Toggle Layout", ToggleLayout),
-            MenuItem::action("Toggle Workspace Style", ToggleWorkspaceStyle),
-            MenuItem::action("Inbox", OpenInbox),
-            MenuItem::action("Notes", OpenNotes),
-            MenuItem::action("Toggle Terminal", ToggleTerminal),
-            MenuItem::action("Switch Model…", SwitchModel),
+        Menu::new(t("View")).items([
+            MenuItem::action(t("Toggle Sidebar"), ToggleSidebar),
+            MenuItem::action(t("Toggle Session Sidebar"), ToggleRightPanel),
+            MenuItem::action(t("Toggle Layout"), ToggleLayout),
+            MenuItem::action(t("Toggle Workspace Style"), ToggleWorkspaceStyle),
+            MenuItem::action(t("Inbox"), OpenInbox),
+            MenuItem::action(t("Notes"), OpenNotes),
+            MenuItem::action(t("Toggle Terminal"), ToggleTerminal),
+            MenuItem::action(t("Switch Model…"), SwitchModel),
             MenuItem::separator(),
-            MenuItem::action("Previous Session", PreviousSession),
-            MenuItem::action("Next Session", NextSession),
-            MenuItem::action("Previous Project", PreviousProject),
-            MenuItem::action("Next Project", NextProject),
+            MenuItem::action(t("Previous Session"), PreviousSession),
+            MenuItem::action(t("Next Session"), NextSession),
+            MenuItem::action(t("Previous Project"), PreviousProject),
+            MenuItem::action(t("Next Project"), NextProject),
             MenuItem::separator(),
-            MenuItem::action("Focus Left", FocusPaneLeft),
-            MenuItem::action("Focus Right", FocusPaneRight),
-            MenuItem::action("Focus Up", FocusPaneUp),
-            MenuItem::action("Focus Down", FocusPaneDown),
+            MenuItem::action(t("Focus Left"), FocusPaneLeft),
+            MenuItem::action(t("Focus Right"), FocusPaneRight),
+            MenuItem::action(t("Focus Up"), FocusPaneUp),
+            MenuItem::action(t("Focus Down"), FocusPaneDown),
             MenuItem::separator(),
-            MenuItem::action("Zoom In", ZoomIn),
-            MenuItem::action("Zoom Out", ZoomOut),
-            MenuItem::action("Reset Zoom", ResetZoom),
-            MenuItem::action("Reload", Reload),
+            MenuItem::action(t("Zoom In"), ZoomIn),
+            MenuItem::action(t("Zoom Out"), ZoomOut),
+            MenuItem::action(t("Reset Zoom"), ResetZoom),
+            MenuItem::action(t("Reload"), Reload),
             MenuItem::separator(),
-            MenuItem::action("Sidebar Appearance…", SidebarAppearance),
+            MenuItem::action(t("Sidebar Appearance…"), SidebarAppearance),
         ]),
-        // AppKit adds its window list here once the menu is named "Window".
+        // AppKit adds its window list here once the menu is named "Window",
+        // so it is retitled only after installing.
         Menu::new("Window").items([
-            MenuItem::action("Minimize", MinimizeWindow),
-            MenuItem::action("Zoom", ZoomWindow),
+            MenuItem::action(t("Minimize"), MinimizeWindow),
+            MenuItem::action(t("Zoom"), ZoomWindow),
         ]),
-        Menu::new("Help").items([
-            MenuItem::action("MonoCode Website", OpenUrl("https://usemono.dev")),
-            MenuItem::action("View on GitHub", OpenUrl(REPO)),
+        Menu::new(t("Help")).items([
+            MenuItem::action(t("MonoCode Website"), OpenUrl("https://usemono.dev")),
+            MenuItem::action(t("View on GitHub"), OpenUrl(REPO)),
             MenuItem::separator(),
             MenuItem::action(
-                "Report a Bug…",
+                t("Report a Bug…"),
                 OpenUrl(concat!(
                     "https://github.com/hardbeat920/monocode",
                     "/issues/new?template=bug_report.yml"
                 )),
             ),
             MenuItem::action(
-                "Request a Feature…",
+                t("Request a Feature…"),
                 OpenUrl(concat!(
                     "https://github.com/hardbeat920/monocode",
                     "/issues/new?template=feature_request.yml"
@@ -142,4 +144,30 @@ pub(crate) fn install(prefs: &crate::settings::Preferences, cx: &mut App) {
             ),
         ]),
     ]);
+    #[cfg(target_os = "macos")]
+    retitle_window_menu();
+}
+
+/// Shows the Window menu in the interface language once AppKit has found it
+/// by its English name.
+#[cfg(target_os = "macos")]
+fn retitle_window_menu() {
+    use objc2::MainThreadMarker;
+    use objc2_app_kit::NSApplication;
+    use objc2_foundation::NSString;
+    let Some(main) = MainThreadMarker::new() else {
+        return;
+    };
+    let title = t("Window");
+    let Some(item) = NSApplication::sharedApplication(main)
+        .mainMenu()
+        .and_then(|menu| menu.itemWithTitle(&NSString::from_str("Window")))
+    else {
+        return;
+    };
+    let title = NSString::from_str(title);
+    item.setTitle(&title);
+    if let Some(menu) = item.submenu() {
+        menu.setTitle(&title);
+    }
 }

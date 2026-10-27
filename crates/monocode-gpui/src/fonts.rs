@@ -4,6 +4,29 @@ use std::sync::OnceLock;
 /// GPUI resolves this family to the platform system UI font.
 pub(crate) const UI: &str = ".SystemUIFont";
 
+/// Simplified Chinese faces, so Chinese labels never pick up another CJK
+/// face's glyph shapes on a Mac or PC set to another language.
+const CHINESE: &[&str] = &[
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Microsoft YaHei UI",
+    "Microsoft YaHei",
+    "Noto Sans CJK SC",
+    "Noto Sans SC",
+    "WenQuanYi Micro Hei",
+];
+
+/// The UI font, with Chinese faces first among its fallbacks in Chinese.
+pub(crate) fn ui() -> gpui::Font {
+    let mut font = gpui::font(UI);
+    if monocode_core::i18n::chinese() {
+        font.fallbacks = Some(gpui::FontFallbacks::from_fonts(
+            CHINESE.iter().map(|face| face.to_string()).collect(),
+        ));
+    }
+    font
+}
+
 /// GPUI matches family names literally outside macOS, so the CSS generic
 /// `monospace` resolves to nothing there and text falls back to a
 /// proportional sans. Mirror the web build's terminal stack instead.
