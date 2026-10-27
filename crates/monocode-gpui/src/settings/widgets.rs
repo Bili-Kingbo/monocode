@@ -9,6 +9,7 @@ use gpui::{
     AnyElement, Context, Div, ElementId, FontWeight, Hsla, MouseButton, MouseDownEvent, Role,
     SharedString, Stateful, div, prelude::*, px, relative, rgb,
 };
+use monocode_core::{i18n::t, tr};
 
 pub(super) const RED: u32 = 0xf87171;
 /// `text-[12px] leading-relaxed` and `text-[13px]` line boxes.
@@ -583,7 +584,11 @@ impl SettingsView {
                     .id(SharedString::from(format!("select-{id}")))
                     .debug_selector(move || format!("settings-select-{id}"))
                     .role(Role::ComboBox)
-                    .aria_label(format!("{label}: {trigger_label}"))
+                    .aria_label(tr!(
+                        "{label}: {value}",
+                        label = label,
+                        value = trigger_label
+                    ))
                     .aria_expanded(open)
                     .relative()
                     .w_full()
@@ -788,7 +793,7 @@ impl SettingsView {
         let value = self.selected_project.clone();
         self.select(
             "settings-project",
-            "Project",
+            t("Project"),
             &value,
             options,
             None,
