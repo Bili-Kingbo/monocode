@@ -143,6 +143,10 @@ impl GitAction {
 }
 
 impl Conversation {
+    /// Files this session's edit tools changed.
+    pub(crate) fn session_edits(&self) -> &[String] {
+        &self.session_edits
+    }
     pub(super) fn remember_session_edits(&mut self, paths: Vec<String>) {
         for path in paths {
             let path = monocode_core::files::document::resolve_path(

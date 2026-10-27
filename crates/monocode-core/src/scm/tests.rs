@@ -179,6 +179,50 @@ fn nested_repos_list_checkouts_one_level_inside_a_plain_folder() {
 }
 
 #[test]
+fn session_repos_follow_edits_and_their_task_branch() {
+    let dir = tmp();
+    let root = dir.path();
+    for name in ["web", "api", "pwa"] {
+        std::fs::create_dir(root.join(name)).unwrap();
+        assert!(init_git_commit(&root.join(name), &[("a.txt", "one\n")]));
+    }
+    std::fs::create_dir(root.join("worktrees")).unwrap();
+    for name in ["web", "api"] {
+        let tree = root.join("worktrees").join(format!("{name}-task"));
+        assert!(git(
+            &root.join(name),
+            &[
+                "worktree",
+                "add",
+                "-q",
+                "-b",
+                "feature/task",
+                &tree.to_string_lossy()
+            ]
+        ));
+    }
+    let root = std::fs::canonicalize(root).unwrap();
+    std::fs::write(root.join("worktrees/web-task/a.txt"), "one\ntwo\n").unwrap();
+
+    // Editing one worktree brings in the task's worktree in another repository.
+    let repos = session_repos(&root, &["worktrees/web-task/a.txt".into()]);
+    let found: Vec<(&str, &str)> = repos
+        .iter()
+        .map(|r| (r.name.as_str(), r.path.rsplit('/').next().unwrap()))
+        .collect();
+    assert_eq!(found, [("api", "api-task"), ("web", "web-task")]);
+    assert_eq!(repos[1].branch.as_deref(), Some("feature/task"));
+    assert_eq!(repos[1].stats.files, 1);
+
+    // Edits on a default branch stay with their own checkout.
+    let main = root.join("pwa/a.txt").to_string_lossy().into_owned();
+    let repos = session_repos(&root, &[main]);
+    assert_eq!(repos.len(), 1);
+    assert_eq!(repos[0].name, "pwa");
+    assert!(session_repos(&root, &[]).is_empty());
+}
+
+#[test]
 fn nested_repos_are_empty_inside_a_checkout() {
     let dir = tmp();
     let root = dir.path();

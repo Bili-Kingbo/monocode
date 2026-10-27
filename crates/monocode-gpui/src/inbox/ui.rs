@@ -2035,6 +2035,7 @@ impl Inbox {
         let f = &self.state.filters;
         f.assigned_to_me
             || !f.hidden_projects.is_empty()
+            || !f.hidden_repos.is_empty()
             || !f.hidden_linear_projects.is_empty()
             || !f.hidden_kinds.is_empty()
             || f.time != "all"
@@ -2160,6 +2161,40 @@ impl Inbox {
                     }))
                     .into_any_element(),
                 );
+            }
+            // A project that holds several repositories can narrow to some.
+            let mut repos: Vec<String> = self
+                .snapshot
+                .items
+                .iter()
+                .filter(|item| item.provider == self.state.source && !item.repo.is_empty())
+                .map(|item| item.repo.to_lowercase())
+                .chain(f.hidden_repos.iter().cloned())
+                .collect();
+            repos.sort();
+            repos.dedup();
+            if repos.len() > 1 {
+                rows.push(caption("REPOSITORIES").into_any_element());
+                for (ix, repo) in repos.into_iter().enumerate() {
+                    let shown = self
+                        .snapshot
+                        .items
+                        .iter()
+                        .find(|item| item.repo.eq_ignore_ascii_case(&repo))
+                        .map_or_else(|| repo.clone(), |item| item.repo.clone());
+                    rows.push(
+                        menu_row(
+                            format!("inbox-repo-filter-{ix}"),
+                            shown,
+                            !f.hidden_repos.contains(&repo),
+                        )
+                        .on_click(cx.listener(move |this, _, _, cx| {
+                            toggle(&mut this.state.filters.hidden_repos, repo.clone());
+                            this.filters_changed(false, cx);
+                        }))
+                        .into_any_element(),
+                    );
+                }
             }
         }
         let provider_options = if self.state.source == "linear" {

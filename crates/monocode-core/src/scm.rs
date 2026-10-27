@@ -161,7 +161,7 @@ pub fn nested_repos(cwd: &Path) -> Vec<NestedRepo> {
     read_nested_repos(&root)
 }
 
-fn nested_repo_paths(root: &Path) -> Vec<std::path::PathBuf> {
+pub(crate) fn nested_repo_paths(root: &Path) -> Vec<std::path::PathBuf> {
     let Ok(entries) = std::fs::read_dir(root) else {
         return Vec::new();
     };
@@ -202,6 +202,118 @@ fn read_nested_repos(root: &Path) -> Vec<NestedRepo> {
         });
     }
     repos
+}
+
+/// The checkouts a session works in, inside a folder of checkouts: those
+/// holding the files it edited, and the worktrees of the folder's other
+/// checkouts on the same task branch, such as ones an agent created for the
+/// task but has not edited yet. Named after their repository, by name.
+pub fn session_repos(cwd: &Path, edited: &[String]) -> Vec<NestedRepo> {
+    if remote_workspace::is_remote(cwd) || edited.is_empty() {
+        return Vec::new();
+    }
+    let root = expand_home(cwd);
+    let mut checkouts: Vec<std::path::PathBuf> = Vec::new();
+    for path in edited {
+        let path = crate::files::document::resolve_path(Path::new(path), &root);
+        if let Some(checkout) = checkout_of(&path) {
+            if checkout != root && !checkouts.contains(&checkout) {
+                checkouts.push(checkout);
+            }
+        }
+    }
+    if checkouts.is_empty() {
+        return Vec::new();
+    }
+    // A task branch is any branch but the repository's default one.
+    let branches: Vec<String> = checkouts
+        .iter()
+        .filter_map(|checkout| {
+            let branch = git_head_branch(checkout)?;
+            let default = git_default_branch(checkout, git_remote_name(checkout).as_deref());
+            (default.as_deref() != Some(branch.as_str())
+                && !matches!(branch.as_str(), "main" | "master"))
+            .then_some(branch)
+        })
+        .collect();
+    if !branches.is_empty() {
+        for repo in nested_repo_paths(&root) {
+            for (path, branch) in linked_worktrees(&repo) {
+                if branches.contains(&branch) && !checkouts.contains(&path) {
+                    checkouts.push(path);
+                }
+            }
+        }
+    }
+    let mut repos = Vec::with_capacity(checkouts.len());
+    for chunk in checkouts.chunks(8) {
+        std::thread::scope(|scope| {
+            let reads: Vec<_> = chunk
+                .iter()
+                .map(|path| {
+                    scope.spawn(move || NestedRepo {
+                        path: path.to_string_lossy().into_owned(),
+                        name: repository_name(path),
+                        branch: git_branch(path),
+                        stats: checkout_stats_for(path),
+                    })
+                })
+                .collect();
+            repos.extend(reads.into_iter().filter_map(|read| read.join().ok()));
+        });
+    }
+    repos.sort_by(|a, b| (a.name.to_lowercase(), &a.path).cmp(&(b.name.to_lowercase(), &b.path)));
+    repos
+}
+
+/// The checkout holding `path`: the nearest folder with a `.git` entry.
+fn checkout_of(path: &Path) -> Option<std::path::PathBuf> {
+    path.ancestors()
+        .skip(1)
+        .find(|dir| dir.join(".git").exists())
+        .map(|dir| std::fs::canonicalize(dir).unwrap_or_else(|_| dir.to_owned()))
+}
+
+/// The main checkout's folder name, also for one of its linked worktrees,
+/// whose `.git` file points into `<main>/.git/worktrees/<name>`.
+fn repository_name(checkout: &Path) -> String {
+    let linked = std::fs::read_to_string(checkout.join(".git"))
+        .ok()
+        .and_then(|text| {
+            let gitdir = std::path::PathBuf::from(text.trim().strip_prefix("gitdir:")?.trim());
+            let dot_git = gitdir.ancestors().find(|dir| dir.ends_with(".git"))?;
+            Some(dot_git.parent()?.to_path_buf())
+        });
+    linked
+        .as_deref()
+        .unwrap_or(checkout)
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default()
+}
+
+/// A repository's linked worktrees (not its main checkout) and their branches.
+fn linked_worktrees(repo: &Path) -> Vec<(std::path::PathBuf, String)> {
+    let Some(text) = git_stdout(repo, &["worktree", "list", "--porcelain"]) else {
+        return Vec::new();
+    };
+    let mut trees = Vec::new();
+    for block in text.split("\n\n").skip(1) {
+        let path = block.lines().find_map(|l| l.strip_prefix("worktree "));
+        let branch = block
+            .lines()
+            .find_map(|l| l.strip_prefix("branch refs/heads/"));
+        if let (Some(path), Some(branch)) = (path, branch) {
+            let path = Path::new(path);
+            if path.exists() {
+                trees.push((
+                    std::fs::canonicalize(path).unwrap_or_else(|_| path.to_owned()),
+                    branch.to_owned(),
+                ));
+            }
+        }
+    }
+    trees
 }
 
 /// Changed files under `cwd` (paths relative to it), with per-file line counts,

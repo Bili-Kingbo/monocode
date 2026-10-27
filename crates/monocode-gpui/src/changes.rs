@@ -1929,14 +1929,44 @@ impl Changes {
             return None;
         }
         let selected = nested.selected().unwrap_or_default().to_owned();
+        let session = nested.session_scope();
+        let mine = nested.session_repos().len();
+        let all = nested.all().len();
+        // A session's checkouts all show; a whole folder folds its clean ones.
         let (shown, unchanged): (Vec<NestedRepo>, Vec<NestedRepo>) = nested
             .repos()
             .iter()
             .cloned()
-            .partition(|repo| repo.stats.files > 0 || repo.path == selected);
+            .partition(|repo| session || repo.stats.files > 0 || repo.path == selected);
         let unchanged_count = unchanged.len();
         let open = self.unchanged_open;
         let mut rows: Vec<AnyElement> = Vec::new();
+        if mine > 0 {
+            rows.push(
+                div()
+                    .h(px(ROW))
+                    .w_full()
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .px(px(6.))
+                    .child(self.scope_tab(
+                        "nested-scope-session",
+                        "This session",
+                        mine,
+                        session,
+                        cx,
+                    ))
+                    .child(self.scope_tab(
+                        "nested-scope-all",
+                        "All repositories",
+                        all,
+                        !session,
+                        cx,
+                    ))
+                    .into_any_element(),
+            );
+        }
         for (ix, repo) in shown.iter().enumerate() {
             rows.push(self.nested_row(ix, repo, repo.path == selected, cx));
         }
@@ -2009,6 +2039,53 @@ impl Changes {
                 .children(rows)
                 .into_any_element(),
         )
+    }
+    /// Switches the list between the session's checkouts and all of them.
+    fn scope_tab(
+        &self,
+        id: &'static str,
+        label: &'static str,
+        count: usize,
+        active: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let all = id == "nested-scope-all";
+        div()
+            .id(id)
+            .debug_selector(move || id.into())
+            .role(Role::Tab)
+            .aria_label(label)
+            .aria_selected(active)
+            .min_w_0()
+            .h(px(22.))
+            .flex()
+            .items_center()
+            .gap_1()
+            .px(px(8.))
+            .rounded_md()
+            .text_size(px(12.))
+            .when(active, |d| d.bg(content(0.1)).text_color(content(1.)))
+            .when(!active, |d| {
+                d.text_color(content(0.55))
+                    .hover(|s| s.text_color(content(1.)))
+            })
+            .child(div().min_w_0().truncate().child(label))
+            .child(
+                div()
+                    .flex_shrink_0()
+                    .font_features(tabular())
+                    .text_size(px(11.))
+                    .text_color(content(0.4))
+                    .child(count.to_string()),
+            )
+            .when(!active, |d| {
+                d.on_click(cx.listener(move |this, _, _, cx| {
+                    if let Some((nested, _)) = &this.nested {
+                        nested.update(cx, |nested, cx| nested.set_show_all(all, cx));
+                    }
+                }))
+            })
+            .into_any_element()
     }
     fn nested_row(
         &self,

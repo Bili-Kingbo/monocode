@@ -288,6 +288,9 @@ pub struct StatusFilter {
 pub struct Filters {
     pub assigned_to_me: bool,
     pub hidden_projects: Vec<String>,
+    /// Repositories hidden by name ("owner/name", lowercase), for projects
+    /// that hold several.
+    pub hidden_repos: Vec<String>,
     pub hidden_linear_projects: Vec<String>,
     pub hidden_kinds: Vec<String>,
     pub time: String,
@@ -298,6 +301,7 @@ impl Default for Filters {
         Self {
             assigned_to_me: false,
             hidden_projects: vec![],
+            hidden_repos: vec![],
             hidden_linear_projects: vec![],
             hidden_kinds: vec![],
             time: "all".into(),
@@ -325,6 +329,9 @@ impl Filters {
             return false;
         }
         if !tracker && self.hidden_kinds.contains(&item.kind) {
+            return false;
+        }
+        if !tracker && self.hidden_repos.contains(&item.repo.to_lowercase()) {
             return false;
         }
         let linear_project = if item.project_id.is_empty() {
@@ -555,7 +562,12 @@ impl NotificationTracker {
                         &item.team_id
                     }
                 ),
-                _ if !item.project_path.is_empty() => crate::files::path_key(&item.project_path),
+                // One folder can hold several repositories with the same numbers.
+                _ if !item.project_path.is_empty() => format!(
+                    "{}:{}",
+                    crate::files::path_key(&item.project_path),
+                    item.repo.to_lowercase()
+                ),
                 _ => format!("{}:{}", item.provider, item.repo.to_lowercase()),
             };
             let id = if item.id.is_empty() {
@@ -584,6 +596,67 @@ pub struct Service {
     pub data_dir: PathBuf,
     pub cwd: PathBuf,
 }
+/// GitHub issues and pull requests for each (project, repository), read side
+/// by side. With several repositories, as in a folder of checkouts, one that
+/// fails (issues turned off, no access) costs only its own rows; the error
+/// shows only when every read failed.
+fn github_items(
+    repos: &[(&PathBuf, String)],
+    assigned_to_me: bool,
+    state: &str,
+    limit: u32,
+) -> Result<Vec<Item>, String> {
+    let requests: Vec<(&PathBuf, &str, &str)> = repos
+        .iter()
+        .flat_map(|(project, repo)| ["issue", "pr"].map(|kind| (*project, repo.as_str(), kind)))
+        .collect();
+    let mut items = Vec::new();
+    let mut error = None;
+    let mut read_any = false;
+    for chunk in requests.chunks(8) {
+        std::thread::scope(|scope| {
+            let reads: Vec<_> = chunk
+                .iter()
+                .map(|&(project, repo, kind)| {
+                    scope.spawn(move || {
+                        let rows = github::git_github_work_items_for(
+                            project,
+                            repo,
+                            kind,
+                            assigned_to_me,
+                            state,
+                            "",
+                            limit,
+                        )
+                        .and_then(convert::<_, Vec<Item>>);
+                        (project, rows)
+                    })
+                })
+                .collect();
+            for read in reads {
+                match read.join() {
+                    Ok((project, Ok(rows))) => {
+                        read_any = true;
+                        items.extend(rows.into_iter().map(|mut item| {
+                            item.provider = "github".into();
+                            item.project_path = project.to_string_lossy().into_owned();
+                            item
+                        }));
+                    }
+                    Ok((_, Err(e))) => {
+                        error.get_or_insert(e);
+                    }
+                    Err(_) => {}
+                }
+            }
+        });
+    }
+    match error {
+        Some(error) if !read_any => Err(error),
+        _ => Ok(items),
+    }
+}
+
 fn convert<T: Serialize, U: DeserializeOwned>(value: T) -> Result<U, String> {
     serde_json::from_value(serde_json::to_value(value).map_err(|e| e.to_string())?)
         .map_err(|e| e.to_string())
@@ -732,9 +805,10 @@ impl Service {
                     }
                     return Ok(items);
                 }
+                let mut github_repos: Vec<(&PathBuf, String)> = Vec::new();
                 for project in projects {
                     let repos = match provider {
-                        "github" => github::git_github_repositories_for(project),
+                        "github" => github::repositories_for_project(project),
                         "gitlab" => gitlab::gitlab_repo(
                             self.data_dir.clone(),
                             project.to_string_lossy().into_owned(),
@@ -751,6 +825,10 @@ impl Service {
                     };
                     for repo in repos {
                         if !visited.insert(repo.to_lowercase()) {
+                            continue;
+                        }
+                        if provider == "github" {
+                            github_repos.push((project, repo));
                             continue;
                         }
                         for kind in ["issue", "pr"] {
@@ -789,6 +867,12 @@ impl Service {
                         }
                     }
                 }
+                items.extend(github_items(
+                    &github_repos,
+                    state.filters.assigned_to_me,
+                    state.filters.fetch_state(),
+                    limit,
+                )?);
                 Ok(items)
             })();
             match result {
@@ -1069,6 +1153,35 @@ mod notification_tests {
         assert!(tracker
             .observe(&snapshot(vec![item(2, "github")]), "scope".into())
             .is_empty());
+    }
+
+    #[test]
+    fn a_folder_tracks_the_same_number_in_each_repository() {
+        let mut tracker = NotificationTracker::default();
+        let mut web = item(12, "github");
+        web.id.clear();
+        web.project_path = "/w".into();
+        web.repo = "acme/web".into();
+        let mut api = web.clone();
+        api.repo = "acme/api".into();
+        assert!(tracker
+            .observe(&snapshot(vec![web.clone()]), "scope".into())
+            .is_empty());
+        let appeared = tracker.observe(&snapshot(vec![web, api]), "scope".into());
+        assert_eq!(
+            appeared.iter().map(|i| i.repo.as_str()).collect::<Vec<_>>(),
+            vec!["acme/api"]
+        );
+    }
+
+    #[test]
+    fn hidden_repositories_hide_their_items() {
+        let mut filters = Filters::default();
+        let mut web = item(1, "github");
+        web.repo = "Acme/Web".into();
+        assert!(filters.matches(&web, "github", ""));
+        filters.hidden_repos.push("acme/web".into());
+        assert!(!filters.matches(&web, "github", ""));
     }
 
     #[test]

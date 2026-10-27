@@ -1580,16 +1580,19 @@ impl Shell {
                         .clone()
                         .unwrap_or_else(|| view.summary.cwd.clone()),
                     Kind::from_id(&view.summary.provider),
+                    view.session_edits().to_vec(),
                 )
             });
-        let (folder, provider) = match session {
-            Some((cwd, kind)) => (cwd, Some(kind)),
-            None => (self.working_copy().to_owned(), None),
+        let (folder, provider, edited) = match session {
+            Some((cwd, kind, edited)) => (cwd, Some(kind), edited),
+            None => (self.working_copy().to_owned(), None, Vec::new()),
         };
         // A folder of checkouts keeps Files on the folder; Git views follow
-        // its selected checkout.
-        self.nested
-            .update(cx, |nested, cx| nested.set_root(folder.clone(), cx));
+        // its selected checkout, among the session's own checkouts if any.
+        self.nested.update(cx, |nested, cx| {
+            nested.set_root(folder.clone(), cx);
+            nested.set_session(&edited, cx);
+        });
         let project = self
             .nested
             .read(cx)

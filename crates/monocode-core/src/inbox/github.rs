@@ -1,7 +1,7 @@
 //! GitHub Inbox models and parsers shared with the original implementation.
 use serde::{Deserialize, Serialize};
 use std::{
-    path::Path,
+    path::{Path, PathBuf},
     time::{SystemTime, UNIX_EPOCH},
 };
 const MAX_PR_DIFF_BYTES: usize = 2 * 1024 * 1024;
@@ -125,6 +125,56 @@ pub struct GitHubPrChecks {
 pub(super) fn git_github_repositories_for(root: &Path) -> Result<Vec<String>, String> {
     let json = gh_checked(root, &["repo", "view", "--json", "nameWithOwner,parent"])?;
     parse_github_repositories(&json)
+}
+
+/// A project's GitHub repositories. A folder that holds several checkouts
+/// (and is not one itself) has each checkout's own repository, without a
+/// fork's parent, whose items would crowd out the folder's own; they are
+/// looked up side by side and kept for ten minutes, as checkouts rarely
+/// change their remote.
+pub(super) fn repositories_for_project(root: &Path) -> Result<Vec<String>, String> {
+    use std::{
+        collections::HashMap,
+        sync::{Mutex, OnceLock},
+        time::{Duration, Instant},
+    };
+    type Lookups = Mutex<HashMap<PathBuf, (Instant, Vec<String>)>>;
+    static FOLDERS: OnceLock<Lookups> = OnceLock::new();
+    let direct = git_github_repositories_for(root);
+    if direct.is_ok() {
+        return direct;
+    }
+    let folders = FOLDERS.get_or_init(Default::default);
+    if let Some((at, repos)) = folders.lock().ok().and_then(|f| f.get(root).cloned()) {
+        if at.elapsed() < Duration::from_secs(600) {
+            return Ok(repos);
+        }
+    }
+    let checkouts = crate::scm::nested_repo_paths(root);
+    if checkouts.is_empty() {
+        return direct;
+    }
+    let mut repos: Vec<String> = Vec::new();
+    for chunk in checkouts.chunks(8) {
+        std::thread::scope(|scope| {
+            let reads: Vec<_> = chunk
+                .iter()
+                .map(|checkout| scope.spawn(move || git_github_repositories_for(checkout)))
+                .collect();
+            for read in reads {
+                let own = read.join().ok().and_then(Result::ok).unwrap_or_default();
+                if let Some(repo) = own.into_iter().next() {
+                    if !repos.iter().any(|r| r.eq_ignore_ascii_case(&repo)) {
+                        repos.push(repo);
+                    }
+                }
+            }
+        });
+    }
+    if let Ok(mut folders) = folders.lock() {
+        folders.insert(root.to_path_buf(), (Instant::now(), repos.clone()));
+    }
+    Ok(repos)
 }
 
 fn parse_github_repositories(json: &str) -> Result<Vec<String>, String> {
