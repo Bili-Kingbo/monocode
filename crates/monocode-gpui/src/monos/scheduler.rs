@@ -12,14 +12,53 @@ pub(super) struct HabitUi {
     expanded: HashSet<(String, u64)>,
 }
 
+const DAYS: [&str; 7] = [
+    n!("Sunday"),
+    n!("Monday"),
+    n!("Tuesday"),
+    n!("Wednesday"),
+    n!("Thursday"),
+    n!("Friday"),
+    n!("Saturday"),
+];
 fn duration(ms: u64) -> String {
     let seconds = (ms.saturating_add(500) / 1000).max(1);
     if seconds < 60 {
-        format!("{seconds}s")
+        tr!("{seconds}s", seconds = seconds)
     } else if seconds.is_multiple_of(60) {
-        format!("{}m", seconds / 60)
+        tr!("{minutes}m", minutes = seconds / 60)
     } else {
-        format!("{}m {}s", seconds / 60, seconds % 60)
+        tr!(
+            "{minutes}m {seconds}s",
+            minutes = seconds / 60,
+            seconds = seconds % 60
+        )
+    }
+}
+/// `Schedule::label` in the shown language; the core's stays English for
+/// the Mono's tools.
+pub(super) fn schedule_label(schedule: &Schedule) -> String {
+    const WEEKLY: [&str; 7] = [
+        n!("Sunday at {time}"),
+        n!("Monday at {time}"),
+        n!("Tuesday at {time}"),
+        n!("Wednesday at {time}"),
+        n!("Thursday at {time}"),
+        n!("Friday at {time}"),
+        n!("Saturday at {time}"),
+    ];
+    let time = &schedule.time;
+    match schedule.schedule_kind.as_str() {
+        "hourly" => tr!(
+            "Hourly at :{minute}",
+            minute = format!("{:02}", schedule.minute)
+        ),
+        "weekdays" => tr!("Weekdays at {time}", time = time),
+        "weekly" => monocode_core::i18n::tf(
+            WEEKLY[schedule.day_of_week.min(6) as usize],
+            &[("time", time)],
+        ),
+        _ => tr!("Daily at {time}", time = time),
     }
 }
 fn when(at: u64, now: u64) -> String {
@@ -30,11 +69,22 @@ fn when(at: u64, now: u64) -> String {
     let today = chrono::DateTime::from_timestamp_millis(now as i64)
         .map(|d| d.with_timezone(&chrono::Local).date_naive());
     if Some(at.date_naive()) == today {
-        format!("Today {}", at.format("%H:%M"))
+        tr!("Today {time}", time = at.format("%H:%M"))
     } else if now.saturating_sub(at.timestamp_millis().max(0) as u64) < 6 * 24 * 60 * 60 * 1000 {
-        at.format("%a %H:%M").to_string()
+        // chrono's `%a` is English only.
+        const SHORT_DAYS: [&str; 7] = [
+            n!("Sun"),
+            n!("Mon"),
+            n!("Tue"),
+            n!("Wed"),
+            n!("Thu"),
+            n!("Fri"),
+            n!("Sat"),
+        ];
+        let day = chrono::Datelike::weekday(&at).num_days_from_sunday() as usize;
+        format!("{} {}", tl(SHORT_DAYS[day]), at.format("%H:%M"))
     } else {
-        at.format("%b %-d, %H:%M").to_string()
+        at.format(t("%b %-d, %H:%M")).to_string()
     }
 }
 fn same_day(a: u64, b: u64) -> bool {
@@ -205,7 +255,7 @@ impl Monos {
     pub(super) fn habits_list(&mut self, mono: &Mono, cx: &mut Context<Self>) -> AnyElement {
         let filter = self.field(
             "mono-habit-search",
-            "Search habits…",
+            t("Search habits…"),
             String::new(),
             false,
             cx,
@@ -219,7 +269,12 @@ impl Monos {
                         let h = &self.habits[*ix];
                         matches_query(
                             &query,
-                            &format!("{} {} {}", h.name, h.instructions, h.schedule.label()),
+                            &format!(
+                                "{} {} {}",
+                                h.name,
+                                h.instructions,
+                                schedule_label(&h.schedule)
+                            ),
                         )
                     })
                     .collect::<Vec<_>>()
@@ -227,13 +282,13 @@ impl Monos {
         let no_matches = !self.habits.is_empty() && groups.iter().all(|items| items.is_empty());
         let list = div().id("mono-habits-list").debug_selector(|| "mono-habits-list".into())
             .flex_1().min_h_0().min_w_0().overflow_y_scroll().p_2().flex().flex_col().gap_4()
-            .when(no_matches, |d| d.child(empty_state("search-01", "No habits match this search.")))
+            .when(no_matches, |d| d.child(empty_state("search-01", t("No habits match this search."))))
             .when(self.habits.is_empty(), |d| d.child(
                 div().flex_1().min_h(px(160.)).flex().flex_col().items_center().justify_center()
                     .gap_3().px_6().py_10().text_center().text_size(px(12.)).line_height(px(18.))
                     .text_color(content(0.55)).child(icon("clock", 18.))
-                    .child(format!("Ask {} to put recurring work on a schedule, like a morning digest or a weekly report.", mono.label()))))
-            .children(["Up next today", "Done today", "Later"].into_iter().zip(groups).filter(|(_, items)| !items.is_empty()).map(|(title, items)| {
+                    .child(tr!("Ask {name} to put recurring work on a schedule, like a morning digest or a weekly report.", name = mono.label()))))
+            .children([t("Up next today"), t("Done today"), t("Later")].into_iter().zip(groups).filter(|(_, items)| !items.is_empty()).map(|(title, items)| {
                 div().flex_shrink_0().w_full().min_w_0().flex().flex_col().gap_1p5()
                     .child(div().px_2().text_size(px(11.)).text_color(content(0.4)).child(title))
                     .children(items.into_iter().map(|ix| self.habit_row(&self.habits[ix], mono, cx)))
@@ -251,13 +306,19 @@ impl Monos {
         let id = h.id.clone();
         let since = self.habit_running_since(h);
         let subtitle = if let Some(since) = since {
-            format!("Running now · {}", duration(now_ms().saturating_sub(since)))
+            tr!(
+                "Running now · {duration}",
+                duration = duration(now_ms().saturating_sub(since))
+            )
         } else if self.habit_busy(h) {
-            "Starting…".into()
+            t("Starting…").into()
         } else if h.enabled {
-            h.schedule.label()
+            schedule_label(&h.schedule)
         } else {
-            format!("Paused · {}", h.schedule.label())
+            tr!(
+                "Paused · {schedule}",
+                schedule = schedule_label(&h.schedule)
+            )
         };
         div()
             .id(SharedString::from(format!("mono-habit-{id}")))
@@ -362,11 +423,11 @@ impl Monos {
                 habit_icon_button(
                     SharedString::from(format!("mono-habit-run{suffix}")),
                     if running {
-                        "Already running"
+                        t("Already running")
                     } else if busy {
-                        "Starting"
+                        t("Starting")
                     } else {
-                        "Run now"
+                        t("Run now")
                     },
                     "zap",
                 )
@@ -384,7 +445,7 @@ impl Monos {
             .child(
                 habit_icon_button(
                     SharedString::from(format!("mono-habit-toggle{suffix}")),
-                    if h.enabled { "Pause" } else { "Resume" },
+                    if h.enabled { t("Pause") } else { t("Resume") },
                     if h.enabled {
                         "queue-pause"
                     } else {
@@ -400,7 +461,7 @@ impl Monos {
             .child(
                 habit_icon_button(
                     SharedString::from(format!("mono-habit-delete{suffix}")),
-                    "Remove",
+                    t("Remove"),
                     "trash",
                 )
                 .debug_selector(move || format!("mono-habit-delete{suffix}"))
@@ -426,7 +487,7 @@ impl Monos {
                     let h = all
                         .iter_mut()
                         .find(|h| h.id == id)
-                        .ok_or("Habit not found")?;
+                        .ok_or(t("Habit not found"))?;
                     h.enabled = !h.enabled;
                     if h.enabled {
                         h.next_run_at = h.schedule.next(now_ms())?;
@@ -451,13 +512,13 @@ impl Monos {
                     .min_w_0()
                     .flex()
                     .flex_col()
-                    .child(self.page_header("Habit", cx))
+                    .child(self.page_header(t("Habit"), cx))
                     .child(
                         div()
                             .p_4()
                             .text_size(px(12.))
                             .text_color(content(0.45))
-                            .child("This habit is no longer available."),
+                            .child(t("This habit is no longer available.")),
                     )
                     .into_any_element();
             };
@@ -477,19 +538,19 @@ impl Monos {
             .flex_col()
             .gap_0p5()
             .child(property(
-                "Runs",
+                t("Runs"),
                 if h.enabled {
-                    h.schedule.label()
+                    schedule_label(&h.schedule)
                 } else {
-                    "Paused".into()
+                    t("Paused").into()
                 },
             ));
         if since.is_none() && self.habit_busy(&h) {
-            info = info.child(property("Next", "Starting…"));
+            info = info.child(property(t("Next"), t("Starting…")));
         } else if h.enabled {
-            info = info.child(property("Next", when(h.next_run_at, now_ms())));
+            info = info.child(property(t("Next"), when(h.next_run_at, now_ms())));
         }
-        let mut history = section("Recent runs");
+        let mut history = section(t("Recent runs"));
         if let Some(since) = since {
             history = history.child(
                 div()
@@ -509,7 +570,7 @@ impl Monos {
                             .rounded_full()
                             .bg(rgb(mono.color)),
                     )
-                    .child(div().flex_1().min_w_0().child("Running now"))
+                    .child(div().flex_1().min_w_0().child(t("Running now")))
                     .child(
                         div()
                             .flex_shrink_0()
@@ -525,7 +586,7 @@ impl Monos {
                     .py_3()
                     .text_size(px(12.))
                     .text_color(content(0.4))
-                    .child("It hasn't run yet."),
+                    .child(t("It hasn't run yet.")),
             );
         }
         for run in &h.runs {
@@ -555,7 +616,7 @@ impl Monos {
                     .flex_col()
                     .child(info)
                     .child(
-                        section("What it does").child(
+                        section(t("What it does")).child(
                             div()
                                 .id("mono-habit-instructions")
                                 .debug_selector(|| "mono-habit-instructions".into())
@@ -588,9 +649,9 @@ impl Monos {
             .or(run.error.as_ref())
             .is_some_and(|text| !text.is_empty());
         let (label, color) = match run.outcome.as_str() {
-            "posted" => ("Messaged you", rgb(mono.color).into()),
-            "quiet" => ("Nothing to report", content(0.25)),
-            _ => ("Couldn't finish", rgb(0xf87171).into()),
+            "posted" => (t("Messaged you"), rgb(mono.color).into()),
+            "quiet" => (t("Nothing to report"), content(0.25)),
+            _ => (t("Couldn't finish"), rgb(0xf87171).into()),
         };
         let time = format!(
             "{}{}",
@@ -619,7 +680,7 @@ impl Monos {
                         move || format!("mono-habit-history-{id}-{at}")
                     })
                     .role(Role::Button)
-                    .aria_label(format!("{label}, {time}"))
+                    .aria_label(tr!("{label}, {time}", label = label, time = time))
                     .w_full()
                     .min_w_0()
                     .px_2()
@@ -706,7 +767,7 @@ impl Monos {
     }
     fn new_habit_page(&mut self, window: &mut Window, cx: &mut Context<Self>) -> AnyElement {
         let fresh = !self.fields.contains_key("habit-name");
-        let name = self.field("habit-name", "Name", String::new(), false, cx);
+        let name = self.field("habit-name", t("Name"), String::new(), false, cx);
         let instructions = if let Some(field) = self.fields.get("habit-instructions") {
             field.clone()
         } else {
@@ -767,7 +828,7 @@ impl Monos {
             .habit_schedule(cx)
             .next(now_ms())
             .map(|at| when(at, now_ms()))
-            .unwrap_or_else(|_| "Choose a valid time (HH:MM)".into());
+            .unwrap_or_else(|_| t("Choose a valid time (HH:MM)").into());
         div()
             .size_full()
             .min_w_0()
@@ -776,13 +837,13 @@ impl Monos {
             .flex()
             .flex_col()
             .child(
-                self.page_header("New habit", cx).child(
+                self.page_header(t("New habit"), cx).child(
                     button(
                         "mono-habit-save",
                         if self.habit_ui.saving {
-                            "Creating…"
+                            t("Creating…")
                         } else {
-                            "Create"
+                            t("Create")
                         },
                     )
                     .debug_selector(|| "mono-habit-save".into())
@@ -836,11 +897,11 @@ impl Monos {
                             .flex()
                             .flex_col()
                             .gap_0p5()
-                            .child(property("Runs", self.schedule_controls(cx)))
-                            .child(property("Next", next)),
+                            .child(property(t("Runs"), self.schedule_controls(cx)))
+                            .child(property(t("Next"), next)),
                     )
                     .child(
-                        section("What it does")
+                        section(t("What it does"))
                             .child(
                                 div()
                                     .id("mono-habit-prompt-field")
@@ -894,7 +955,11 @@ impl Monos {
             .id(field)
             .debug_selector(move || format!("mono-{field}-picker"))
             .role(Role::ComboBox)
-            .aria_label(format!("{label}: {selected}"))
+            .aria_label(tr!(
+                "{label}: {selected}",
+                label = label,
+                selected = selected
+            ))
             .aria_expanded(expanded)
             .track_focus(&focus)
             .tab_index(0)
@@ -997,15 +1062,8 @@ impl Monos {
                 .map(|(value, label)| (value.to_string(), label.to_string()))
                 .collect()
         };
-        let days = [
-            "Sunday",
-            "Monday",
-            "Tuesday",
-            "Wednesday",
-            "Thursday",
-            "Friday",
-            "Saturday",
-        ];
+        // Chinese reads 每周 星期一 09:00, without the joining words.
+        let joins = !monocode_core::i18n::chinese();
         div()
             .id("mono-habit-schedule")
             .debug_selector(|| "mono-habit-schedule".into())
@@ -1019,36 +1077,41 @@ impl Monos {
             .py_0p5()
             .child(self.schedule_picker(
                 "habit-kind",
-                "Repeats",
+                t("Repeats"),
                 kind.clone(),
                 choices(&[
-                    ("daily", "Daily"),
-                    ("weekdays", "Weekdays"),
-                    ("weekly", "Weekly"),
-                    ("hourly", "Hourly"),
+                    ("daily", t("Daily")),
+                    ("weekdays", t("Weekdays")),
+                    ("weekly", t("Weekly")),
+                    ("hourly", t("Hourly")),
                 ]),
                 cx,
             ))
             .when(kind == "weekly", |d| {
-                d.child(div().text_color(content(0.45)).child("on")).child(
+                d.when(joins, |d| {
+                    d.child(div().text_color(content(0.45)).child("on"))
+                })
+                .child(
                     self.schedule_picker(
                         "habit-weekday",
-                        "Day",
+                        t("Day"),
                         self.value("habit-weekday", cx),
-                        days.into_iter()
+                        DAYS.into_iter()
                             .enumerate()
-                            .map(|(ix, label)| (ix.to_string(), label.into()))
+                            .map(|(ix, label)| (ix.to_string(), tl(label).into()))
                             .collect(),
                         cx,
                     ),
                 )
             })
-            .child(div().text_color(content(0.45)).child("at"))
+            .when(joins, |d| {
+                d.child(div().text_color(content(0.45)).child("at"))
+            })
             .when(kind == "hourly", |d| {
                 d.child(
                     self.schedule_picker(
                         "habit-minute",
-                        "Minute",
+                        t("Minute"),
                         self.value("habit-minute", cx),
                         [0, 15, 30, 45]
                             .into_iter()
@@ -1157,7 +1220,7 @@ impl Monos {
             habits::update(&root, &target, |all| {
                 all.iter_mut()
                     .find(|h| h.id == id)
-                    .ok_or("Habit not found")?
+                    .ok_or(t("Habit not found"))?
                     .run_requested = true;
                 Ok(())
             })

@@ -1,4 +1,5 @@
 //! macOS application hotkeys via HIToolbox; no accessibility permission needed.
+use monocode_core::{i18n::t, tr};
 use std::ffi::c_void;
 #[repr(C)]
 struct EventType {
@@ -67,7 +68,10 @@ impl Registration {
                 &mut handler,
             );
             if error != 0 {
-                return Err(format!("Could not register Quick composer ({error})."));
+                return Err(tr!(
+                    "Could not register Quick composer ({error}).",
+                    error = error
+                ));
             }
             let error = RegisterEventHotKey(
                 code,
@@ -83,7 +87,7 @@ impl Registration {
             if error != 0 {
                 RemoveEventHandler(handler);
                 return Err(
-                    "This shortcut is already in use. Choose another in Keybindings.".into(),
+                    t("This shortcut is already in use. Choose another in Keybindings.").into(),
                 );
             }
         }
@@ -118,7 +122,7 @@ fn parse(shortcut: &str) -> Result<(u32, u32), String> {
             v => key = Some(v),
         }
     }
-    let key = key.ok_or("Choose a key for Quick composer.")?;
+    let key = key.ok_or(t("Choose a key for Quick composer."))?;
     let code = match key {
         "a" => 0,
         "s" => 1,
@@ -166,10 +170,10 @@ fn parse(shortcut: &str) -> Result<(u32, u32), String> {
         "right" => 124,
         "down" => 125,
         "up" => 126,
-        _ => return Err("This Quick composer shortcut is not supported.".into()),
+        _ => return Err(t("This Quick composer shortcut is not supported.").into()),
     };
     if modifiers == 0 {
-        return Err("Quick composer needs a modifier key.".into());
+        return Err(t("Quick composer needs a modifier key.").into());
     }
     Ok((code, modifiers))
 }

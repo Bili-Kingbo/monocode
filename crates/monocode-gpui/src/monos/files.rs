@@ -25,7 +25,7 @@ impl Monos {
         cx.spawn(async move |this, cx| {
             let files = work.await?;
             this.update(cx, |this, cx| {
-                let mono = this.roster.get_mut(&id).ok_or("Mono no longer exists")?;
+                let mono = this.roster.get_mut(&id).ok_or(t("Mono no longer exists"))?;
                 mono.name.clear();
                 let key = format!("{id}:SOUL.md");
                 this.fields.remove(&format!("file:{key}"));
@@ -75,7 +75,7 @@ impl Monos {
                 cx,
             );
             editor.update(cx, |v, cx| {
-                v.set_placeholder("Who it is, and what it should always keep in mind", cx)
+                v.set_placeholder(t("Who it is, and what it should always keep in mind"), cx)
             });
             let focus = editor.focus_handle(cx);
             div()
@@ -100,7 +100,7 @@ impl Monos {
                 .text_center()
                 .text_size(px(12.))
                 .text_color(content(0.45))
-                .child("Loading…")
+                .child(t("Loading…"))
                 .into_any_element()
         };
         let _ = mono;
@@ -111,7 +111,7 @@ impl Monos {
             .min_h_0()
             .flex()
             .flex_col()
-            .child(Self::settings_page_header("Soul"))
+            .child(Self::settings_page_header(t("Soul")))
             .child(body)
             .into_any_element()
     }
@@ -180,8 +180,9 @@ impl Monos {
                             this.reload_files(&id, cx);
                         }
                         Err(e) => {
-                            this.error = Some(format!(
-                                "Could not save: {e}. Your edits are still in the editor."
+                            this.error = Some(tr!(
+                                "Could not save: {e}. Your edits are still in the editor.",
+                                e = e
                             ))
                         }
                     }
@@ -221,9 +222,11 @@ impl Monos {
     ) {
         let prompt = window.prompt(
             gpui::PromptLevel::Warning,
-            "Reset conversation?",
-            Some("The chat will be cleared. Its soul, memory and habits stay."),
-            &["Cancel", "Reset"],
+            t("Reset conversation?"),
+            Some(t(
+                "The chat will be cleared. Its soul, memory and habits stay.",
+            )),
+            &[t("Cancel"), t("Reset")],
             cx,
         );
         let id = id.to_string();
@@ -250,9 +253,11 @@ impl Monos {
     pub(super) fn delete_mono(&mut self, id: &str, window: &mut Window, cx: &mut Context<Self>) {
         let prompt = window.prompt(
             gpui::PromptLevel::Warning,
-            "Delete mono?",
-            Some("Its scheduled habits stop. Sessions and notes it created stay saved."),
-            &["Cancel", "Delete"],
+            t("Delete mono?"),
+            Some(t(
+                "Its scheduled habits stop. Sessions and notes it created stay saved.",
+            )),
+            &[t("Cancel"), t("Delete")],
             cx,
         );
         let id = id.to_string();
