@@ -1,7 +1,7 @@
 use super::panels::{button, empty_state, matches_query, search_bar};
 use super::*;
 use monocode_core::mono::habits::{Run, Schedule};
-use monocode_core::time::now_ms;
+use monocode_core::{i18n::tc, time::now_ms};
 
 #[derive(Default)]
 pub(super) struct HabitUi {
@@ -546,9 +546,9 @@ impl Monos {
                 },
             ));
         if since.is_none() && self.habit_busy(&h) {
-            info = info.child(property(t("Next"), t("Starting…")));
+            info = info.child(property(tc("habit", "Next"), t("Starting…")));
         } else if h.enabled {
-            info = info.child(property(t("Next"), when(h.next_run_at, now_ms())));
+            info = info.child(property(tc("habit", "Next"), when(h.next_run_at, now_ms())));
         }
         let mut history = section(t("Recent runs"));
         if let Some(since) = since {
@@ -898,7 +898,7 @@ impl Monos {
                             .flex_col()
                             .gap_0p5()
                             .child(property(t("Runs"), self.schedule_controls(cx)))
-                            .child(property(t("Next"), next)),
+                            .child(property(tc("habit", "Next"), next)),
                     )
                     .child(
                         section(t("What it does"))

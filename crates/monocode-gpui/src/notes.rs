@@ -14,7 +14,7 @@ use gpui::{
     prelude::*, px,
 };
 use monocode_core::{
-    i18n::t,
+    i18n::{ago, t},
     notes::{self, Note},
     tr,
 };
@@ -1168,9 +1168,9 @@ fn relative_time(at: i64) -> String {
     let seconds = (monocode_core::time::now_ms() as i64 - at).max(0) / 1000;
     match seconds {
         0..60 => t("now").into(),
-        60..3600 => tr!("{minutes}m", minutes = seconds / 60),
-        3600..86400 => tr!("{hours}h", hours = seconds / 3600),
-        86400..604800 => tr!("{days}d", days = seconds / 86400),
+        60..3600 => ago(tr!("{minutes}m", minutes = seconds / 60)),
+        3600..86400 => ago(tr!("{hours}h", hours = seconds / 3600)),
+        86400..604800 => ago(tr!("{days}d", days = seconds / 86400)),
         _ => chrono::DateTime::from_timestamp_millis(at)
             .map(|date| date.format(t("%b %-d")).to_string())
             .unwrap_or_default(),

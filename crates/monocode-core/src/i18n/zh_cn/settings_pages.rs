@@ -236,7 +236,7 @@ pub(super) const ENTRIES: &[(&str, &str)] = &[
         "No archived conversations in this project.",
         "此项目中没有已归档的对话。",
     ),
-    ("%b %-d", "%-m 月 %-d 日"),
+    ("%b %-d", "%-m月%-d日"),
     ("Unarchive", "取消归档"),
     ("Delete", "删除"),
     ("Archived conversations", "已归档的对话"),

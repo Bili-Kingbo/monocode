@@ -34,19 +34,23 @@ pub fn relative(value: u64, now: u64) -> String {
     }
     let minutes = seconds / 60;
     if minutes < 60 {
-        return crate::tr!("{minutes}m", minutes = minutes);
+        return crate::i18n::ago(crate::tr!("{minutes}m", minutes = minutes));
     }
     let hours = minutes / 60;
     if hours < 24 {
         return if minutes.is_multiple_of(60) {
-            crate::tr!("{hours}h", hours = hours)
+            crate::i18n::ago(crate::tr!("{hours}h", hours = hours))
         } else {
-            crate::tr!("{hours}h {minutes}m", hours = hours, minutes = minutes % 60)
+            crate::i18n::ago(crate::tr!(
+                "{hours}h {minutes}m",
+                hours = hours,
+                minutes = minutes % 60
+            ))
         };
     }
     let days = hours / 24;
     if days < 7 {
-        return crate::tr!("{days}d", days = days);
+        return crate::i18n::ago(crate::tr!("{days}d", days = days));
     }
     i64::try_from(value)
         .ok()

@@ -61,6 +61,29 @@ pub fn t(en: &'static str) -> &'static str {
     tl(en)
 }
 
+/// `t` for English that means different things in different places, such
+/// as "Next" as a button and as a habit's next run: the entry is keyed
+/// "{context}|{en}", and English shows unchanged.
+pub fn tc(context: &'static str, en: &'static str) -> &'static str {
+    if !chinese() {
+        return en;
+    }
+    table()
+        .get(format!("{context}|{en}").as_str())
+        .copied()
+        .unwrap_or_else(|| t(en))
+}
+
+/// A compact elapsed time ("5m", "3h") read as how long ago: Chinese adds 前
+/// ("5 分钟前"), English stays as it is.
+pub fn ago(elapsed: String) -> String {
+    if chinese() {
+        elapsed + "前"
+    } else {
+        elapsed
+    }
+}
+
 /// `t` for a label held in a variable, such as one from a table marked with
 /// `n!`, or a fixed status kept as a `String`.
 pub fn tl(en: &str) -> &str {
@@ -146,7 +169,7 @@ mod tests {
     /// also when formatting moved the literal onto the next line.
     fn labels(text: &str) -> Vec<String> {
         let mut labels = Vec::new();
-        for call in ["t(", "tr!(", "tf(", "n!("] {
+        for call in ["t(", "tr!(", "tf(", "n!(", "tc("] {
             let mut rest = text;
             while let Some(at) = rest.find(call) {
                 let before = rest[..at].chars().next_back();
@@ -158,6 +181,22 @@ mod tests {
                     continue;
                 };
                 rest = quoted;
+                // tc("context", "English") is keyed "context|English".
+                let mut context = None;
+                if call == "tc(" {
+                    let Some(end) = rest.find('"') else {
+                        continue;
+                    };
+                    let Some(next) = rest[end + 1..]
+                        .trim_start()
+                        .strip_prefix(',')
+                        .and_then(|r| r.trim_start().strip_prefix('"'))
+                    else {
+                        continue;
+                    };
+                    context = Some(rest[..end].to_owned());
+                    rest = next;
+                }
                 let mut label = String::new();
                 let mut chars = rest.chars();
                 while let Some(c) = chars.next() {
@@ -171,7 +210,10 @@ mod tests {
                         c => label.push(c),
                     }
                 }
-                labels.push(label);
+                labels.push(match context {
+                    Some(context) => format!("{context}|{label}"),
+                    None => label,
+                });
             }
         }
         labels
