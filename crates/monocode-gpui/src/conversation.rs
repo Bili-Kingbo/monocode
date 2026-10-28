@@ -715,6 +715,8 @@ impl Conversation {
                 .and_then(|s| s.worktree_cwd.as_deref())
                 .unwrap_or(&cwd);
             let git = crate::git_cache::load(Path::new(execution_cwd)).ok();
+            let folder =
+                git.is_none() && monocode_core::scm::holds_checkouts(Path::new(execution_cwd));
             (
                 locked(&store)
                     .and_then(|s| {
@@ -732,7 +734,7 @@ impl Conversation {
                             edits,
                         )
                     }),
-                git,
+                (git, folder),
                 settings,
                 locked(&store).and_then(|s| s.context_usage(id)),
                 locked(&store).and_then(|s| s.follow_ups(id)),
@@ -740,11 +742,12 @@ impl Conversation {
             )
         });
         cx.spawn(async move |this, cx| {
-            let (result, git, settings, context, follow_ups, before) = work.await;
+            let (result, (git, folder), settings, context, follow_ups, before) = work.await;
             let _ = this.update(cx, |this, cx| {
                 this.loading = false;
                 this.branch = git.as_ref().and_then(|s| s.current.clone());
                 this.git = git;
+                this.checkouts_folder = folder;
                 this.context = context.ok().flatten();
                 match follow_ups {
                     Ok(state) => {
@@ -2984,6 +2987,7 @@ impl Conversation {
             let name = monocode_core::files::leaf_name(self.execution_cwd());
             div()
                 .id("composer-workspace")
+                .debug_selector(|| "composer-workspace-folder".into())
                 .role(Role::Group)
                 .aria_label(format!("Workspace {name}"))
                 .min_w_0()
