@@ -6,6 +6,7 @@ use crate::{
     explorer::Explorer,
     git_status::{GitChanged, ProjectGit},
     history::History,
+    nested_repos::NestedRepos,
     project_tabs::{TabLabel, TabReveal, tab_button},
     theme::*,
 };
@@ -277,14 +278,23 @@ impl Focusable for RightPanel {
 impl RightPanel {
     pub(crate) fn new(
         git: Entity<ProjectGit>,
+        nested: Entity<NestedRepos>,
         tab: RightTab,
         order: Vec<RightTab>,
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
         let explorer = cx.new(|cx| Explorer::new(git.clone(), window, cx));
-        let changes = cx.new(|cx| Changes::new(git.clone(), window, cx));
-        let history = cx.new(|cx| History::new(git.clone(), window, cx));
+        let changes = cx.new(|cx| {
+            let mut changes = Changes::new(git.clone(), window, cx);
+            changes.set_nested(nested.clone(), cx);
+            changes
+        });
+        let history = cx.new(|cx| {
+            let mut history = History::new(git.clone(), window, cx);
+            history.set_nested(nested.clone(), cx);
+            history
+        });
         let subscriptions = vec![
             cx.observe(&git, |_, _, cx| cx.notify()),
             cx.subscribe(&git, |_, _, _: &GitChanged, cx| cx.notify()),

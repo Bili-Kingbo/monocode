@@ -47,6 +47,7 @@ mod metal_tests;
 mod mobile;
 mod modal;
 mod monos;
+mod nested_repos;
 mod notes;
 mod notifications;
 mod pane_layout;

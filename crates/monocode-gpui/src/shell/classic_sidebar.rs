@@ -812,6 +812,10 @@ impl Shell {
     }
 
     fn open_classic_worktree_picker(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        // A folder of checkouts has no worktrees of its own to pick.
+        if self.is_folder_of_checkouts(&self.workspace.project, cx) {
+            return;
+        }
         self.close_menu(cx);
         self.close_preview(cx);
         let project = self.workspace.project.clone();

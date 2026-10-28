@@ -16,7 +16,7 @@ use crate::{
 };
 use gpui::{
     App, AppContext, Context, Entity, EventEmitter, FocusHandle, Focusable, ListAlignment,
-    ListState, Pixels, Subscription, px,
+    ListState, Pixels, Subscription, UniformListScrollHandle, px,
 };
 use monocode_core::{
     inbox::{self as model, Checks, Details, Diff, Item, Service, Snapshot, Thread, ViewState},
@@ -54,6 +54,7 @@ pub(crate) struct Inbox {
     search: Entity<Input>,
     comment: Entity<Input>,
     summary_scroll: ListState,
+    list_scroll: UniformListScrollHandle,
     summary_width: std::rc::Rc<std::cell::Cell<Pixels>>,
     activity: Vec<ui::Activity>,
     activity_revision: u64,
@@ -228,6 +229,7 @@ impl Inbox {
             search,
             comment,
             summary_scroll: ListState::new(0, ListAlignment::Top, px(200.)),
+            list_scroll: UniformListScrollHandle::new(),
             summary_width: Default::default(),
             activity: vec![],
             activity_revision: 0,
@@ -469,6 +471,17 @@ impl Inbox {
         if let Err(error) = locked(&self.store).and_then(|db| self.state.save(&db)) {
             self.error = Some(error);
         }
+    }
+    /// Positions in the snapshot of the items the filters and search show.
+    fn visible_indices(&self, cx: &App) -> Vec<usize> {
+        let search = self.search.read(cx).content.as_ref();
+        self.snapshot
+            .items
+            .iter()
+            .enumerate()
+            .filter(|(_, item)| self.state.filters.matches(item, &self.state.source, search))
+            .map(|(ix, _)| ix)
+            .collect()
     }
     fn visible_items(&self, cx: &App) -> Vec<Item> {
         let search = self.search.read(cx).content.as_ref();

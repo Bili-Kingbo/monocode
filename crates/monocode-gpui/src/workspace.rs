@@ -130,6 +130,8 @@ pub(crate) struct Workspace {
     pub project_rail_groups: Vec<ProjectRailGroup>,
     pub project_rail_assignments: HashMap<String, String>,
     pub classic_sidebar_tabs: HashMap<String, String>,
+    /// The checkout Git views follow in a folder of checkouts, by folder.
+    pub nested_repos: HashMap<String, String>,
     pub classic_sidebar_tab_order: Vec<String>,
     pub new_layout_prompt_dismissed: bool,
     pub preferences: crate::settings::Preferences,
@@ -331,6 +333,7 @@ impl Default for Workspace {
             project_rail_groups: Vec::new(),
             project_rail_assignments: HashMap::new(),
             classic_sidebar_tabs: HashMap::new(),
+            nested_repos: HashMap::new(),
             classic_sidebar_tab_order: Vec::new(),
             new_layout_prompt_dismissed: false,
             preferences: crate::settings::Preferences::default(),

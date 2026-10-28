@@ -717,6 +717,7 @@ pub(crate) struct Shell {
     tab_scroll_task: Option<gpui::Task<()>>,
     resize: Option<(Pixels, f32)>,
     pub(crate) git: Entity<crate::git_status::ProjectGit>,
+    pub(crate) nested: Entity<crate::nested_repos::NestedRepos>,
     pub(crate) right_panel: Option<Entity<RightPanel>>,
     right_resize: Option<(Pixels, f32)>,
     /// Either right-panel handle is hovered; both of its hairlines light up.
@@ -888,6 +889,23 @@ impl Shell {
         });
         let git_project = workspace.project.clone();
         let git = cx.new(|cx| crate::git_status::ProjectGit::new(git_project, cx));
+        let nested =
+            cx.new(|_| crate::nested_repos::NestedRepos::new(workspace.nested_repos.clone()));
+        // A finished read or a pick can change the checkout Git views follow.
+        let nested_observation = cx.observe(&nested, |this, _, cx| this.sync_git(cx));
+        let nested_selection = cx.subscribe(
+            &nested,
+            |this, _, event: &crate::nested_repos::NestedRepoSelected, cx| {
+                this.workspace
+                    .nested_repos
+                    .insert(event.root.clone(), event.repo.clone());
+                this.persist(cx);
+            },
+        );
+        // Staging or committing in the followed checkout changes its row.
+        let nested_git = cx.subscribe(&git, |this, _, _: &crate::git_status::GitChanged, cx| {
+            this.reload_nested(cx)
+        });
         let git_observation = cx.observe(&git, |this, git, cx| {
             let cwd = git.read(cx).root.clone();
             for view in this.sessions.values() {
@@ -1061,6 +1079,7 @@ impl Shell {
             tab_scroll_task: None,
             resize: None,
             git,
+            nested,
             right_panel: None,
             right_resize: None,
             right_resize_hovered: false,
@@ -1098,6 +1117,9 @@ impl Shell {
             viewport_height: 800.,
             observations: vec![
                 git_observation,
+                nested_observation,
+                nested_selection,
+                nested_git,
                 resource_observation,
                 resource_stops,
                 classic_search_subscription,
@@ -1298,6 +1320,7 @@ impl Shell {
                 if this.workspace.active == Some(id) {
                     this.sync_git(cx);
                     this.git.update(cx, |git, cx| git.reload(cx));
+                    this.reload_nested(cx);
                 }
                 this.sync_search_session(id, cx);
                 this.orchestration_session_changed(id, cx);
@@ -1529,6 +1552,18 @@ impl Shell {
             self.tab_scroll.scroll_to_item(ix);
         }
     }
+    /// A folder that holds checkouts and is not one itself, once read.
+    pub(super) fn is_folder_of_checkouts(&self, folder: &str, cx: &App) -> bool {
+        self.nested.read(cx).target(folder).is_some()
+    }
+    /// A folder of checkouts rereads its list; other folders have none.
+    fn reload_nested(&mut self, cx: &mut Context<Self>) {
+        self.nested.update(cx, |nested, cx| {
+            if !nested.repos().is_empty() {
+                nested.reload(cx);
+            }
+        });
+    }
     /// Sidebar.tsx's `gitRoot`: the active session's worktree or folder.
     fn sync_git(&mut self, cx: &mut Context<Self>) {
         self.classic_sidebar_tab = self
@@ -1549,13 +1584,26 @@ impl Shell {
                         .clone()
                         .unwrap_or_else(|| view.summary.cwd.clone()),
                     Kind::from_id(&view.summary.provider),
+                    view.session_edits().to_vec(),
                 )
             });
-        let (project, provider) = match session {
-            Some((cwd, kind)) => (cwd, Some(kind)),
-            None => (self.working_copy().to_owned(), None),
+        let (folder, provider, edited) = match session {
+            Some((cwd, kind, edited)) => (cwd, Some(kind), edited),
+            None => (self.working_copy().to_owned(), None, Vec::new()),
         };
-        self.git.update(cx, |git, cx| git.set_project(project, cx));
+        // A folder of checkouts keeps Files on the folder; Git views follow
+        // its selected checkout, among the session's own checkouts if any.
+        self.nested.update(cx, |nested, cx| {
+            nested.set_root(folder.clone(), cx);
+            nested.set_session(&edited, cx);
+        });
+        let project = self
+            .nested
+            .read(cx)
+            .target(&folder)
+            .map_or_else(|| folder.clone(), str::to_owned);
+        self.git
+            .update(cx, |git, cx| git.set_checkout(folder, project, cx));
         if let (Some(panel), Some(kind)) = (&self.right_panel, provider) {
             let changes = panel.read(cx).changes.clone();
             changes.update(cx, |c, _| c.text_provider = kind);
@@ -1686,6 +1734,7 @@ impl Shell {
             return;
         }
         let git = self.git.clone();
+        let nested = self.nested.clone();
         let (tab, order, view) = (
             self.workspace.right_panel_tab,
             self.workspace.right_panel_tabs.clone(),
@@ -1693,7 +1742,7 @@ impl Shell {
         );
         let terminal_tab = self.terminal_in_panel(cx);
         let panel = cx.new(|cx| {
-            let mut panel = RightPanel::new(git, tab, order, window, cx);
+            let mut panel = RightPanel::new(git, nested, tab, order, window, cx);
             panel.set_terminal_tab(terminal_tab, cx);
             panel
         });
@@ -5366,42 +5415,49 @@ impl Shell {
                             &self.workspace.project,
                         ))
                     });
-                let worktree = MenuAction::new("switch-worktree", "Switch worktree")
-                    .icon("folder-tree")
-                    .flyout(self.worktree_flyout(events, window, cx));
-                (
-                    format!("{} menu", self.project_label(&self.workspace.project)).into(),
-                    vec![
+                // A folder of checkouts is the workspace itself: its agents
+                // make the worktrees they need, and Changes lists them.
+                let worktree =
+                    (!self.is_folder_of_checkouts(&self.workspace.project, cx)).then(|| {
+                        let worktree = MenuAction::new("switch-worktree", "Switch worktree")
+                            .icon("folder-tree")
+                            .flyout(self.worktree_flyout(events, window, cx));
                         match branch {
                             Some(branch) => worktree.value(branch),
                             None => worktree,
                         }
-                        .into(),
-                        MenuItem::Separator,
-                        MenuAction::new("switch-project", "Switch project")
-                            .icon("folder")
-                            .flyout(Flyout {
-                                view: picker.into(),
-                                width: 286.,
-                                padding: 0.,
-                                height: None,
-                                max_height: Some(380.),
-                                focus: Some(focus),
-                                surface: None,
-                            })
-                            .into(),
-                        MenuAction::new("project-settings", "Project settings")
-                            .icon("sliders")
-                            .flyout(self.project_settings_flyout(events, window, cx))
-                            .into(),
-                        MenuAction::new("open-remote-project", "Open folder on a machine…")
-                            .icon("globe")
-                            .into(),
-                        MenuAction::new("settings", "Settings")
-                            .icon("settings")
-                            .shortcut(format!("{MOD},"))
-                            .into(),
-                    ],
+                    });
+                (
+                    format!("{} menu", self.project_label(&self.workspace.project)).into(),
+                    worktree
+                        .into_iter()
+                        .flat_map(|worktree| [worktree.into(), MenuItem::Separator])
+                        .chain([
+                            MenuAction::new("switch-project", "Switch project")
+                                .icon("folder")
+                                .flyout(Flyout {
+                                    view: picker.into(),
+                                    width: 286.,
+                                    padding: 0.,
+                                    height: None,
+                                    max_height: Some(380.),
+                                    focus: Some(focus),
+                                    surface: None,
+                                })
+                                .into(),
+                            MenuAction::new("project-settings", "Project settings")
+                                .icon("sliders")
+                                .flyout(self.project_settings_flyout(events, window, cx))
+                                .into(),
+                            MenuAction::new("open-remote-project", "Open folder on a machine…")
+                                .icon("globe")
+                                .into(),
+                            MenuAction::new("settings", "Settings")
+                                .icon("settings")
+                                .shortcut(format!("{MOD},"))
+                                .into(),
+                        ])
+                        .collect(),
                     240.,
                     MenuStyle::Switcher,
                 )
@@ -8095,6 +8151,8 @@ impl Render for Shell {
         self.git.update(cx, |git, cx| {
             git.set_polling(poll_git && git.available(), cx)
         });
+        self.nested
+            .update(cx, |nested, cx| nested.set_polling(poll_git, cx));
         if let Some(panel) = &self.right_panel {
             let classic = self.workspace.boxy_layout();
             let tab_width = self.project_tabs_width(cx);

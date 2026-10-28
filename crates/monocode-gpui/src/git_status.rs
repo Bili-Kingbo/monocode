@@ -63,9 +63,12 @@ fn parent(path: &str) -> &str {
 
 pub(crate) struct ProjectGit {
     /// The active session's working folder (its worktree, if it has one):
-    /// Sidebar.tsx's `gitRoot`.
+    /// Sidebar.tsx's `gitRoot`. For a folder of checkouts, the one Git views
+    /// follow.
     project: String,
     pub root: String,
+    /// The folder Files shows: `project`, or the folder of checkouts holding it.
+    pub folder: String,
     pub index: Option<DiffIndex>,
     pub stats: Option<DiffStats>,
     pub statuses: StatusMap,
@@ -88,6 +91,7 @@ impl ProjectGit {
         let mut this = Self {
             root: project.clone(),
             project: String::new(),
+            folder: String::new(),
             index: None,
             stats: None,
             statuses: StatusMap::default(),
@@ -113,7 +117,19 @@ impl ProjectGit {
     /// The first frame of a switch already shows the new checkout's last
     /// snapshot, never the previous one's files and actions.
     pub(crate) fn set_project(&mut self, project: String, cx: &mut Context<Self>) {
+        self.set_checkout(project.clone(), project, cx);
+    }
+    /// Files shows `folder` while Git views read `project`, one of the
+    /// checkouts inside it (or the folder itself).
+    pub(crate) fn set_checkout(&mut self, folder: String, project: String, cx: &mut Context<Self>) {
+        let moved = folder != self.folder;
+        self.folder = folder;
         if project == self.project {
+            if moved {
+                self.epoch += 1;
+                cx.emit(GitChanged);
+                cx.notify();
+            }
             return;
         }
         self.project = project.clone();

@@ -4,13 +4,15 @@ use crate::{
     git_graph::{self, GraphCommit, NodeKind, Row, RowGraph, SWIMLANE_WIDTH},
     git_status::{GitChanged, ProjectGit},
     input::{self, Input},
+    nested_repos::NestedRepos,
+    popover::{Align, Anchor, AnchorSlot, Menu, MenuAction, MenuEvent, MenuItem, menu_popover},
     right_panel::*,
     theme::*,
 };
 use gpui::{
-    App, Bounds, Context, Entity, FocusHandle, Focusable, FontWeight, Hsla, KeyBinding, Role,
-    ScrollStrategy, SharedString, Subscription, UniformListScrollHandle, Window, actions, canvas,
-    div, fill, point, prelude::*, px, rgb, size, uniform_list,
+    AnyElement, App, Bounds, Context, Entity, FocusHandle, Focusable, FontWeight, Hsla, KeyBinding,
+    Role, ScrollStrategy, SharedString, Subscription, UniformListScrollHandle, Window, actions,
+    canvas, div, fill, point, prelude::*, px, rgb, size, uniform_list,
 };
 use monocode_core::scm::{self, HistoryCommit};
 use std::{collections::HashMap, path::PathBuf};
@@ -60,6 +62,10 @@ pub(crate) struct History {
     hovered: Option<usize>,
     scroll: UniformListScrollHandle,
     focus: FocusHandle,
+    /// A folder of checkouts picks the checkout whose history shows.
+    nested: Option<(Entity<NestedRepos>, Subscription)>,
+    repo_menu: Option<(Entity<Menu>, Subscription)>,
+    repo_anchor: AnchorSlot,
     _subscriptions: Vec<Subscription>,
 }
 
@@ -95,8 +101,101 @@ impl History {
             hovered: None,
             scroll: UniformListScrollHandle::new(),
             focus: cx.focus_handle(),
+            nested: None,
+            repo_menu: None,
+            repo_anchor: AnchorSlot::default(),
             _subscriptions: subscriptions,
         }
+    }
+    pub(crate) fn set_nested(&mut self, nested: Entity<NestedRepos>, cx: &mut Context<Self>) {
+        let observed = cx.observe(&nested, |_, _, cx| cx.notify());
+        self.nested = Some((nested, observed));
+    }
+    fn open_repo_menu(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        if self.repo_menu.take().is_some() {
+            cx.notify();
+            return;
+        }
+        let Some((nested, _)) = &self.nested else {
+            return;
+        };
+        let nested = nested.clone();
+        let (repos, selected) = {
+            let nested = nested.read(cx);
+            (
+                nested.repos().to_vec(),
+                nested.selected().map(str::to_owned),
+            )
+        };
+        let items: Vec<MenuItem> = repos
+            .iter()
+            .enumerate()
+            .map(|(ix, repo)| {
+                let action = MenuAction::new(format!("repo:{ix}"), repo.name.clone())
+                    .checked(selected.as_deref() == Some(repo.path.as_str()));
+                let action = match &repo.branch {
+                    Some(branch) => action.description(branch.clone()),
+                    None => action,
+                };
+                if repo.stats.files > 0 {
+                    action.badge(repo.stats.files.to_string()).into()
+                } else {
+                    action.into()
+                }
+            })
+            .collect();
+        let menu = cx.new(|cx| {
+            // The default rows fit each checkout's branch beneath its name.
+            Menu::new("Repositories", items, window, cx).width(240.)
+        });
+        let events = cx.subscribe(&menu, move |this, _, event: &MenuEvent, cx| {
+            this.repo_menu = None;
+            if let MenuEvent::Picked(action, _) = event
+                && let Some(repo) = action
+                    .strip_prefix("repo:")
+                    .and_then(|n| n.parse::<usize>().ok())
+                    .and_then(|i| repos.get(i))
+            {
+                nested.update(cx, |nested, cx| nested.select(repo.path.clone(), cx));
+            }
+            cx.notify();
+        });
+        self.repo_menu = Some((menu, events));
+        cx.notify();
+    }
+    /// The followed checkout's name, which opens the folder's checkouts.
+    fn repo_button(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let nested = self.nested.as_ref()?.0.read(cx);
+        let path = nested.selected()?;
+        let name = nested
+            .repos()
+            .iter()
+            .find(|repo| repo.path == path)
+            .map(|repo| repo.name.clone())?;
+        let open = self.repo_menu.is_some();
+        Some(
+            div()
+                .id("history-repo")
+                .role(Role::Button)
+                .aria_label("Repository")
+                .aria_expanded(open)
+                .relative()
+                .min_w_0()
+                .h(px(22.))
+                .flex()
+                .items_center()
+                .gap(px(4.))
+                .px(px(6.))
+                .rounded_md()
+                .child(self.repo_anchor.probe())
+                .when(open, |d| d.bg(content(0.1)))
+                .when(!open, |d| d.hover(|s| s.bg(content(0.05))))
+                .child(icon("folder", 13.).text_color(content(0.45)))
+                .child(div().min_w_0().truncate().child(name))
+                .child(icon("chevron-down", 12.).text_color(content(0.45)))
+                .on_click(cx.listener(|this, _, window, cx| this.open_repo_menu(window, cx)))
+                .into_any_element(),
+        )
     }
     pub(crate) fn set_enabled(&mut self, enabled: bool, cx: &mut Context<Self>) {
         let was = self.enabled;
@@ -306,6 +405,7 @@ impl History {
                             .flex()
                             .items_center()
                             .gap(px(6.))
+                            .children(self.repo_button(cx))
                             .child(icon("git-branch-hi", 14.).text_color(content(0.45)))
                             .child(div().min_w_0().truncate().child(label)),
                     )
@@ -747,6 +847,9 @@ impl Render for History {
                     .min_h_0(),
                 ),
             })
+            .children(self.repo_menu.as_ref().map(|(menu, _)| {
+                menu_popover(menu, Anchor::Slot(self.repo_anchor.clone()), cx).align(Align::Start)
+            }))
     }
 }
 

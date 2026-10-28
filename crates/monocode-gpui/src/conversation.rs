@@ -197,6 +197,9 @@ pub(crate) struct Conversation {
     controls: Option<std::sync::mpsc::Sender<Control>>,
     branch: Option<String>,
     git: Option<monocode_core::git::Snapshot>,
+    /// The working folder is not a checkout but holds several: the session
+    /// works across them in the folder itself, without a worktree to pick.
+    checkouts_folder: bool,
     git_picker: Option<Entity<GitPicker>>,
     git_events: Option<Subscription>,
     preparing_worktree: bool,
@@ -634,6 +637,7 @@ impl Conversation {
             controls: None,
             branch: git.as_ref().and_then(|s| s.current.clone()),
             git,
+            checkouts_folder: false,
             git_picker: None,
             git_events: None,
             preparing_worktree: false,
@@ -711,6 +715,8 @@ impl Conversation {
                 .and_then(|s| s.worktree_cwd.as_deref())
                 .unwrap_or(&cwd);
             let git = crate::git_cache::load(Path::new(execution_cwd)).ok();
+            let folder =
+                git.is_none() && monocode_core::scm::holds_checkouts(Path::new(execution_cwd));
             (
                 locked(&store)
                     .and_then(|s| {
@@ -728,7 +734,7 @@ impl Conversation {
                             edits,
                         )
                     }),
-                git,
+                (git, folder),
                 settings,
                 locked(&store).and_then(|s| s.context_usage(id)),
                 locked(&store).and_then(|s| s.follow_ups(id)),
@@ -736,11 +742,12 @@ impl Conversation {
             )
         });
         cx.spawn(async move |this, cx| {
-            let (result, git, settings, context, follow_ups, before) = work.await;
+            let (result, (git, folder), settings, context, follow_ups, before) = work.await;
             let _ = this.update(cx, |this, cx| {
                 this.loading = false;
                 this.branch = git.as_ref().and_then(|s| s.current.clone());
                 this.git = git;
+                this.checkouts_folder = folder;
                 this.context = context.ok().flatten();
                 match follow_ups {
                     Ok(state) => {
@@ -1697,15 +1704,19 @@ impl Conversation {
         self.sync_review(cx);
         let cwd = self.execution_cwd().to_owned();
         let work_cwd = cwd.clone();
-        let work = cx
-            .background_executor()
-            .spawn(async move { crate::git_cache::load(Path::new(&work_cwd)).ok() });
+        let work = cx.background_executor().spawn(async move {
+            let path = Path::new(&work_cwd);
+            let git = crate::git_cache::load(path).ok();
+            let folder = git.is_none() && monocode_core::scm::holds_checkouts(path);
+            (git, folder)
+        });
         cx.spawn(async move |this, cx| {
-            let git = work.await;
+            let (git, folder) = work.await;
             let _ = this.update(cx, |this, cx| {
                 if this.execution_cwd() == cwd {
                     this.branch = git.as_ref().and_then(|s| s.current.clone());
                     this.git = git;
+                    this.checkouts_folder = folder;
                     cx.notify();
                 }
             });
@@ -2970,7 +2981,28 @@ impl Conversation {
         let enabled = !self.busy && !self.preparing_worktree && self.git.is_some();
         // Still reading git is not unavailable: don't dim, then brighten.
         let dimmed = !enabled && (self.loaded || self.busy || self.preparing_worktree);
-        let workspace = if draft {
+        let workspace = if self.git.is_none() && self.checkouts_folder {
+            // A folder of checkouts is the workspace: name it, with nothing
+            // to pick; agents create the worktrees a task needs.
+            let name = monocode_core::files::leaf_name(self.execution_cwd());
+            div()
+                .id("composer-workspace")
+                .debug_selector(|| "composer-workspace-folder".into())
+                .role(Role::Group)
+                .aria_label(format!("Workspace {name}"))
+                .min_w_0()
+                .h(px(24.))
+                .ml(px(-6.))
+                .px(px(6.))
+                .flex()
+                .items_center()
+                .gap(px(6.))
+                .text_size(px(12.))
+                .text_color(content(0.55))
+                .child(icon("folder", 14.).text_color(content(0.55)))
+                .child(div().min_w_0().truncate().child(name))
+                .into_any_element()
+        } else if draft {
             bar_trigger(
                 "composer-workspace",
                 if new || linked {

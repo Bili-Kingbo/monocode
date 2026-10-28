@@ -6,6 +6,7 @@ use crate::{
     file_icons::file_type_icon,
     git_status::{GitChanged, ProjectGit},
     input::{self, Input},
+    nested_repos::NestedRepos,
     popover::{
         Align, Anchor, AnchorSlot, Menu, MenuAction, MenuEvent, MenuItem, MenuStyle, menu_popover,
     },
@@ -19,7 +20,7 @@ use gpui::{
 use monocode_core::{
     agent::{AccessMode, Settings},
     provider::{self, Event, Kind, Request},
-    scm::{self, ChangedFile, DiffIndex, Pr},
+    scm::{self, ChangedFile, DiffIndex, NestedRepo, Pr},
 };
 use serde::{Deserialize, Serialize};
 use std::{
@@ -237,6 +238,9 @@ pub(crate) struct Changes {
     menu: Option<OpenMenu>,
     branch_anchor: AnchorSlot,
     commit_anchor: AnchorSlot,
+    /// A folder of checkouts lists them above the followed one's changes.
+    nested: Option<(Entity<NestedRepos>, Subscription)>,
+    unchanged_open: bool,
     _subscriptions: Vec<Subscription>,
 }
 impl EventEmitter<ChangesEvent> for Changes {}
@@ -273,10 +277,16 @@ impl Changes {
             menu: None,
             branch_anchor: AnchorSlot::default(),
             commit_anchor: AnchorSlot::default(),
+            nested: None,
+            unchanged_open: false,
             _subscriptions: subscriptions,
         };
         this.rebuild(cx);
         this
+    }
+    pub(crate) fn set_nested(&mut self, nested: Entity<NestedRepos>, cx: &mut Context<Self>) {
+        let observed = cx.observe(&nested, |_, _, cx| cx.notify());
+        self.nested = Some((nested, observed));
     }
     pub(crate) fn set_view(&mut self, view: ChangesView, cx: &mut Context<Self>) {
         self.view = view;
@@ -1909,6 +1919,250 @@ fn text_prompt(
     Ok(text)
 }
 
+impl Changes {
+    /// The checkouts of a folder of checkouts: those with changes and the
+    /// followed one first, the others folded away. Picking one points every
+    /// Git view at it.
+    fn nested_list(&self, cx: &mut Context<Self>) -> Option<AnyElement> {
+        let nested = self.nested.as_ref()?.0.read(cx);
+        if nested.repos().is_empty() {
+            return None;
+        }
+        let selected = nested.selected().unwrap_or_default().to_owned();
+        let session = nested.session_scope();
+        let mine = nested.session_repos().len();
+        let all = nested.all().len();
+        // A session's checkouts all show; a whole folder folds its clean ones.
+        let (shown, unchanged): (Vec<NestedRepo>, Vec<NestedRepo>) = nested
+            .repos()
+            .iter()
+            .cloned()
+            .partition(|repo| session || repo.stats.files > 0 || repo.path == selected);
+        let unchanged_count = unchanged.len();
+        let open = self.unchanged_open;
+        let mut rows: Vec<AnyElement> = Vec::new();
+        if mine > 0 {
+            rows.push(
+                div()
+                    .h(px(ROW))
+                    .w_full()
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .px(px(6.))
+                    .child(self.scope_tab(
+                        "nested-scope-session",
+                        "This session",
+                        mine,
+                        session,
+                        cx,
+                    ))
+                    .child(self.scope_tab(
+                        "nested-scope-all",
+                        "All repositories",
+                        all,
+                        !session,
+                        cx,
+                    ))
+                    .into_any_element(),
+            );
+        }
+        for (ix, repo) in shown.iter().enumerate() {
+            rows.push(self.nested_row(ix, repo, repo.path == selected, cx));
+        }
+        if unchanged_count > 0 {
+            rows.push(
+                div()
+                    .id("nested-unchanged")
+                    .debug_selector(|| "nested-unchanged".into())
+                    .role(Role::Button)
+                    .aria_label("Repositories without changes")
+                    .aria_expanded(open)
+                    .h(px(ROW))
+                    .w_full()
+                    .flex()
+                    .items_center()
+                    .gap_1()
+                    .px(px(6.))
+                    .hover(|s| s.bg(content(0.05)))
+                    .child(
+                        icon(
+                            if open {
+                                "chevron-down"
+                            } else {
+                                "chevron-right"
+                            },
+                            14.,
+                        )
+                        .text_color(content(0.5)),
+                    )
+                    .child(
+                        div()
+                            .min_w_0()
+                            .truncate()
+                            .text_size(px(12.))
+                            .text_color(content(0.55))
+                            .child("No changes"),
+                    )
+                    .child(
+                        div()
+                            .flex_shrink_0()
+                            .font_features(tabular())
+                            .text_size(px(11.))
+                            .text_color(content(0.4))
+                            .child(unchanged_count.to_string()),
+                    )
+                    .on_click(cx.listener(|this, _, _, cx| {
+                        this.unchanged_open = !this.unchanged_open;
+                        cx.notify();
+                    }))
+                    .into_any_element(),
+            );
+            if open {
+                for (ix, repo) in unchanged.iter().enumerate() {
+                    rows.push(self.nested_row(shown.len() + ix, repo, false, cx));
+                }
+            }
+        }
+        Some(
+            div()
+                .id("nested-repos")
+                .debug_selector(|| "nested-repos".into())
+                .role(Role::List)
+                .aria_label("Repositories")
+                .flex_shrink_0()
+                .max_h(px(ROW * 8.5))
+                .overflow_y_scroll()
+                .py_1()
+                .border_b_1()
+                .border_color(stroke())
+                .children(rows)
+                .into_any_element(),
+        )
+    }
+    /// Switches the list between the session's checkouts and all of them.
+    fn scope_tab(
+        &self,
+        id: &'static str,
+        label: &'static str,
+        count: usize,
+        active: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let all = id == "nested-scope-all";
+        div()
+            .id(id)
+            .debug_selector(move || id.into())
+            .role(Role::Tab)
+            .aria_label(label)
+            .aria_selected(active)
+            .min_w_0()
+            .h(px(22.))
+            .flex()
+            .items_center()
+            .gap_1()
+            .px(px(8.))
+            .rounded_md()
+            .text_size(px(12.))
+            .when(active, |d| d.bg(content(0.1)).text_color(content(1.)))
+            .when(!active, |d| {
+                d.text_color(content(0.55))
+                    .hover(|s| s.text_color(content(1.)))
+            })
+            .child(div().min_w_0().truncate().child(label))
+            .child(
+                div()
+                    .flex_shrink_0()
+                    .font_features(tabular())
+                    .text_size(px(11.))
+                    .text_color(content(0.4))
+                    .child(count.to_string()),
+            )
+            .when(!active, |d| {
+                d.on_click(cx.listener(move |this, _, _, cx| {
+                    if let Some((nested, _)) = &this.nested {
+                        nested.update(cx, |nested, cx| nested.set_show_all(all, cx));
+                    }
+                }))
+            })
+            .into_any_element()
+    }
+    fn nested_row(
+        &self,
+        ix: usize,
+        repo: &NestedRepo,
+        selected: bool,
+        cx: &mut Context<Self>,
+    ) -> AnyElement {
+        let path = repo.path.clone();
+        let changed = repo.stats.files > 0;
+        let selector = format!("nested-repo-{}", repo.name);
+        div()
+            .id(("nested-repo", ix))
+            .debug_selector(move || selector.clone())
+            .role(Role::Button)
+            .aria_label(SharedString::from(repo.name.clone()))
+            .aria_selected(selected)
+            .h(px(ROW))
+            .w_full()
+            .flex()
+            .items_center()
+            .gap(px(6.))
+            .pl(px(8.))
+            .pr_2()
+            .when(selected, |d| d.bg(selection()))
+            .when(!selected, |d| d.hover(|s| s.bg(content(0.05))))
+            .child(file_type_icon(&repo.name, true, false, 16.))
+            .child(
+                div()
+                    .min_w_0()
+                    .truncate()
+                    .text_size(px(13.))
+                    .font_weight(FontWeight::MEDIUM)
+                    .text_color(content(if changed || selected { 1. } else { 0.7 }))
+                    .child(repo.name.clone()),
+            )
+            .child(
+                div()
+                    .min_w_0()
+                    .flex_1()
+                    .truncate()
+                    .text_size(px(11.))
+                    .text_color(content(0.4))
+                    .children(repo.branch.clone()),
+            )
+            .when(changed, |d| {
+                d.child(
+                    div()
+                        .flex_shrink_0()
+                        .flex()
+                        .gap(px(4.))
+                        .font_features(tabular())
+                        .text_size(px(10.))
+                        .font_weight(FontWeight::MEDIUM)
+                        .child(
+                            div()
+                                .text_color(rgb(DIFF_ADD))
+                                .child(format!("+{}", format_integer(repo.stats.additions))),
+                        )
+                        .child(
+                            div()
+                                .text_color(rgb(DIFF_DEL))
+                                .child(format!("-{}", format_integer(repo.stats.deletions))),
+                        ),
+                )
+            })
+            .when(!selected, |d| {
+                d.on_click(cx.listener(move |this, _, _, cx| {
+                    if let Some((nested, _)) = &this.nested {
+                        nested.update(cx, |nested, cx| nested.select(path.clone(), cx));
+                    }
+                }))
+            })
+            .into_any_element()
+    }
+}
+
 impl Render for Changes {
     fn render(&mut self, _: &mut Window, cx: &mut Context<Self>) -> impl IntoElement {
         let available = !self.cwd.is_empty() && self.cwd != "~";
@@ -1949,6 +2203,7 @@ impl Render for Changes {
             .flex()
             .flex_col()
             .overflow_hidden()
+            .children(self.nested_list(cx))
             .child(self.header(cx))
             .child(self.commit_box(cx))
             .map(|d| match empty {
@@ -1981,6 +2236,97 @@ impl Render for Changes {
 #[cfg(test)]
 mod tests {
     use super::*;
+    /// A plain folder holding a clean `api` checkout and a changed `web` one.
+    struct Folder(PathBuf);
+    impl Folder {
+        fn new() -> Self {
+            static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+            let root = std::env::temp_dir().join(format!(
+                "monocode-nested-{}-{}",
+                std::process::id(),
+                NEXT.fetch_add(1, Ordering::SeqCst),
+            ));
+            for name in ["api", "web"] {
+                let repo = root.join(name);
+                std::fs::create_dir_all(&repo).unwrap();
+                std::fs::write(repo.join("a.txt"), "one\n").unwrap();
+                for args in [
+                    &["init", "-q", "-b", "main"][..],
+                    &["add", "."],
+                    &["commit", "-qm", "Base"],
+                ] {
+                    let done = std::process::Command::new("git")
+                        .args([
+                            "-c",
+                            "user.name=Test",
+                            "-c",
+                            "user.email=test@example.invalid",
+                        ])
+                        .args(["-c", "commit.gpgsign=false"])
+                        .args(args)
+                        .current_dir(&repo)
+                        .status()
+                        .unwrap();
+                    assert!(done.success());
+                }
+            }
+            std::fs::write(root.join("web/a.txt"), "one\ntwo\n").unwrap();
+            Self(std::fs::canonicalize(root).unwrap())
+        }
+        fn repo(&self, name: &str) -> String {
+            self.0.join(name).to_string_lossy().into_owned()
+        }
+    }
+    impl Drop for Folder {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    #[gpui::test]
+    fn a_folder_of_checkouts_lists_changed_ones_and_picks_another(cx: &mut gpui::TestAppContext) {
+        let folder = Folder::new();
+        let nested = cx.new(|_| NestedRepos::new(Default::default()));
+        let git = cx.new(|cx| ProjectGit::new("~".into(), cx));
+        let window = cx.update(|cx| {
+            cx.open_window(Default::default(), |window, cx| {
+                let git = git.clone();
+                cx.new(|cx| {
+                    let mut changes = Changes::new(git, window, cx);
+                    changes.set_nested(nested.clone(), cx);
+                    changes
+                })
+            })
+            .unwrap()
+        });
+        let root = folder.0.to_string_lossy().into_owned();
+        nested.update(cx, |nested, cx| nested.set_root(root, cx));
+        cx.run_until_parked();
+        // The changed checkout is followed until another is picked.
+        assert_eq!(
+            nested.read_with(cx, |n, _| n.selected().map(str::to_owned)),
+            Some(folder.repo("web"))
+        );
+        // As the shell does: Files keeps the folder, Git views the checkout.
+        let root = folder.0.to_string_lossy().into_owned();
+        git.update(cx, |git, cx| git.set_checkout(root, folder.repo("web"), cx));
+        cx.run_until_parked();
+        let visual = &mut gpui::VisualTestContext::from_window(window.into(), cx);
+        visual.run_until_parked();
+        assert!(visual.debug_bounds("nested-repo-web").is_some());
+        assert!(visual.debug_bounds("nested-repo-api").is_none());
+        let fold = visual.debug_bounds("nested-unchanged").unwrap();
+        visual.simulate_click(fold.center(), Default::default());
+        visual.run_until_parked();
+        let api = visual.debug_bounds("nested-repo-api").unwrap();
+        visual.simulate_click(api.center(), Default::default());
+        visual.run_until_parked();
+        assert_eq!(
+            nested.read_with(visual, |n, _| n.selected().map(str::to_owned)),
+            Some(folder.repo("api"))
+        );
+    }
+
     #[gpui::test]
     fn enabling_an_enabled_changes_panel_does_not_reload(cx: &mut gpui::TestAppContext) {
         let window = cx.update(|cx| {

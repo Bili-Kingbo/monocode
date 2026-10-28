@@ -143,6 +143,10 @@ impl GitAction {
 }
 
 impl Conversation {
+    /// Files this session's edit tools changed.
+    pub(crate) fn session_edits(&self) -> &[String] {
+        &self.session_edits
+    }
     pub(super) fn remember_session_edits(&mut self, paths: Vec<String>) {
         for path in paths {
             let path = monocode_core::files::document::resolve_path(
@@ -472,6 +476,46 @@ mod tests {
         fn drop(&mut self) {
             let _ = std::fs::remove_dir_all(&self.0);
         }
+    }
+
+    #[gpui::test]
+    fn a_folder_of_checkouts_is_the_workspace_with_no_worktree_to_pick(cx: &mut TestAppContext) {
+        let repo = Repo::new();
+        let folder = repo.0.with_file_name(format!(
+            "{}-folder",
+            repo.0.file_name().unwrap().to_string_lossy()
+        ));
+        std::fs::create_dir_all(&folder).unwrap();
+        let checkout = folder.join("web");
+        std::fs::rename(&repo.0, &checkout).unwrap();
+        let store = Store::open(Path::new(":memory:")).unwrap();
+        let mut summary = store.create("codex", &folder.to_string_lossy()).unwrap();
+        summary.provider = "fixture".into();
+        let store = Arc::new(Mutex::new(store));
+        let window = cx.update(|cx| {
+            input::bind(cx);
+            crate::popover::bind(cx);
+            cx.open_window(Default::default(), |_, cx| {
+                cx.new(|cx| {
+                    let mut view = Conversation::new(summary, store.clone(), cx);
+                    view.load(cx);
+                    view
+                })
+            })
+            .unwrap()
+        });
+        cx.run_until_parked();
+        window
+            .update(cx, |view, _, _| {
+                assert!(view.git.is_none());
+                assert!(view.checkouts_folder);
+            })
+            .unwrap();
+        let visual = &mut gpui::VisualTestContext::from_window(window.into(), cx);
+        visual.run_until_parked();
+        assert!(visual.debug_bounds("composer-workspace-folder").is_some());
+        std::fs::rename(&checkout, &repo.0).unwrap();
+        let _ = std::fs::remove_dir_all(&folder);
     }
 
     #[gpui::test]
