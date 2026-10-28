@@ -30,7 +30,7 @@ pub(super) const ENTRIES: &[(&str, &str)] = &[
     ("Effort", "推理强度"),
     ("Switch account", "切换账号"),
     ("Workspace", "工作区"),
-    ("Current checkout", "当前工作副本"),
+    ("Current checkout", "当前目录"),
     ("New worktree", "新建工作树"),
     ("Existing worktrees", "已有工作树"),
     ("Add to message", "添加到消息"),

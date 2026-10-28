@@ -330,7 +330,7 @@ pub(super) const ENTRIES: &[(&str, &str)] = &[
     ("Attach", "添加"),
     ("Could not take a screenshot: {error}", "无法截屏：{error}"),
     ("New worktree", "新建工作树"),
-    ("Current checkout", "当前工作副本"),
+    ("Current checkout", "当前目录"),
     ("From {base}", "基于 {base}"),
     ("No repo", "无仓库"),
     ("No project", "无项目"),
