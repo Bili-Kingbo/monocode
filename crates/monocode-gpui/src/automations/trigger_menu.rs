@@ -5,7 +5,7 @@ use super::*;
 use crate::popover::{Menu, MenuAction, MenuEvent, MenuItem, Popover, menu_popover};
 
 const CATEGORIES: [(&str, &str, &str); 6] = [
-    ("time", "Scheduled", "clock"),
+    ("time", n!("Scheduled"), "clock"),
     ("github", "GitHub", "inbox-github"),
     ("linear", "Linear", "inbox-linear"),
     ("jira", "Jira", "inbox-jira"),
@@ -54,6 +54,7 @@ impl TriggerMenu {
             header.input.read(cx).focus_handle(cx),
         )];
         for (kind, label, mark) in CATEGORIES {
+            let label = tl(label);
             if !label.to_lowercase().contains(&query) {
                 continue;
             }
@@ -77,12 +78,12 @@ impl TriggerMenu {
                         .collect(),
                 )
             } else {
-                action.disabled(true).value("Not connected")
+                action.disabled(true).value(t("Not connected"))
             };
             items.push(action.into());
         }
         if items.len() == 1 {
-            items.push(MenuItem::Note("No matching triggers".into()));
+            items.push(MenuItem::Note(t("No matching triggers").into()));
         }
         items
     }
@@ -91,14 +92,20 @@ impl TriggerMenu {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) -> Self {
-        let input =
-            cx.new(|cx| Input::field("Search triggers", "Search triggers", content(0.35), cx));
+        let input = cx.new(|cx| {
+            Input::field(
+                t("Search triggers"),
+                t("Search triggers"),
+                content(0.35),
+                cx,
+            )
+        });
         let search = cx.new(|_| SearchHeader {
             input: input.clone(),
         });
         let items = Self::items(&search, &connected, cx);
         let menu = cx.new(|cx| {
-            Menu::new("Choose automation trigger", items, window, cx)
+            Menu::new(t("Choose automation trigger"), items, window, cx)
                 .width(250.)
                 .row_metrics(36., 14.)
                 .search_navigation()

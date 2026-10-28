@@ -6,7 +6,7 @@ use crate::{
     theme::*,
 };
 use gpui::{AnyElement, Context, SharedString, div, prelude::*, px};
-use monocode_core::provider::Kind;
+use monocode_core::{i18n::t, provider::Kind, tr};
 impl SettingsView {
     pub(super) fn providers_page(&mut self, cx: &mut Context<Self>) -> Vec<AnyElement> {
         let p = self.prefs.clone();
@@ -20,17 +20,17 @@ impl SettingsView {
                 center.settings_rows(cx)
             })
         } else {
-            vec![note("Provider accounts load with the workspace.")]
+            vec![note(t("Provider accounts load with the workspace."))]
         };
         let usage = vec![
             self.row(
                 Some("show-remaining-usage"),
                 true,
-                "Show remaining usage",
-                Some("Show remaining capacity in usage meters.".into()),
+                t("Show remaining usage"),
+                Some(t("Show remaining capacity in usage meters.").into()),
                 vec![self.toggle(
                     "show-remaining-usage",
-                    "Show remaining usage",
+                    t("Show remaining usage"),
                     p.show_remaining_usage,
                     false,
                     cx,
@@ -40,11 +40,11 @@ impl SettingsView {
             self.row(
                 Some("mask-emails"),
                 false,
-                "Mask account emails",
-                Some("Hide email addresses until clicked.".into()),
+                t("Mask account emails"),
+                Some(t("Hide email addresses until clicked.").into()),
                 vec![self.toggle(
                     "mask-emails",
-                    "Mask account emails",
+                    t("Mask account emails"),
                     p.mask_emails,
                     false,
                     cx,
@@ -54,7 +54,7 @@ impl SettingsView {
         ];
         let mut options = vec![(
             "global".into(),
-            SharedString::from("Global"),
+            SharedString::from(t("Global")),
             Some(icon("globe", 14.).into_any_element()),
         )];
         options.extend(self.ctx.projects.iter().map(|(path, label)| {
@@ -67,7 +67,7 @@ impl SettingsView {
         let scope = self.provider_scope.clone();
         let action = self.select(
             "provider-scope",
-            "Provider defaults scope",
+            t("Provider defaults scope"),
             &scope,
             options,
             None,
@@ -123,7 +123,7 @@ impl SettingsView {
                         .clone();
                     secondary_button(
                         SharedString::from(format!("binary-{}", kind.id())),
-                        format!("Show {} CLI details", kind.label()),
+                        tr!("Show {cli} CLI details", cli = kind.label()),
                         false,
                         false,
                     )
@@ -150,26 +150,26 @@ impl SettingsView {
                         .text_size(px(10.))
                         .text_color(content(0.6))
                         .child(if installed.is_some() {
-                            "INSTALLED"
+                            t("INSTALLED")
                         } else {
-                            "NOT INSTALLED"
+                            t("NOT INSTALLED")
                         }),
                 );
             let mut controls = vec![
                 secondary_button(
                     SharedString::from(format!("default-provider-{}", kind.id())),
                     if selected {
-                        "Default"
+                        t("Default")
                     } else {
-                        "Use by default"
+                        t("Use by default")
                     },
                     false,
                     selected || selected_model.is_none() || installed.is_none(),
                 )
                 .child(if selected {
-                    "Default"
+                    t("Default")
                 } else {
-                    "Use by default"
+                    t("Use by default")
                 })
                 .when(
                     !selected && selected_model.is_some() && installed.is_some(),
@@ -230,14 +230,14 @@ impl SettingsView {
                                 .text_size(px(12.))
                                 .text_color(content(0.5))
                                 .child(if locked {
-                                    "Hidden globally"
+                                    t("Hidden globally")
                                 } else {
-                                    "Show in picker"
+                                    t("Show in picker")
                                 }),
                         )
                         .child(self.toggle(
                             kind.id(),
-                            "Show provider in the model picker",
+                            t("Show provider in the model picker"),
                             visible,
                             locked,
                             cx,
@@ -261,46 +261,46 @@ impl SettingsView {
             }
             let description = installed
                 .map(|_| {
-                    format!(
-                        "{} {} available.",
-                        models.len(),
-                        if models.len() == 1 { "model" } else { "models" }
-                    )
+                    if models.len() == 1 {
+                        tr!("{count} model available.", count = models.len())
+                    } else {
+                        tr!("{count} models available.", count = models.len())
+                    }
                 })
                 .unwrap_or_else(|| {
-                    format!(
-                        "Install {} and sign in with {}.",
-                        kind.label(),
-                        kind.login_hint()
+                    tr!(
+                        "Install {cli} and sign in with {command}.",
+                        cli = kind.label(),
+                        command = kind.login_hint()
                     )
                 });
             clis.push(self.row(None, index == 0, label, Some(description.into()), controls));
         }
         if self.discovery_loading {
-            clis.insert(0, note("Checking installed CLIs…"));
+            clis.insert(0, note(t("Checking installed CLIs…")));
         }
         let advanced=vec![
-            self.row(Some("idle-agents"),true,"Keep idle agents ready",Some("Keep up to this many idle agents running for faster follow-ups. Uses additional memory.".into()),vec![self.segmented("idle-agents","Keep idle agents ready",&p.idle_agents.to_string(),&[("0","None"),("1","1"),("2","2"),("3","3"),("5","5")],cx,|this,value,cx|if let Ok(value)=value.parse(){this.update(cx,|p|p.idle_agents=value)})]),
-            self.row(Some("claude-hooks"),false,"Claude Code hooks",Some("Run your configured Claude Code hooks. Changes apply on the next turn.".into()),vec![self.toggle("claude-hooks","Claude Code hooks",p.claude_hooks,false,cx,|this,on,cx|this.update(cx,|p|p.claude_hooks=on))])];
+            self.row(Some("idle-agents"),true,t("Keep idle agents ready"),Some(t("Keep up to this many idle agents running for faster follow-ups. Uses additional memory.").into()),vec![self.segmented("idle-agents",t("Keep idle agents ready"),&p.idle_agents.to_string(),&[("0",t("None")),("1","1"),("2","2"),("3","3"),("5","5")],cx,|this,value,cx|if let Ok(value)=value.parse(){this.update(cx,|p|p.idle_agents=value)})]),
+            self.row(Some("claude-hooks"),false,t("Claude Code hooks"),Some(t("Run your configured Claude Code hooks. Changes apply on the next turn.").into()),vec![self.toggle("claude-hooks",t("Claude Code hooks"),p.claude_hooks,false,cx,|this,on,cx|this.update(cx,|p|p.claude_hooks=on))])];
         vec![
             self.group(
                 Some("provider-accounts"),
                 true,
-                "Accounts",
-                Some("Manage sign-ins and choose accounts for each project.".into()),
-                Some(self.refresh_button("refresh-provider-accounts", "Refresh", cx)),
+                t("Accounts"),
+                Some(t("Manage sign-ins and choose accounts for each project.").into()),
+                Some(self.refresh_button("refresh-provider-accounts", t("Refresh"), cx)),
                 accounts,
             ),
-            self.group(None, false, "Usage and privacy", None, None, usage),
+            self.group(None, false, t("Usage and privacy"), None, None, usage),
             self.group(
                 Some("agent-clis"),
                 false,
-                "Agent CLIs",
-                Some("Choose available agents and default models for new conversations.".into()),
+                t("Agent CLIs"),
+                Some(t("Choose available agents and default models for new conversations.").into()),
                 Some(action),
                 clis,
             ),
-            self.group(None, false, "Advanced", None, None, advanced),
+            self.group(None, false, t("Advanced"), None, None, advanced),
         ]
     }
 }

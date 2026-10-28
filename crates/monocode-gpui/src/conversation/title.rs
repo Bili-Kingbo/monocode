@@ -148,6 +148,16 @@ impl Conversation {
     }
 }
 
+/// A shown title: the untitled placeholder in the interface language, which
+/// stays English where code compares it.
+pub(crate) fn shown_title(title: String) -> String {
+    if title == "New session" {
+        t("New session").to_owned()
+    } else {
+        title
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

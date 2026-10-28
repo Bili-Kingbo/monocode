@@ -8,10 +8,23 @@ pub(super) struct Metadata<'a> {
     draft: bool,
     remote_waiting: bool,
 }
+/// A display title as drawn: the untitled "New session" stays English for
+/// the comparisons that look for it, and shows in the interface language.
+pub(super) fn shown(title: String) -> String {
+    if title == "New session" {
+        t("New session").into()
+    } else {
+        title
+    }
+}
+
 impl Metadata<'_> {
     pub(super) fn display_title(&self) -> String {
         monocode_core::session_title::display_title(&self.summary.title, &self.summary.provider)
             .replace('\n', " ")
+    }
+    pub(super) fn shown_title(&self) -> String {
+        shown(self.display_title())
     }
     pub(super) fn needs_approval(&self) -> bool {
         self.live.is_some_and(Conversation::needs_approval) || self.remote_waiting

@@ -317,19 +317,19 @@ impl Conversation {
     pub(crate) fn mono_access_options(&self) -> Vec<MenuItem> {
         let provider = Kind::from_id(&self.summary.provider);
         let mut items = vec![
-            MenuAction::new("access:read-only", "Read-only")
+            MenuAction::new("access:read-only", t("Read-only"))
                 .icon("square-lock")
-                .description("Inspect without changing files.")
+                .description(t("Inspect without changing files."))
                 .checked(self.settings.access == AccessMode::ReadOnly)
                 .into(),
         ];
         items.extend(ACCESS_MODES.iter().map(|(id, label, hint, glyph)| {
                     let hint = match (provider,*id) {
-                        (Kind::Cursor,"supervised") => "Confirm commands using Cursor's permission policy; Cursor may accept edits automatically.",
-                        (Kind::Pi | Kind::Omp,_) => "Tool confirmations follow this provider's configured extensions.",
-                        _ => *hint,
+                        (Kind::Cursor,"supervised") => t("Confirm commands using Cursor's permission policy; Cursor may accept edits automatically."),
+                        (Kind::Pi | Kind::Omp,_) => t("Tool confirmations follow this provider's configured extensions."),
+                        _ => tl(hint),
                     };
-                    let action = MenuAction::new(format!("access:{id}"), *label)
+                    let action = MenuAction::new(format!("access:{id}"), tl(label))
                         .icon(glyph)
                         .description(hint)
                         .checked(self.settings.access.id() == *id);
@@ -340,7 +340,7 @@ impl Conversation {
                     })
                 }));
         if self.busy {
-            items.push(MenuItem::Note("Changes apply to the next turn.".into()));
+            items.push(MenuItem::Note(t("Changes apply to the next turn.").into()));
         }
         items
     }
@@ -383,22 +383,23 @@ impl Conversation {
             );
         }
         if self.model_info().is_some_and(|m| m.fast) {
-            items.push(MenuAction::new("fast", "Fast").toggle(self.settings.fast));
+            items.push(MenuAction::new("fast", t("Fast")).toggle(self.settings.fast));
         }
         if let Some(model) = self.model_info().filter(|m| !m.tiers.is_empty()) {
-            let mut tiers =
-                vec![MenuAction::new("tier:", "Standard").checked(self.selected_tier().is_none())];
+            let mut tiers = vec![
+                MenuAction::new("tier:", t("Standard")).checked(self.selected_tier().is_none()),
+            ];
             tiers.extend(model.tiers.iter().map(|(id, name)| {
                 MenuAction::new(format!("tier:{id}"), name.clone())
                     .checked(self.selected_tier() == Some(id.as_str()))
             }));
             items.push(
-                MenuAction::new("service-tier", "Service Tier")
+                MenuAction::new("service-tier", t("Service Tier"))
                     .value(
                         self.selected_tier()
                             .and_then(|id| model.tiers.iter().find(|(key, _)| key == id))
                             .map(|(_, label)| label.as_str())
-                            .unwrap_or_else(|| self.selected_tier().unwrap_or("Standard"))
+                            .unwrap_or_else(|| self.selected_tier().unwrap_or(t("Standard")))
                             .to_owned(),
                     )
                     .submenu(tiers),
@@ -406,7 +407,7 @@ impl Conversation {
         }
         if self.model_info().is_some_and(|m| m.thinking) {
             items.push(
-                MenuAction::new("thinking", "Thinking")
+                MenuAction::new("thinking", t("Thinking"))
                     .toggle(self.settings.thinking.unwrap_or(false)),
             );
         }
@@ -422,7 +423,7 @@ impl Conversation {
                     .get(&control.id)
                     .unwrap_or(&control.current);
                 let label = match control.id.as_str() {
-                    "effort" | "reasoning" => "Effort",
+                    "effort" | "reasoning" => t("Effort"),
                     _ => &control.name,
                 };
                 if model_control_toggle(control) {
@@ -537,7 +538,7 @@ impl Conversation {
             let greeting = div().flex().flex_col().items_center().justify_center().px_6().py_12()
                 .child(crate::monos::avatar::avatar(&mono.mascot, mono.color, status, 56., false))
                 .child(div().mt(px(-8.)).h(px(32.)).px(px(14.)).flex().items_center().rounded_full().border_1().border_color(content(0.14)).bg(content(0.06)).text_size(px(13.)).font_weight(gpui::FontWeight::SEMIBOLD).child(name))
-                .child(div().mt_3().max_w(px(384.)).text_center().text_size(px(13.)).line_height(px(21.)).text_color(content(0.5)).child(if mono.projects.is_empty(){"Add the projects I should work on in my settings, or just ask me something.".into()}else{format!("I can see every session, note and folder in {}. Ask what’s going on, or hand me work.",mono.projects.iter().map(|p|std::path::Path::new(p).file_name().unwrap_or_default().to_string_lossy()).collect::<Vec<_>>().join(", "))}));
+                .child(div().mt_3().max_w(px(384.)).text_center().text_size(px(13.)).line_height(px(21.)).text_color(content(0.5)).child(if mono.projects.is_empty(){t("Add the projects I should work on in my settings, or just ask me something.").into()}else{tr!("I can see every session, note and folder in {projects}. Ask what’s going on, or hand me work.",projects = mono.projects.iter().map(|p|std::path::Path::new(p).file_name().unwrap_or_default().to_string_lossy()).collect::<Vec<_>>().join(", "))}));
             div()
                 .flex_1()
                 .flex()
@@ -607,7 +608,7 @@ impl Conversation {
                                             .text_size(px(13.))
                                             .text_color(content(0.6))
                                             .child(if message.internal {
-                                                "Completion update".into()
+                                                t("Completion update").into()
                                             } else {
                                                 message.text.clone()
                                             })
@@ -615,12 +616,10 @@ impl Conversation {
                                                 div()
                                                     .text_size(px(11.))
                                                     .text_color(content(0.4))
-                                                    .child(
-                                                        message
-                                                            .error
-                                                            .clone()
-                                                            .unwrap_or_else(|| "Pending".into()),
-                                                    ),
+                                                    .child(message.error.clone().map_or_else(
+                                                        || t("Pending").into(),
+                                                        |error| status_text(&error),
+                                                    )),
                                             )
                                             .when(message.error.is_some(), |d| {
                                                 d.child(
@@ -630,7 +629,7 @@ impl Conversation {
                                                         .child(
                                                             icon_button(
                                                                 "mono-queue-retry",
-                                                                "Retry queued message",
+                                                                t("Retry queued message"),
                                                                 "refresh-cw",
                                                             )
                                                             .on_click(cx.listener(
@@ -645,7 +644,7 @@ impl Conversation {
                                                         .child(
                                                             icon_button(
                                                                 "mono-queue-discard",
-                                                                "Discard queued message",
+                                                                t("Discard queued message"),
                                                                 "close",
                                                             )
                                                             .on_click(cx.listener(
@@ -752,7 +751,7 @@ impl Conversation {
         ix: usize,
     ) -> (&'static str, Vec<MenuItem>, f32, MenuStyle) {
         let Some(model) = self.model_info() else {
-            return ("Model setting", Vec::new(), 210., MenuStyle::Explorer);
+            return (t("Model setting"), Vec::new(), 210., MenuStyle::Explorer);
         };
         let mut items = Vec::new();
         if ix == 0 {
@@ -769,22 +768,22 @@ impl Conversation {
             if model.fast {
                 group(
                     &mut items,
-                    "Fast",
+                    t("Fast"),
                     vec![
-                        MenuAction::new("fast:on", "On").checked(self.settings.fast),
-                        MenuAction::new("fast:off", "Off").checked(!self.settings.fast),
+                        MenuAction::new("fast:on", t("On")).checked(self.settings.fast),
+                        MenuAction::new("fast:off", t("Off")).checked(!self.settings.fast),
                     ],
                 );
             }
             if !model.tiers.is_empty() {
                 let mut tiers = vec![
-                    MenuAction::new("tier:", "Standard").checked(self.selected_tier().is_none()),
+                    MenuAction::new("tier:", t("Standard")).checked(self.selected_tier().is_none()),
                 ];
                 tiers.extend(model.tiers.iter().map(|(id, name)| {
                     MenuAction::new(format!("tier:{id}"), name.clone())
                         .checked(self.selected_tier() == Some(id.as_str()))
                 }));
-                group(&mut items, "Service Tier", tiers);
+                group(&mut items, t("Service Tier"), tiers);
             }
             if items
                 .iter()
@@ -794,7 +793,7 @@ impl Conversation {
             {
                 items.retain(|i| !matches!(i, MenuItem::Header(_)));
             }
-            return ("Effort", items, 210., MenuStyle::Explorer);
+            return (t("Effort"), items, 210., MenuStyle::Explorer);
         }
         if let Some(control) = model.controls.get(ix - 1) {
             let selected = self
@@ -810,7 +809,7 @@ impl Conversation {
                 )
             }));
         }
-        ("Model setting", items, 210., MenuStyle::Explorer)
+        (t("Model setting"), items, 210., MenuStyle::Explorer)
     }
     /// The form's box: the field and send, as `MonoComposer` lays them out
     /// when it has controls.
@@ -862,7 +861,7 @@ impl Conversation {
                             .id("mono-send")
                             .debug_selector(|| "mono-send".into())
                             .role(Role::Button)
-                            .aria_label("Send")
+                            .aria_label(t("Send"))
                             .flex_shrink_0()
                             .size(px(26.))
                             .rounded_md()
@@ -921,10 +920,10 @@ impl Conversation {
                 let (glyph, label, value) = if model.efforts.is_empty() {
                     (
                         "zap",
-                        "Service Tier",
+                        t("Service Tier"),
                         self.selected_tier()
                             .and_then(|id| model.tiers.iter().find(|(t, _)| t == id))
-                            .map_or("Standard".into(), |(_, name)| name.clone()),
+                            .map_or(t("Standard").into(), |(_, name)| name.clone()),
                     )
                 } else {
                     (
@@ -951,8 +950,11 @@ impl Conversation {
                 let on = self.settings.fast;
                 pills.push(
                     text_control("mono-fast".into(), false)
-                        .aria_label(format!("Fast mode: {}", if on { "On" } else { "Off" }))
-                        .child(div().when(!on, |d| d.opacity(0.5)).child("Fast"))
+                        .aria_label(tr!(
+                            "Fast mode: {state}",
+                            state = if on { t("On") } else { t("Off") }
+                        ))
+                        .child(div().when(!on, |d| d.opacity(0.5)).child(t("Fast")))
                         .on_click(cx.listener(|this, _, _, cx| this.menu_choice("fast", cx)))
                         .into_any_element(),
                 );
@@ -961,8 +963,11 @@ impl Conversation {
                 let on = self.settings.thinking.unwrap_or(false);
                 pills.push(
                     text_control("mono-thinking".into(), false)
-                        .aria_label(format!("Thinking: {}", if on { "On" } else { "Off" }))
-                        .child(div().when(!on, |d| d.opacity(0.5)).child("Thinking"))
+                        .aria_label(tr!(
+                            "Thinking: {state}",
+                            state = if on { t("On") } else { t("Off") }
+                        ))
+                        .child(div().when(!on, |d| d.opacity(0.5)).child(t("Thinking")))
                         .on_click(cx.listener(|this, _, _, cx| this.menu_choice("thinking", cx)))
                         .into_any_element(),
                 );
@@ -988,7 +993,7 @@ impl Conversation {
                 let toggle_id = format!("model-toggle:{}", control.id);
                 let on = selected == "true";
                 let title = if toggle {
-                    format!("{}: {}", control.name, if on { "On" } else { "Off" })
+                    format!("{}: {}", control.name, if on { t("On") } else { t("Off") })
                 } else {
                     format!("{}: {value}", control.name)
                 };
@@ -1059,13 +1064,18 @@ impl Conversation {
         let models_open = self.mono_ui.models.is_some();
         let ratio = self.context.and_then(|usage| usage.ratio());
         let headline = ratio
-            .map(|r| format!("{:.0}% context used", r * 100.))
-            .unwrap_or_else(|| "No context used yet".into());
+            .map(|r| {
+                tr!(
+                    "{percent}% context used",
+                    percent = format!("{:.0}", r * 100.)
+                )
+            })
+            .unwrap_or_else(|| t("No context used yet").into());
         let detail = self.context.map(|usage| {
-            format!(
-                "{} / {} tokens",
-                monocode_core::context::format_tokens(usage.used),
-                monocode_core::context::format_tokens(usage.window.unwrap_or(0))
+            tr!(
+                "{used} / {window} tokens",
+                used = monocode_core::context::format_tokens(usage.used),
+                window = monocode_core::context::format_tokens(usage.window.unwrap_or(0))
             )
         });
         div()
@@ -1077,7 +1087,7 @@ impl Conversation {
             .pl_1()
             .pr_1p5()
             .child(
-                tool("mono-attach", "Attach files")
+                tool("mono-attach", t("Attach files"))
                     .debug_selector(|| "mono-attach".into())
                     .child(
                         icon("mono-attach", 17.)
@@ -1087,7 +1097,7 @@ impl Conversation {
                     .on_click(cx.listener(|this, _, _, cx| this.choose_attachments(cx))),
             )
             .child(
-                tool("mono-emoji", "Add emoji")
+                tool("mono-emoji", t("Add emoji"))
                     .when(self.mono_ui.emoji, |d| d.bg(content(0.08)))
                     .child(
                         icon("smile", 13.)

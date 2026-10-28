@@ -45,7 +45,7 @@ impl Conversation {
                 this.set_file_drag(false, cx);
                 if paths.paths().is_empty() {
                     this.attachment_error = Some(
-                        "This drag did not provide a file. Save the image, then drag the saved file here."
+                        n!("This drag did not provide a file. Save the image, then drag the saved file here.")
                             .into(),
                     );
                     cx.notify();
@@ -80,7 +80,7 @@ impl Conversation {
                 .justify_center()
                 .text_size(px(12.))
                 .text_color(content(0.7))
-                .child("Drop files to attach")
+                .child(t("Drop files to attach"))
                 .into_any_element()
         })
     }

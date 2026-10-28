@@ -12,7 +12,10 @@ use gpui::{
 };
 use monocode_core::{
     accounts::{self, Account, AuthAction, Book, Profile},
+    i18n::t,
+    n,
     provider::Kind,
+    tr,
     usage::{self, FetchError, Snapshot},
 };
 use std::{
@@ -117,8 +120,11 @@ pub(crate) enum Tone {
 }
 pub(crate) struct Status {
     pub tone: Tone,
+    /// English, as the phone app shows it; `ui::status_label` translates it.
     pub label: String,
     pub detail: Option<String>,
+    /// `detail` in the interface language.
+    pub shown_detail: Option<String>,
 }
 #[derive(Clone)]
 pub(crate) enum AccountEvent {
@@ -320,8 +326,9 @@ impl Accounts {
         let key = Key::new(kind, self.profile(id), None);
         let checking = Status {
             tone: Tone::Checking,
-            label: "Checking…".into(),
+            label: n!("Checking…").into(),
             detail: None,
+            shown_detail: None,
         };
         let Some(state) = self.usage.get(&key) else {
             return checking;
@@ -331,26 +338,30 @@ impl Accounts {
             && let Some(headroom) = snapshot.headroom(now)
         {
             if headroom <= 0. {
+                let back = snapshot
+                    .exhausted_reset()
+                    .filter(|at| *at > now)
+                    .map(|at| usage::duration(at - now));
                 return Status {
                     tone: Tone::Exhausted,
-                    label: "Exhausted".into(),
-                    detail: snapshot
-                        .exhausted_reset()
-                        .filter(|at| *at > now)
-                        .map(|at| format!("back in {}", usage::duration(at - now))),
+                    label: n!("Exhausted").into(),
+                    detail: back.as_ref().map(|back| format!("back in {back}")),
+                    shown_detail: back.map(|back| tr!("back in {duration}", duration = back)),
                 };
             }
             if headroom <= 20. {
                 return Status {
                     tone: Tone::Low,
-                    label: "Running low".into(),
+                    label: n!("Running low").into(),
                     detail: Some(format!("{headroom:.0}% left")),
+                    shown_detail: Some(tr!("{percent}% left", percent = format!("{headroom:.0}"))),
                 };
             }
             return Status {
                 tone: Tone::Ready,
-                label: "Ready".into(),
+                label: n!("Ready").into(),
                 detail: None,
+                shown_detail: None,
             };
         }
         if state.fetching || (state.snapshot.is_none() && state.error.is_none()) {
@@ -362,8 +373,9 @@ impl Accounts {
                 .error
                 .as_ref()
                 .map(|e| e.message.clone())
-                .unwrap_or_else(|| "Usage unavailable".into()),
+                .unwrap_or_else(|| n!("Usage unavailable").into()),
             detail: None,
+            shown_detail: None,
         }
     }
     pub(crate) fn refresh(&mut self, key: Key, force: bool, cx: &mut Context<Self>) {
@@ -565,12 +577,12 @@ impl Accounts {
             .unwrap_or_default();
         let input = cx.new(|cx| {
             let mut input = Input::field(
-                format!(
-                    "{} {} account",
-                    if id.is_some() { "Rename" } else { "New" },
-                    kind.label()
-                ),
-                "Work or Personal",
+                if id.is_some() {
+                    tr!("Rename {provider} account", provider = kind.label())
+                } else {
+                    tr!("New {provider} account", provider = kind.label())
+                },
+                t("Work or Personal"),
                 crate::theme::content(0.25),
                 cx,
             );
@@ -782,7 +794,7 @@ impl Accounts {
         if self.working || account.is_default() {
             return;
         }
-        let answer=window.prompt(gpui::PromptLevel::Warning,&format!("Remove “{}”?",account.label),Some("Its stored credentials will be deleted and any running turns for this account will stop. Existing conversations stay in history, but cannot continue until you switch accounts."),&["Remove account","Cancel"],cx);
+        let answer=window.prompt(gpui::PromptLevel::Warning,&tr!("Remove “{account}”?", account = account.label),Some(t("Its stored credentials will be deleted and any running turns for this account will stop. Existing conversations stay in history, but cannot continue until you switch accounts.")),&[t("Remove account"),t("Cancel")],cx);
         cx.spawn_in(window, async move |this, cx| {
             if !matches!(answer.await, Ok(0)) {
                 return;

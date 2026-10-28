@@ -392,6 +392,7 @@ fn main() {
         .map(|s| (s.id, s.cwd.clone()))
         .collect::<Vec<_>>();
     let workspace = workspace::Workspace::restore(saved.as_deref(), &metadata, &cwd);
+    monocode_core::i18n::set_language(&workspace.preferences.language);
     let mut projects = workspace.projects;
     if !projects.contains(&workspace.project) {
         projects.push(workspace.project);

@@ -129,13 +129,19 @@ impl TranscriptView {
         let title = peek_item(&key(work))
             .map(|item| item.title.trim().to_owned())
             .filter(|title| !title.is_empty());
-        let label = format!(
-            "Open {} #{} in {}{}",
-            if pr { "pull request" } else { "issue" },
-            work.number,
-            work.repo,
-            title.map(|t| format!(": {t}")).unwrap_or_default()
-        );
+        let label = if pr {
+            tr!(
+                "Open pull request #{number} in {repo}",
+                number = work.number,
+                repo = work.repo
+            )
+        } else {
+            tr!(
+                "Open issue #{number} in {repo}",
+                number = work.number,
+                repo = work.repo
+            )
+        } + &title.map(|title| format!(": {title}")).unwrap_or_default();
         let open_url = url.to_owned();
         let hovered = work.clone();
         div()
@@ -167,11 +173,11 @@ impl TranscriptView {
                         icon(if pr { "git-pull-request" } else { "circle-dot" }, 12.)
                             .text_color(alpha(ink, 0.9)),
                     )
-                    .child(format!(
-                        "{} #{}",
-                        if pr { "PR" } else { "Issue" },
-                        work.number
-                    )),
+                    .child(if pr {
+                        format!("PR #{}", work.number)
+                    } else {
+                        tr!("Issue #{number}", number = work.number)
+                    }),
             )
             .on_hover(cx.listener(move |this, hovered_now: &bool, _, cx| {
                 if *hovered_now {
@@ -348,20 +354,20 @@ impl TranscriptView {
             (None, Load::Loading) => skeleton(),
             (None, _) => div()
                 .mt(px(8.))
-                .child(headline(format!(
-                    "{} #{}",
-                    if pr { "Pull request" } else { "Issue" },
-                    work.number
-                )))
+                .child(headline(if pr {
+                    tr!("Pull request #{number}", number = work.number)
+                } else {
+                    tr!("Issue #{number}", number = work.number)
+                }))
                 .child(if summary.is_empty() {
                     div()
                         .mt_1()
                         .text_size(px(11.))
                         .line_height(px(11. * 1.625))
                         .text_color(content(0.5))
-                        .child(
+                        .child(t(
                             "Details aren't available here, but the link can still be opened on GitHub.",
-                        )
+                        ))
                 } else {
                     summary_text(summary.clone())
                 })
@@ -450,7 +456,11 @@ impl TranscriptView {
                         })
                         .when(author.is_some() && !updated.is_empty(), |d| d.child("·"))
                         .when(!updated.is_empty(), |d| {
-                            d.child(div().flex_shrink_0().child(format!("Updated {updated}")))
+                            d.child(
+                                div()
+                                    .flex_shrink_0()
+                                    .child(tr!("Updated {updated}", updated = updated)),
+                            )
                         }),
                 )
             })
@@ -512,7 +522,7 @@ impl TranscriptView {
                                 .join(", ");
                             let mut stack = div()
                                 .id("work-item-assignees")
-                                .aria_label(format!("Assigned to {names}"))
+                                .aria_label(tr!("Assigned to {names}", names = names))
                                 .flex_shrink_0()
                                 .flex();
                             for (ix, person) in assignees.iter().take(3).enumerate() {
@@ -548,7 +558,7 @@ impl TranscriptView {
                     .text_size(px(10.))
                     .text_color(content(0.35))
                     .child(icon("external-link", 12.).text_color(content(0.35)))
-                    .child("Click the chip to open on GitHub"),
+                    .child(t("Click the chip to open on GitHub")),
             );
         let dismiss = cx.weak_entity();
         Some(
@@ -636,21 +646,21 @@ fn status(pr: bool, item: Option<&Item>) -> (&'static str, &'static str, Hsla) {
     match item {
         None => (
             open_icon,
-            if pr { "Pull request" } else { "Issue" },
+            if pr { t("Pull request") } else { t("Issue") },
             content(0.5),
         ),
-        Some(item) if item.draft => ("git-pull-request-draft", "Draft", content(0.5)),
-        Some(item) if item.state == "merged" => ("git-merge", "Merged", alpha(rgb(VIOLET), 0.9)),
+        Some(item) if item.draft => ("git-pull-request-draft", t("Draft"), content(0.5)),
+        Some(item) if item.state == "merged" => ("git-merge", t("Merged"), alpha(rgb(VIOLET), 0.9)),
         Some(item) if item.state == "closed" => (
             if pr {
                 "git-pull-request-closed"
             } else {
                 "circle-x"
             },
-            "Closed",
+            t("Closed"),
             alpha(rgb(ROSE), 0.9),
         ),
-        Some(_) => (open_icon, "Open", alpha(rgb(EMERALD), 0.9)),
+        Some(_) => (open_icon, t("Open"), alpha(rgb(EMERALD), 0.9)),
     }
 }
 
@@ -687,7 +697,7 @@ fn skeleton() -> AnyElement {
     };
     div()
         .id("work-item-loading")
-        .aria_label("Loading GitHub details")
+        .aria_label(t("Loading GitHub details"))
         .mt(px(10.))
         .flex()
         .flex_col()

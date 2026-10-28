@@ -12,6 +12,8 @@ use gpui::{
 use monocode_core::{
     files::path_key,
     git::{self, Snapshot},
+    i18n::t,
+    tr,
 };
 use std::{
     collections::{HashMap, HashSet},
@@ -52,8 +54,8 @@ fn rows(cwd: &str, state: Option<&Snapshot>, query: &str) -> Vec<Row> {
         main: true,
         label: main
             .and_then(|t| t.branch.clone())
-            .unwrap_or_else(|| "Project folder".into()),
-        detail: "Project folder · all sessions".into(),
+            .unwrap_or_else(|| t("Project folder").into()),
+        detail: t("Project folder · all sessions").into(),
     }];
     rows.extend(
         state
@@ -65,7 +67,10 @@ fn rows(cwd: &str, state: Option<&Snapshot>, query: &str) -> Vec<Row> {
                 branch: t.branch.clone(),
                 main: false,
                 label: t.branch.clone().unwrap_or_else(|| {
-                    format!("Detached {}", t.head.chars().take(7).collect::<String>())
+                    tr!(
+                        "Detached {sha}",
+                        sha = t.head.chars().take(7).collect::<String>()
+                    )
                 }),
                 detail: pretty_path(&t.path),
             }),
@@ -136,8 +141,8 @@ impl WorktreeSwitcher {
     ) -> Self {
         let search = cx.new(|cx| {
             let mut input = input::Input::field(
-                "Search working copies",
-                "Search or create a worktree...",
+                t("Search working copies"),
+                t("Search or create a worktree..."),
                 content(0.35),
                 cx,
             );
@@ -287,7 +292,7 @@ impl Render for WorktreeSwitcher {
             .id("worktree-switcher")
             .debug_selector(|| "worktree-switcher".into())
             .role(Role::Dialog)
-            .aria_label("Working copies")
+            .aria_label(t("Working copies"))
             .key_context("WorktreeSwitcher")
             .min_h_0()
             .w_full()
@@ -344,7 +349,7 @@ impl Render for WorktreeSwitcher {
                 div()
                     .id("worktree-switcher-list")
                     .role(Role::ListBox)
-                    .aria_label("Working copies")
+                    .aria_label(t("Working copies"))
                     .min_h_0()
                     .max_h(px(314.))
                     .overflow_y_scroll()
@@ -363,7 +368,7 @@ impl Render for WorktreeSwitcher {
                                 .text_size(px(12.))
                                 .text_color(content(0.5))
                                 .child(icon("loader", 14.))
-                                .child("Loading working copies…"),
+                                .child(t("Loading working copies…")),
                         )
                     })
                     .children(rows.into_iter().enumerate().map(|(index, row)| {
@@ -436,12 +441,18 @@ impl Render for WorktreeSwitcher {
                                     div()
                                         .id(("working-copy-stats", index))
                                         .role(Role::Label)
-                                        .aria_label(format!(
-                                            "{} open tab{}{}",
-                                            stats.tabs.len(),
-                                            if stats.tabs.len() == 1 { "" } else { "s" },
-                                            if stats.busy { ", working" } else { "" }
-                                        ))
+                                        .aria_label({
+                                            let count = stats.tabs.len();
+                                            let mut label = if count == 1 {
+                                                tr!("{count} open tab", count = count)
+                                            } else {
+                                                tr!("{count} open tabs", count = count)
+                                            };
+                                            if stats.busy {
+                                                label.push_str(t(", working"));
+                                            }
+                                            label
+                                        })
                                         .flex_shrink_0()
                                         .flex()
                                         .items_center()
@@ -478,7 +489,7 @@ impl Render for WorktreeSwitcher {
                                 .text_center()
                                 .text_size(px(12.))
                                 .text_color(content(0.45))
-                                .child("No matching working copies"),
+                                .child(t("No matching working copies")),
                         )
                     }),
             )
@@ -509,7 +520,7 @@ impl Render for WorktreeSwitcher {
                                 .id("create-sidebar-worktree")
                                 .debug_selector(|| "create-sidebar-worktree".into())
                                 .role(Role::Button)
-                                .aria_label(format!("Create worktree {}", self.query(cx)))
+                                .aria_label(tr!("Create worktree {name}", name = self.query(cx)))
                                 .h(px(36.))
                                 .w_full()
                                 .flex()
@@ -525,7 +536,7 @@ impl Render for WorktreeSwitcher {
                                         .hover(|s| s.bg(content(0.08)).text_color(content(1.)))
                                 })
                                 .child(icon(if self.creating { "loader" } else { "plus" }, 16.))
-                                .child(format!("Create worktree {}", self.query(cx)))
+                                .child(tr!("Create worktree {name}", name = self.query(cx)))
                                 .on_click(cx.listener(|this, _, _, cx| this.create(cx))),
                         ),
                 )

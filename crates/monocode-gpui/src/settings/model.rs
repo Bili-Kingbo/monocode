@@ -1,5 +1,6 @@
 //! Port of src/features/settings/model/settings.ts: the pages, their rail
 //! groups and the index Settings search jumps through.
+use monocode_core::{i18n::tl, n};
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -22,7 +23,7 @@ pub(crate) enum Section {
 
 pub(crate) const GROUPS: [(&str, &[Section]); 3] = [
     (
-        "App",
+        n!("App"),
         &[
             Section::General,
             Section::Connections,
@@ -31,7 +32,7 @@ pub(crate) const GROUPS: [(&str, &[Section]); 3] = [
         ],
     ),
     (
-        "Agents",
+        n!("Agents"),
         &[
             Section::Chat,
             Section::Providers,
@@ -41,7 +42,7 @@ pub(crate) const GROUPS: [(&str, &[Section]); 3] = [
         ],
     ),
     (
-        "Workspace",
+        n!("Workspace"),
         &[Section::Inbox, Section::Archive, Section::Worktrees],
     ),
 ];
@@ -79,48 +80,56 @@ impl Section {
     }
     pub(crate) fn label(self) -> &'static str {
         match self {
-            Section::General => "General",
-            Section::Connections => "Connections",
-            Section::Appearance => "Appearance",
-            Section::Keybindings => "Keybindings",
-            Section::Chat => "Chat",
-            Section::Providers => "Providers",
+            Section::General => n!("General"),
+            Section::Connections => n!("Connections"),
+            Section::Appearance => n!("Appearance"),
+            Section::Keybindings => n!("Keybindings"),
+            Section::Chat => n!("Chat"),
+            Section::Providers => n!("Providers"),
             Section::Mcp => "MCP",
-            Section::Skills => "Skills",
-            Section::Monos => "Monos",
-            Section::Inbox => "Inbox",
-            Section::Archive => "Archive",
-            Section::Worktrees => "Worktrees",
+            Section::Skills => n!("Skills"),
+            Section::Monos => n!("Monos"),
+            Section::Inbox => n!("Inbox"),
+            Section::Archive => n!("Archive"),
+            Section::Worktrees => n!("Worktrees"),
         }
     }
     pub(crate) fn description(self) -> &'static str {
         match self {
             Section::General => {
-                "The build you are running, how MonoCode reaches you, and the panels it shows."
+                n!("The build you are running, how MonoCode reaches you, and the panels it shows.")
             }
-            Section::Connections => "Connect your machines and run agents remotely through SSH.",
+            Section::Connections => {
+                n!("Connect your machines and run agents remotely through SSH.")
+            }
             Section::Appearance => {
-                "Theme, tint, translucency, workspace layout, and conversation backgrounds."
+                n!("Theme, tint, translucency, workspace layout, and conversation backgrounds.")
             }
             Section::Keybindings => {
-                "Every shortcut the workspace handles, from the app menu and the key handler."
+                n!("Every shortcut the workspace handles, from the app menu and the key handler.")
             }
             Section::Chat => {
-                "How transcripts read, what the composer does with a follow-up, how files save, and how diffs open."
+                n!(
+                    "How transcripts read, what the composer does with a follow-up, how files save, and how diffs open."
+                )
             }
             Section::Providers => {
-                "Provider accounts, agent CLIs MonoCode can drive, and the model new sessions start with."
+                n!(
+                    "Provider accounts, agent CLIs MonoCode can drive, and the model new sessions start with."
+                )
             }
-            Section::Mcp => "Find MCP servers across providers and manage their connections.",
+            Section::Mcp => n!("Find MCP servers across providers and manage their connections."),
             Section::Skills => {
-                "Discover and manage file skills from project, personal, and harness folders."
+                n!("Discover and manage file skills from project, personal, and harness folders.")
             }
-            Section::Monos => "The resident agent beside your tabs, and which projects have one.",
+            Section::Monos => {
+                n!("The resident agent beside your tabs, and which projects have one.")
+            }
             Section::Inbox => {
-                "Manage Inbox services and notification preferences for each project."
+                n!("Manage Inbox services and notification preferences for each project.")
             }
-            Section::Archive => "Projects and conversations you have archived.",
-            Section::Worktrees => "Manage additional worktrees for each project.",
+            Section::Archive => n!("Projects and conversations you have archived."),
+            Section::Worktrees => n!("Manage additional worktrees for each project."),
         }
     }
     fn keywords(self) -> &'static str {
@@ -173,302 +182,308 @@ pub(crate) const INDEX: &[(&str, Section, &str, &str)] = &[
     (
         "remote-machines",
         Section::Connections,
-        "Your machines",
+        n!("Your machines"),
         "ssh remote connect host server environment",
     ),
     (
         "mobile-access",
         Section::Connections,
-        "Your phones",
+        n!("Your phones"),
         "phone iphone android mobile app pair qr code device revoke remove testflight",
     ),
     (
         "mobile-remote",
         Section::Connections,
-        "Connect away from home",
+        n!("Connect away from home"),
         "router port upnp nat remote address public hostname vpn wifi",
     ),
     (
         "mcp-servers",
         Section::Mcp,
-        "MCP servers",
+        n!("MCP servers"),
         "claude tools connections oauth authenticate login add remove",
     ),
     (
         "monos-enabled",
         Section::Monos,
-        "Show monos",
+        n!("Show monos"),
         "mono agent rail hide",
     ),
     (
         "rail-monos-pinned",
         Section::Monos,
-        "Pin monos to the icon rail",
+        n!("Pin monos to the icon rail"),
         "mono rail compact collapsed icons top divider project picker",
     ),
     (
         "mono-list",
         Section::Monos,
-        "Your monos",
+        n!("Your monos"),
         "mono reset soul name projects sessions sidebar visibility hidden show",
     ),
     (
         "project-worktrees",
         Section::Worktrees,
-        "Project worktrees",
+        n!("Project worktrees"),
         "git branch working copy create delete manage",
+    ),
+    (
+        "language",
+        Section::General,
+        n!("Language"),
+        "language locale translation chinese english 语言 中文 简体中文 英文",
     ),
     (
         "update",
         Section::General,
-        "Version",
+        n!("Version"),
         "update upgrade release what's new build changelog",
     ),
     (
         "sounds",
         Section::General,
-        "Sounds",
+        n!("Sounds"),
         "audio cue chime mute volume",
     ),
     (
         "notifications",
         Section::General,
-        "Notifications",
+        n!("Notifications"),
         "notify alert toast permission reminder background",
     ),
     (
         "notes",
         Section::General,
-        "Notes",
+        n!("Notes"),
         "notebook markdown rail scratchpad",
     ),
     (
         "quick-composer",
         Section::General,
-        "Quick composer",
+        n!("Quick composer"),
         "spotlight global shortcut hotkey floating prompt anywhere",
     ),
     (
         "working-agents",
         Section::General,
-        "Working agents",
+        n!("Working agents"),
         "live running sessions rail card",
     ),
     (
         "action-opens-terminal",
         Section::General,
-        "Show terminal for actions",
+        n!("Show terminal for actions"),
         "actions commands run script dock background",
     ),
     (
         "terminal-in-panel",
         Section::General,
-        "Terminal in side panel",
+        n!("Terminal in side panel"),
         "terminal dock right panel tab shell focused layout",
     ),
     (
         "file-tabs",
         Section::General,
-        "File tabs",
+        n!("File tabs"),
         "editor open top workspace normal session pane beside chat",
     ),
     (
         "file-word-wrap",
         Section::General,
-        "Word wrap",
+        n!("Word wrap"),
         "files editor long lines horizontal scroll wrapping",
     ),
     (
         "tab-animations",
         Section::General,
-        "Tab animations",
+        n!("Tab animations"),
         "motion open close resize transition",
     ),
     (
         "theme",
         Section::Appearance,
-        "Theme",
+        n!("Theme"),
         "dark light system appearance mode",
     ),
     (
         "wayland-window-decorations",
         Section::Appearance,
-        "Wayland window decorations",
+        n!("Wayland window decorations"),
         "wayland linux compositor title bar titlebar border decorations minimize maximize close",
     ),
     (
         "workspace-theme",
         Section::Appearance,
-        "Workspace theme",
+        n!("Workspace theme"),
         "workspace theme color colour text accent syntax scheme preset harbor moss ember orchid",
     ),
     (
         "accent-color",
         Section::Appearance,
-        "Accent color",
+        n!("Accent color"),
         "highlight bubble send button tint",
     ),
     (
         "diff-colors",
         Section::Appearance,
-        "Diff colors",
+        n!("Diff colors"),
         "colorblind color blind accessibility added removed red green blue orange high contrast changes",
     ),
-    ("hue", Section::Appearance, "Hue", "tint color chrome"),
+    ("hue", Section::Appearance, n!("Hue"), "tint color chrome"),
     (
         "saturation",
         Section::Appearance,
-        "Saturation",
+        n!("Saturation"),
         "tint color neutral grey gray",
     ),
     (
         "dark-lightness",
         Section::Appearance,
-        "Dark-mode lightness",
+        n!("Dark-mode lightness"),
         "black brightness contrast background",
     ),
     (
         "sidebar-opacity",
         Section::Appearance,
-        "Sidebar opacity",
+        n!("Sidebar opacity"),
         "glass translucent transparency vibrancy",
     ),
     (
         "main-pane-glass",
         Section::Appearance,
-        "Main pane glass",
+        n!("Main pane glass"),
         "translucent transparency body window",
     ),
     (
         "inset-layout",
         Section::Appearance,
-        "Layout",
+        n!("Layout"),
         "classic focused new preview sidebar navigation tabs inset workspace card rounded floating linear frame",
     ),
     (
         "interface-scale",
         Section::Appearance,
-        "Interface scale",
+        n!("Interface scale"),
         "zoom font size bigger smaller ui",
     ),
     (
         "collapsed-project-rail",
         Section::Appearance,
-        "Collapsed project rail",
+        n!("Collapsed project rail"),
         "sidebar compact icons hidden navigation layout",
     ),
     (
         "show-excluded-files",
         Section::Appearance,
-        "Show excluded files",
+        n!("Show excluded files"),
         "explorer gitignore ignored hidden files tree",
     ),
     (
         "chat-background",
         Section::Appearance,
-        "Chat background",
+        n!("Chat background"),
         "wallpaper image picture opacity backdrop",
     ),
     (
         "transcript-layout",
         Section::Chat,
-        "Transcript layout",
+        n!("Transcript layout"),
         "full width chat bubble message",
     ),
     (
         "anchor-prompts",
         Section::Chat,
-        "Anchor prompts to top",
+        n!("Anchor prompts to top"),
         "scroll position sticky message",
     ),
     (
         "paced-reveal",
         Section::Chat,
-        "Smooth text reveal",
+        n!("Smooth text reveal"),
         "streaming pacing immediate latency performance animation",
     ),
     (
         "follow-up",
         Section::Chat,
-        "Follow-up behavior",
+        n!("Follow-up behavior"),
         "queue steer interrupt send while running",
     ),
     (
         "model-controls",
         Section::Chat,
-        "Model controls",
+        n!("Model controls"),
         "effort thinking reasoning fast service tier model picker composer",
     ),
     (
         "composer-autocorrect",
         Section::Chat,
-        "Autocorrect",
+        n!("Autocorrect"),
         "spelling spell check autocorrect typo macos composer",
     ),
     (
         "composer-mascot",
         Section::Chat,
-        "Composer mascot",
+        n!("Composer mascot"),
         "runner animation coin fun",
     ),
     (
         "format-on-save",
         Section::Chat,
-        "Format on save",
+        n!("Format on save"),
         "prettier quotes editor save format",
     ),
     (
         "diff-view",
         Section::Chat,
-        "Diff view",
+        n!("Diff view"),
         "unified editor review changes working tree",
     ),
     (
         "empty-session-games",
         Section::Chat,
-        "Empty session games",
+        n!("Empty session games"),
         "pacman snake arcade grid fun",
     ),
     (
         "agent-clis",
         Section::Providers,
-        "Agent CLIs",
+        n!("Agent CLIs"),
         "codex opencode cursor grok pi omp fx hermes antigravity devin binary path",
     ),
     (
         "provider-accounts",
         Section::Providers,
-        "Provider accounts",
+        n!("Provider accounts"),
         "account sign in login rename remove delete credentials profile usage limit quota exhausted",
     ),
     (
         "show-remaining-usage",
         Section::Providers,
-        "Show remaining usage",
+        n!("Show remaining usage"),
         "usage limit meter bar left used quota percent",
     ),
     (
         "mask-emails",
         Section::Providers,
-        "Mask account emails",
+        n!("Mask account emails"),
         "email privacy blur hide screenshot account",
     ),
     (
         "claude-hooks",
         Section::Providers,
-        "Claude Code hooks",
+        n!("Claude Code hooks"),
         "pretooluse settings.json block command notification",
     ),
     (
         "idle-agents",
         Section::Providers,
-        "Keep idle agents ready",
+        n!("Keep idle agents ready"),
         "memory ram cpu performance process warm park background",
     ),
     (
         "project-notifications",
         Section::Inbox,
-        "Project notifications",
+        n!("Project notifications"),
         "mute resume sounds banners reminders categories",
     ),
     (
@@ -504,7 +519,7 @@ pub(crate) const INDEX: &[(&str, Section, &str, &str)] = &[
     (
         "show-archived",
         Section::Archive,
-        "Show archived in the sidebar",
+        n!("Show archived in the sidebar"),
         "hidden conversations list",
     ),
 ];
@@ -516,11 +531,14 @@ pub(crate) struct SearchResult {
     pub label: &'static str,
 }
 
+/// Matches the English label and keywords, and the label as shown, so a
+/// query in the interface language finds it too.
 fn score(needle: &str, label: &str, keywords: &str) -> Option<f32> {
     let lower = label.to_lowercase();
-    if lower.starts_with(needle) {
+    let shown = tl(label).to_lowercase();
+    if lower.starts_with(needle) || shown.starts_with(needle) {
         Some(0.)
-    } else if lower.contains(needle) {
+    } else if lower.contains(needle) || shown.contains(needle) {
         Some(1.)
     } else if keywords.to_lowercase().contains(needle) {
         Some(2.)
@@ -552,7 +570,12 @@ pub(crate) fn search(query: &str, compositor: &str) -> Vec<SearchResult> {
         }
     }
     for section in Section::ALL {
-        let keywords = format!("{} {}", section.description(), section.keywords());
+        let keywords = format!(
+            "{} {} {}",
+            section.description(),
+            tl(section.description()),
+            section.keywords()
+        );
         if let Some(s) = score(&needle, section.label(), &keywords) {
             scored.push((
                 s + 0.5,

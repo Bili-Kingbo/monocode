@@ -84,24 +84,27 @@ impl Effect {
         Self::Scanlines,
         Self::GradientBlur,
     ];
+    /// Also the effect's debug selector, so it stays English; it is shown
+    /// through `i18n::tl`.
     pub fn label(self) -> &'static str {
         match self {
-            Self::None => "None",
-            Self::Dither => "Dither",
+            Self::None => crate::n!("None"),
+            Self::Dither => crate::n!("Dither"),
             Self::Ascii => "ASCII",
-            Self::Halftone => "Halftone",
-            Self::Scanlines => "Scanlines",
-            Self::GradientBlur => "Haze",
+            Self::Halftone => crate::n!("Halftone"),
+            Self::Scanlines => crate::n!("Scanlines"),
+            Self::GradientBlur => crate::n!("Haze"),
         }
     }
     pub fn description(self) -> &'static str {
+        use crate::i18n::t;
         match self {
-            Self::None => "Shows the original artwork.",
-            Self::Dither => "Rebuilds the artwork with a dithered color palette.",
-            Self::Ascii => "Recreates the artwork with colored characters on black.",
-            Self::Halftone => "Recreates the artwork with colored print dots on black.",
-            Self::Scanlines => "Adds a pronounced horizontal display-line texture.",
-            Self::GradientBlur => "Blurs and fades the artwork into the background below.",
+            Self::None => t("Shows the original artwork."),
+            Self::Dither => t("Rebuilds the artwork with a dithered color palette."),
+            Self::Ascii => t("Recreates the artwork with colored characters on black."),
+            Self::Halftone => t("Recreates the artwork with colored print dots on black."),
+            Self::Scanlines => t("Adds a pronounced horizontal display-line texture."),
+            Self::GradientBlur => t("Blurs and fades the artwork into the background below."),
         }
     }
 }

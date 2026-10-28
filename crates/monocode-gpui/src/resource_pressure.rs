@@ -5,7 +5,11 @@ use gpui::{
     AnyElement, Context, EventEmitter, FocusHandle, FontWeight, Role, ScrollHandle, SharedString,
     Task, Window, div, prelude::*, px, rgb,
 };
-use monocode_core::resources::{self, OwnedProcess, Pressure, Sample};
+use monocode_core::{
+    i18n::{t, tl},
+    resources::{self, OwnedProcess, Pressure, Sample},
+    tr,
+};
 use std::{
     collections::{HashMap, HashSet},
     time::{Duration, Instant},
@@ -154,7 +158,8 @@ impl ResourceMonitor {
         self.pressure
             .reasons
             .iter()
-            .map(|r| r.label())
+            // Core's reason labels, shown in the interface language.
+            .map(|r| tl(r.label()))
             .collect::<Vec<_>>()
             .join(" · ")
     }
@@ -276,7 +281,7 @@ impl ResourceMonitor {
             .id("resource-dialog")
             .debug_selector(|| "resource-dialog".into())
             .role(Role::Dialog)
-            .aria_label("Running work")
+            .aria_label(t("Running work"))
             .track_focus(&self.dialog)
             .relative()
             .flex()
@@ -307,10 +312,10 @@ impl ResourceMonitor {
                             .text_size(px(16.))
                             .line_height(px(20.))
                             .font_weight(FontWeight::SEMIBOLD)
-                            .child("Running work"),
+                            .child(t("Running work")),
                     )
                     .child(
-                        icon_button("close-running-work", "Close", "close")
+                        icon_button("close-running-work", t("Close"), "close")
                             .size(px(28.))
                             .on_click(cx.listener(|this, _, window, cx| this.close(window, cx))),
                     ),
@@ -344,7 +349,7 @@ impl ResourceMonitor {
                                     .child(div().font_weight(FontWeight::MEDIUM).child(if active {
                                         reasons
                                     } else {
-                                        "Usage is back to normal".into()
+                                        t("Usage is back to normal").into()
                                     }))
                                     .child(
                                         div()
@@ -352,9 +357,9 @@ impl ResourceMonitor {
                                             .line_height(px(19.5))
                                             .text_color(content(0.55))
                                             .child(if active {
-                                                "Things may feel slower. Stop work you no longer need."
+                                                t("Things may feel slower. Stop work you no longer need.")
                                             } else {
-                                                "The slowdown has cleared. You can close this window."
+                                                t("The slowdown has cleared. You can close this window.")
                                             }),
                                     ),
                             ),
@@ -362,13 +367,13 @@ impl ResourceMonitor {
                     .when(self.error.is_some(), |d| {
                         d.child(error_line(
                             "resource-load-error",
-                            "Couldn't load running work. Trying again…",
+                            t("Couldn't load running work. Trying again…"),
                         ))
                     })
                     .when(self.stop_error.is_some(), |d| {
                         d.child(error_line(
                             "resource-stop-error",
-                            "Couldn't stop this work. Please try again.",
+                            t("Couldn't stop this work. Please try again."),
                         ))
                     })
                     .when(self.loading && self.processes.is_empty(), |d| {
@@ -384,7 +389,7 @@ impl ResourceMonitor {
                                 .text_size(px(12.))
                                 .text_color(content(0.5))
                                 .child(spinner("resource-loading", "loader", 14.))
-                                .child("Checking running work…"),
+                                .child(t("Checking running work…")),
                         )
                     })
                     .when(
@@ -398,9 +403,9 @@ impl ResourceMonitor {
                                     .line_height(px(19.5))
                                     .text_color(content(0.5))
                                     .child(if active {
-                                        "No running work found in MonoCode. Other apps may be using these resources."
+                                        t("No running work found in MonoCode. Other apps may be using these resources.")
                                     } else {
-                                        "No running work found in MonoCode."
+                                        t("No running work found in MonoCode.")
                                     }),
                             )
                         },
@@ -421,16 +426,17 @@ impl ResourceMonitor {
                                 .text_size(px(11.))
                                 .font_weight(FontWeight::MEDIUM)
                                 .text_color(content(0.45))
-                                .child(format!(
-                                    "{count} {} running",
-                                    if count == 1 { "session" } else { "sessions" }
-                                )),
+                                .child(if count == 1 {
+                                    tr!("{count} session running", count = count)
+                                } else {
+                                    tr!("{count} sessions running", count = count)
+                                }),
                         )
                         .child(
                             div()
                                 .id("running-sessions")
                                 .role(Role::List)
-                                .aria_label("Running sessions")
+                                .aria_label(t("Running sessions"))
                                 .max_h(px(list_height))
                                 .overflow_y_scroll()
                                 .track_scroll(&self.scroll)
@@ -444,7 +450,7 @@ impl ResourceMonitor {
                                 .border_color(content(0.07))
                                 .text_size(px(11.))
                                 .text_color(content(0.4))
-                                .child("Stopping work keeps your conversations saved."),
+                                .child(t("Stopping work keeps your conversations saved.")),
                         )
                     }),
             )
@@ -462,7 +468,7 @@ impl ResourceMonitor {
     ) -> AnyElement {
         let title: SharedString = session
             .map(|s| s.title.clone())
-            .unwrap_or_else(|| "Background work".into());
+            .unwrap_or_else(|| t("Background work").into());
         let memory: u64 = rows.iter().map(|r| r.memory_bytes).sum();
         let expanded = self.expanded.contains(&id);
         let stopping_session = self.stopping.as_deref() == Some(&format!("session:{id}"));
@@ -503,7 +509,7 @@ impl ResourceMonitor {
                             div()
                                 .id(("stop-session", id as u64))
                                 .role(Role::Button)
-                                .aria_label(format!("Stop session {title}"))
+                                .aria_label(tr!("Stop session {title}", title = title))
                                 .h(px(28.))
                                 .flex_shrink_0()
                                 .flex()
@@ -533,9 +539,9 @@ impl ResourceMonitor {
                                     ))
                                 })
                                 .child(if stopping_session {
-                                    "Stopping…"
+                                    t("Stopping…")
                                 } else {
-                                    "Stop"
+                                    t("Stop")
                                 }),
                         )
                     }),
@@ -562,16 +568,19 @@ impl ResourceMonitor {
                         },
                         12.,
                     ))
-                    .child(format!(
-                        "{} {} · {} memory",
-                        rows.len(),
-                        if rows.len() == 1 {
-                            "process"
-                        } else {
-                            "processes"
-                        },
-                        format_memory(memory)
-                    ))
+                    .child(if rows.len() == 1 {
+                        tr!(
+                            "{count} process · {memory} memory",
+                            count = rows.len(),
+                            memory = format_memory(memory)
+                        )
+                    } else {
+                        tr!(
+                            "{count} processes · {memory} memory",
+                            count = rows.len(),
+                            memory = format_memory(memory)
+                        )
+                    })
                     .on_click(cx.listener(move |this, _, _, cx| {
                         if !this.expanded.remove(&id) {
                             this.expanded.insert(id);
@@ -643,14 +652,19 @@ impl ResourceMonitor {
                 div()
                     .id(("stop-process", pid as u64))
                     .role(Role::Button)
-                    .aria_label(format!(
-                        "{} for {title} (PID {pid})",
-                        if agent {
-                            "Stop agent"
-                        } else {
-                            "Stop build/tool"
-                        }
-                    ))
+                    .aria_label(if agent {
+                        tr!(
+                            "Stop agent for {title} (PID {pid})",
+                            title = title,
+                            pid = pid
+                        )
+                    } else {
+                        tr!(
+                            "Stop build/tool for {title} (PID {pid})",
+                            title = title,
+                            pid = pid
+                        )
+                    })
                     .flex_shrink_0()
                     .rounded_sm()
                     .px(px(6.))
@@ -672,7 +686,11 @@ impl ResourceMonitor {
                                 }))
                         }
                     })
-                    .child(if stopping { "Stopping…" } else { "Stop" }),
+                    .child(if stopping {
+                        t("Stopping…")
+                    } else {
+                        t("Stop")
+                    }),
             )
             .into_any_element()
     }
@@ -689,8 +707,11 @@ impl Render for ResourceMonitor {
                     .id("resource-pressure-chip")
                     .debug_selector(|| "resource-pressure-chip".into())
                     .role(Role::Button)
-                    .aria_label("High resource usage")
-                    .aria_description(format!("{} · Review running work", self.reasons()))
+                    .aria_label(t("High resource usage"))
+                    .aria_description(tr!(
+                        "{reasons} · Review running work",
+                        reasons = self.reasons()
+                    ))
                     .aria_expanded(open)
                     .track_focus(&self.trigger)
                     .tab_index(0)
@@ -718,7 +739,7 @@ impl Render for ResourceMonitor {
                     })
                     .hover(|s| s.bg(content(0.08)).text_color(content(1.)))
                     .child(icon("circle-alert", 14.).text_color(rgb(AMBER)))
-                    .child("High usage")
+                    .child(t("High usage"))
                     .on_click(cx.listener(|this, _, window, cx| this.open(window, cx)))
                     .on_key_down(cx.listener(|this, event: &gpui::KeyDownEvent, window, cx| {
                         if matches!(event.keystroke.key.as_str(), "enter" | "space") {

@@ -12,7 +12,12 @@ use gpui::{
     AnyElement, Context, Div, Focusable, FontWeight, Role, SharedString, Task, Window, div,
     prelude::*, px, rgb,
 };
-use monocode_core::remote::{Connections, JobView, Machine};
+use monocode_core::{
+    i18n::{t, tl},
+    n,
+    remote::{Connections, JobView, Machine},
+    tr,
+};
 use serde_json::{Value, json};
 use std::{
     collections::{HashMap, HashSet},
@@ -20,12 +25,12 @@ use std::{
     time::Duration,
 };
 
-const TARGET: &str = "SSH target";
-const NAME: &str = "Machine name";
-const PORT: &str = "SSH port";
-const URL: &str = "Host URL";
-const TOKEN: &str = "Host token";
-const ANSWER: &str = "SSH password or passphrase";
+const TARGET: &str = n!("SSH target");
+const NAME: &str = n!("Machine name");
+const PORT: &str = n!("SSH port");
+const URL: &str = n!("Host URL");
+const TOKEN: &str = n!("Host token");
+const ANSWER: &str = n!("SSH password or passphrase");
 
 #[derive(Default)]
 pub(in crate::settings) struct ConnectionsState {
@@ -92,11 +97,11 @@ fn describe_health(environment: &str, host: &Value) -> Result<Health, String> {
     let needs_update = !supports("workspace.run") || !supports("git.worktreeCreate");
     Ok(Health {
         label: if needs_update {
-            "Connected · host update needed for Explorer and Changes"
+            n!("Connected · host update needed for Explorer and Changes")
         } else if providers.is_empty() {
-            "Connected · install a supported provider on the host"
+            n!("Connected · install a supported provider on the host")
         } else {
-            "Connected"
+            n!("Connected")
         }
         .into(),
         needs_update,
@@ -113,7 +118,7 @@ fn parse_port(value: &str) -> Result<Option<u16>, String> {
         .ok()
         .filter(|port| *port != 0)
         .map(Some)
-        .ok_or_else(|| "SSH port must be between 1 and 65535.".into())
+        .ok_or_else(|| t("SSH port must be between 1 and 65535.").into())
 }
 
 fn paragraph(text: impl Into<SharedString>) -> Div {
@@ -126,8 +131,8 @@ fn paragraph(text: impl Into<SharedString>) -> Div {
 
 fn remove_machine(remote: &Connections, machine: Machine, revoke: bool) -> Result<Machine, String> {
     if revoke {
-        remote.request(&machine.id, "devices.revokeSelf", json!({})).map_err(|reason| format!(
-            "Could not revoke access, so {} was not removed: {reason}. Reconnect and try again, or remove it from this desktop only and revoke it on the host with monocode-host devices and monocode-host revoke <device-id>.", machine.name
+        remote.request(&machine.id, "devices.revokeSelf", json!({})).map_err(|reason| tr!(
+            "Could not revoke access, so {name} was not removed: {reason}. Reconnect and try again, or remove it from this desktop only and revoke it on the host with monocode-host devices and monocode-host revoke <device-id>.", name = machine.name, reason = reason
         ))?;
     }
     remote.disconnect(&machine.id)?;
@@ -141,15 +146,15 @@ impl SettingsView {
         }
         self.connections.initialized = true;
         for (key, placeholder, secret) in [
-            (TARGET, "user@my-mac-mini or an SSH alias", false),
-            (NAME, "Optional, e.g. Home Mac mini", false),
-            (PORT, "From SSH config", false),
+            (TARGET, t("user@my-mac-mini or an SSH alias"), false),
+            (NAME, t("Optional, e.g. Home Mac mini"), false),
+            (PORT, t("From SSH config"), false),
             (URL, "http://127.0.0.1:3774", false),
-            (TOKEN, "Device token", true),
-            (ANSWER, "Password or passphrase", true),
+            (TOKEN, t("Device token"), true),
+            (ANSWER, t("Password or passphrase"), true),
         ] {
             let input = cx.new(|cx| {
-                let mut input = Input::field(key, placeholder, content(0.35), cx);
+                let mut input = Input::field(tl(key), placeholder, content(0.35), cx);
                 input.set_font_size(13.);
                 input.set_secret(secret);
                 if key == URL {
@@ -365,9 +370,10 @@ impl SettingsView {
                                     }
                                 }
                                 Err(_) => {
-                                    this.connections
-                                        .status
-                                        .insert(id, "Offline · reconnect to check access".into());
+                                    this.connections.status.insert(
+                                        id,
+                                        n!("Offline · reconnect to check access").into(),
+                                    );
                                 }
                             }
                         }
@@ -487,11 +493,11 @@ impl SettingsView {
                                 else if let Some(machine) = &job.machine {
                                     this.connections.adding = false;
                                     this.connections.notice = if this.connections.updating.take().is_some() {
-                                        format!("{} was updated and reconnected.", machine.name)
+                                        tr!("{name} was updated and reconnected.", name = machine.name)
                                     } else {
-                                        format!("{} is connected. To work on it, click + next to Projects in the project rail and choose Open folder on a machine.", machine.name)
+                                        tr!("{name} is connected. To work on it, click + next to Projects in the project rail and choose Open folder on a machine.", name = machine.name)
                                     };
-                                    this.connections.status.insert(machine.id.clone(), "Connected".into());
+                                    this.connections.status.insert(machine.id.clone(), n!("Connected").into());
                                     for key in [TARGET, NAME, PORT] { this.clear_connection_field(key, cx); }
                                 }
                             }
@@ -606,7 +612,7 @@ impl SettingsView {
         let url = self.connection_value(URL, cx);
         let token = self.connection_value(TOKEN, cx);
         if url.trim().is_empty() || token.trim().is_empty() {
-            self.connections.error = "Enter a host URL and device token.".into();
+            self.connections.error = t("Enter a host URL and device token.").into();
             cx.notify();
             return;
         }
@@ -629,7 +635,7 @@ impl SettingsView {
                 match result {
                     Ok(machine) => {
                         this.clear_connection_field(TOKEN, cx);
-                        this.connections.notice = format!("{} is connected.", machine.name);
+                        this.connections.notice = tr!("{name} is connected.", name = machine.name);
                         this.refresh_connections(cx);
                     }
                     Err(error) => this.connections.error = error,
@@ -667,9 +673,9 @@ impl SettingsView {
                         this.connections.removing = None;
                         this.connections.machines.retain(|m| m.id != machine.id);
                         this.connections.notice = if revoke {
-                            format!("{} was removed and this desktop's access was revoked. The host and its sessions keep running.", machine.name)
+                            tr!("{name} was removed and this desktop's access was revoked. The host and its sessions keep running.", name = machine.name)
                         } else {
-                            format!("{} was removed from this desktop. The host and its sessions keep running, and it still accepts this desktop's credential.", machine.name)
+                            tr!("{name} was removed from this desktop. The host and its sessions keep running, and it still accepts this desktop's credential.", name = machine.name)
                         };
                         this.refresh_connections(cx);
                     }
@@ -689,10 +695,10 @@ impl SettingsView {
         let mut page = vec![div().relative().child(self.reveal_probe("remote-machines"))
             .flex().items_end().justify_between().gap_4()
             .child(div().min_w_0().flex_1()
-                .child(div().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).child("Your machines"))
-                .child(paragraph("Run agents on another computer and return to them from your laptop. The host keeps working when you close MonoCode here.").mt_1()))
+                .child(div().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).child(t("Your machines")))
+                .child(paragraph(t("Run agents on another computer and return to them from your laptop. The host keeps working when you close MonoCode here.")).mt_1()))
             .when(!self.connections.adding, |d| d.child(
-                secondary_button("add-machine", "Add machine", false, disabled).child(icon("plus", 16.)).child("Add machine")
+                secondary_button("add-machine", t("Add machine"), false, disabled).child(icon("plus", 16.)).child(t("Add machine"))
                     .on_click(cx.listener(|this, _, window, cx| {
                         if this.connections.busy || this.connections.revoking || this.ctx.remote.is_none() { return; }
                         this.connections.adding = true;
@@ -716,7 +722,7 @@ impl SettingsView {
                             "SSH · {}{}",
                             ssh.target,
                             ssh.port
-                                .map(|port| format!(" · port {port}"))
+                                .map(|port| format!(" · {}", tr!("port {port}", port = port)))
                                 .unwrap_or_default()
                         )
                     })
@@ -731,14 +737,14 @@ impl SettingsView {
                         .child(div().min_w_0().flex_1()
                             .child(div().truncate().text_size(px(13.)).font_weight(FontWeight::MEDIUM).child(machine.name.clone()))
                             .child(paragraph(endpoint).mt_1())
-                            .child(paragraph(self.connections.status.get(&id).cloned().unwrap_or_else(|| "Checking connection…".into())).mt_1().text_color(content(0.5)))
-                            .when(machine.ssh.is_some() && update, |d| d.child(paragraph("Updating restarts the host and interrupts active agent turns.").mt_1().text_size(px(11.)))))
+                            .child(paragraph(self.connections.status.get(&id).map_or(t("Checking connection…"), |status| tl(status)).to_owned()).mt_1().text_color(content(0.5)))
+                            .when(machine.ssh.is_some() && update, |d| d.child(paragraph(t("Updating restarts the host and interrupts active agent turns.")).mt_1().text_size(px(11.)))))
                         .when(machine.ssh.is_some(), |d| d.child(div().flex().items_center().gap_2()
-                            .when(update, |d| d.child(secondary_button(SharedString::from(format!("update-host-{id}")), "Update Host", false, disabled)
-                                .child("Update Host").on_click(cx.listener(move |this, _, _, cx| this.begin_connection(Some(update_id.clone()), true, cx)))))
-                            .child(secondary_button(SharedString::from(format!("reconnect-{id}")), "Reconnect", false, disabled)
-                                .child("Reconnect").on_click(cx.listener(move |this, _, _, cx| this.begin_connection(Some(reconnect_id.clone()), false, cx))))))
-                        .child(secondary_button(SharedString::from(format!("remove-machine-{id}")), format!("Remove {}", machine.name), true, disabled)
+                            .when(update, |d| d.child(secondary_button(SharedString::from(format!("update-host-{id}")), t("Update Host"), false, disabled)
+                                .child(t("Update Host")).on_click(cx.listener(move |this, _, _, cx| this.begin_connection(Some(update_id.clone()), true, cx)))))
+                            .child(secondary_button(SharedString::from(format!("reconnect-{id}")), t("Reconnect"), false, disabled)
+                                .child(t("Reconnect")).on_click(cx.listener(move |this, _, _, cx| this.begin_connection(Some(reconnect_id.clone()), false, cx))))))
+                        .child(secondary_button(SharedString::from(format!("remove-machine-{id}")), tr!("Remove {name}", name = machine.name), true, disabled)
                             .child(icon("trash", 16.)).on_click(cx.listener(move |this, _, _, cx| {
                                 if this.connections.busy || this.connections.revoking { return; }
                                 this.connections.error.clear(); this.connections.removing = Some(remove_id.clone()); cx.notify();
@@ -758,30 +764,32 @@ impl SettingsView {
                     .text_center()
                     .text_size(px(13.))
                     .text_color(content(0.45))
-                    .child("Add your always-on Windows, Mac, or Linux machine to get started.")
+                    .child(t(
+                        "Add your always-on Windows, Mac, or Linux machine to get started.",
+                    ))
                     .into_any_element(),
             );
         }
         if self.connections.adding {
-            let target = self.connection_field(TARGET, "SSH address", disabled, cx);
-            let name = self.connection_field(NAME, "Name (optional)", disabled, cx);
-            let port = self.connection_field(PORT, "SSH port", disabled, cx);
+            let target = self.connection_field(TARGET, t("SSH address"), disabled, cx);
+            let name = self.connection_field(NAME, t("Name (optional)"), disabled, cx);
+            let port = self.connection_field(PORT, t("SSH port"), disabled, cx);
             let connect_disabled = disabled || self.connection_value(TARGET, cx).trim().is_empty();
             page.push(div().mt_5().p_5().rounded_xl().border_1().border_color(content(0.1)).flex().flex_col().gap_4()
-                .child(div().flex().justify_between().child(div().text_size(px(14.)).font_weight(FontWeight::MEDIUM).child("Connect through SSH"))
+                .child(div().flex().justify_between().child(div().text_size(px(14.)).font_weight(FontWeight::MEDIUM).child(t("Connect through SSH")))
                     .child(div().rounded_sm().bg(content(0.1)).px_2().py_1().text_size(px(11.)).text_color(content(0.6)).child("SSH")))
                 .child(target).child(name)
-                .child(div().id("ssh-advanced").role(Role::Button).aria_label("Advanced SSH settings").text_size(px(12.)).text_color(content(0.5)).cursor_pointer()
-                    .child(if self.connections.advanced { "▾ Advanced" } else { "▸ Advanced" })
+                .child(div().id("ssh-advanced").role(Role::Button).aria_label(t("Advanced SSH settings")).text_size(px(12.)).text_color(content(0.5)).cursor_pointer()
+                    .child(if self.connections.advanced { t("▾ Advanced") } else { t("▸ Advanced") })
                     .on_click(cx.listener(|this, _, _, cx| { this.connections.advanced = !this.connections.advanced; cx.notify(); })))
                 .when(self.connections.advanced, |d| d.child(div().max_w(px(160.)).child(port)))
-                .child(paragraph("MonoCode installs and starts its background host, then connects securely. Your SSH keys and config are used automatically. Enable SSH on the host and sign in to Codex or Claude Code there. On Windows and Mac, keep the host’s desktop account signed in and the machine awake. Locking the desktop is fine."))
-                .child(paragraph("On Linux, setup installs a systemd user service and turns on lingering for your account (loginctl enable-linger), so the host and your other user services keep running after you log out. Without systemd, as in many containers and microVMs, the host runs as a background process instead and is started again when you reconnect. The host keeps running until you stop it on that machine; removing it here only disconnects this desktop."))
+                .child(paragraph(t("MonoCode installs and starts its background host, then connects securely. Your SSH keys and config are used automatically. Enable SSH on the host and sign in to Codex or Claude Code there. On Windows and Mac, keep the host’s desktop account signed in and the machine awake. Locking the desktop is fine.")))
+                .child(paragraph(t("On Linux, setup installs a systemd user service and turns on lingering for your account (loginctl enable-linger), so the host and your other user services keep running after you log out. Without systemd, as in many containers and microVMs, the host runs as a background process instead and is started again when you reconnect. The host keeps running until you stop it on that machine; removing it here only disconnects this desktop.")))
                 .child(div().flex().justify_end().gap_2()
-                    .child(secondary_button("cancel-machine", "Cancel", false, busy).child("Cancel").on_click(cx.listener(|this, _, _, cx| {
+                    .child(secondary_button("cancel-machine", t("Cancel"), false, busy).child(t("Cancel")).on_click(cx.listener(|this, _, _, cx| {
                         if !this.connections.busy { this.connections.adding = false; cx.notify(); }
                     })))
-                    .child(secondary_button("connect-machine", "Connect", false, connect_disabled).child(if busy { "Connecting…" } else { "Connect" })
+                    .child(secondary_button("connect-machine", t("Connect"), false, connect_disabled).child(if busy { t("Connecting…") } else { t("Connect") })
                         .on_click(cx.listener(|this, _, _, cx| this.begin_connection(None, false, cx)))))
                 .into_any_element());
         }
@@ -810,7 +818,7 @@ impl SettingsView {
                         .child(
                             job.as_ref()
                                 .map(|job| job.message.clone())
-                                .unwrap_or_else(|| "Starting connection…".into()),
+                                .unwrap_or_else(|| t("Starting connection…").into()),
                         ),
                 );
             if let Some(prompt) = job.and_then(|job| job.prompt) {
@@ -819,7 +827,7 @@ impl SettingsView {
                 if !prompt.confirm {
                     progress = progress.child(self.connection_field(
                         ANSWER,
-                        "SSH password or passphrase",
+                        t("SSH password or passphrase"),
                         answering,
                         cx,
                     ));
@@ -829,11 +837,11 @@ impl SettingsView {
                         .flex()
                         .gap_2()
                         .child(
-                            secondary_button("answer-ssh-prompt", "Continue", false, answering)
+                            secondary_button("answer-ssh-prompt", t("Continue"), false, answering)
                                 .child(if prompt.confirm {
-                                    "Trust host and continue"
+                                    t("Trust host and continue")
                                 } else {
-                                    "Continue"
+                                    t("Continue")
                                 })
                                 .on_click(
                                     cx.listener(|this, _, _, cx| this.answer_connection(None, cx)),
@@ -841,8 +849,8 @@ impl SettingsView {
                         )
                         .when(prompt.confirm, |d| {
                             d.child(
-                                secondary_button("reject-ssh-host", "Reject", false, answering)
-                                    .child("Reject")
+                                secondary_button("reject-ssh-host", t("Reject"), false, answering)
+                                    .child(t("Reject"))
                                     .on_click(cx.listener(|this, _, _, cx| {
                                         this.answer_connection(Some("no"), cx)
                                     })),
@@ -855,11 +863,11 @@ impl SettingsView {
                     .child(
                         secondary_button(
                             "cancel-ssh-connection",
-                            "Cancel connection",
+                            t("Cancel connection"),
                             false,
                             false,
                         )
-                        .child("Cancel connection")
+                        .child(t("Cancel connection"))
                         .on_click(cx.listener(|this, _, _, cx| this.cancel_connection(cx))),
                     )
                     .into_any_element(),
@@ -897,15 +905,15 @@ impl SettingsView {
             div()
                 .id("existing-host-url")
                 .role(Role::Button)
-                .aria_label("Connect to an existing host by URL")
+                .aria_label(t("Connect to an existing host by URL"))
                 .mt_5()
                 .text_size(px(12.))
                 .text_color(content(0.45))
                 .cursor_pointer()
                 .child(if self.connections.url {
-                    "▾ Connect to an existing host by URL"
+                    t("▾ Connect to an existing host by URL")
                 } else {
-                    "▸ Connect to an existing host by URL"
+                    t("▸ Connect to an existing host by URL")
                 })
                 .on_click(cx.listener(|this, _, _, cx| {
                     this.connections.url = !this.connections.url;
@@ -914,8 +922,8 @@ impl SettingsView {
                 .into_any_element(),
         );
         if self.connections.url {
-            let url = self.connection_field(URL, "Host URL", disabled, cx);
-            let token = self.connection_field(TOKEN, "Device token", disabled, cx);
+            let url = self.connection_field(URL, t("Host URL"), disabled, cx);
+            let token = self.connection_field(TOKEN, t("Device token"), disabled, cx);
             page.push(
                 div()
                     .mt_4()
@@ -925,8 +933,8 @@ impl SettingsView {
                     .child(url)
                     .child(token)
                     .child(
-                        secondary_button("connect-host-url", "Connect by URL", false, disabled)
-                            .child("Connect by URL")
+                        secondary_button("connect-host-url", t("Connect by URL"), false, disabled)
+                            .child(t("Connect by URL"))
                             .on_click(cx.listener(|this, _, _, cx| this.connect_url(cx))),
                     )
                     .into_any_element(),
@@ -942,17 +950,17 @@ impl SettingsView {
     ) -> AnyElement {
         let revoke_machine = machine.clone();
         let disabled = self.connections.revoking;
-        div().id("remote-remove-confirmation").role(Role::Group).aria_label(format!("Confirm removing {}", machine.name)).border_t_1().border_color(content(0.1)).bg(content(0.03)).p_4().flex().flex_col().gap_3()
-            .child(div().text_size(px(13.)).font_weight(FontWeight::MEDIUM).child(format!("Remove {} from this desktop?", machine.name)))
-            .child(paragraph("This closes this desktop’s connection to the machine. It does not stop the host, and its sessions keep running and stay on that machine. You can add it again later."))
-            .child(paragraph("Removing alone leaves this desktop’s credential valid on the host. Revoke access to invalidate it first; the machine must be reachable."))
-            .child(paragraph("To stop the host and turn off its background service, run ~/.monocode-host/bin/monocode-host service uninstall on that machine (%USERPROFILE%\\.monocode-host\\bin\\monocode-host.cmd service uninstall on Windows). Its sessions and history are kept."))
+        div().id("remote-remove-confirmation").role(Role::Group).aria_label(tr!("Confirm removing {name}", name = machine.name)).border_t_1().border_color(content(0.1)).bg(content(0.03)).p_4().flex().flex_col().gap_3()
+            .child(div().text_size(px(13.)).font_weight(FontWeight::MEDIUM).child(tr!("Remove {name} from this desktop?", name = machine.name)))
+            .child(paragraph(t("This closes this desktop’s connection to the machine. It does not stop the host, and its sessions keep running and stay on that machine. You can add it again later.")))
+            .child(paragraph(t("Removing alone leaves this desktop’s credential valid on the host. Revoke access to invalidate it first; the machine must be reachable.")))
+            .child(paragraph(t("To stop the host and turn off its background service, run ~/.monocode-host/bin/monocode-host service uninstall on that machine (%USERPROFILE%\\.monocode-host\\bin\\monocode-host.cmd service uninstall on Windows). Its sessions and history are kept.")))
             .child(div().flex().flex_wrap().gap_2()
-                .child(secondary_button("revoke-remove-machine", "Revoke access and remove", true, disabled).child("Revoke access and remove")
+                .child(secondary_button("revoke-remove-machine", t("Revoke access and remove"), true, disabled).child(t("Revoke access and remove"))
                     .on_click(cx.listener(move |this, _, _, cx| this.remove_connection(revoke_machine.clone(), true, cx))))
-                .child(secondary_button("remove-machine-only", "Remove from this desktop only", false, disabled).child("Remove from this desktop only")
+                .child(secondary_button("remove-machine-only", t("Remove from this desktop only"), false, disabled).child(t("Remove from this desktop only"))
                     .on_click(cx.listener(move |this, _, _, cx| this.remove_connection(machine.clone(), false, cx))))
-                .child(secondary_button("cancel-remove-machine", "Cancel", false, disabled).child("Cancel")
+                .child(secondary_button("cancel-remove-machine", t("Cancel"), false, disabled).child(t("Cancel"))
                     .on_click(cx.listener(|this, _, _, cx| { if !this.connections.revoking { this.connections.removing = None; cx.notify(); } })))).into_any_element()
     }
 }

@@ -22,8 +22,7 @@ fn line_card(id: impl Into<ElementId>) -> Stateful<Div> {
 /// ArtifactCard: the document's icon and title, opening it in the reader.
 fn artifact(value: &Value, cx: &mut Context<crate::transcript::TranscriptView>) -> AnyElement {
     let html = value["kind"] == "html";
-    let label = if html { "visual" } else { "document" };
-    let title = value["title"].as_str().unwrap_or("Document").to_string();
+    let title = value["title"].as_str().unwrap_or(t("Document")).to_string();
     let card = value.clone();
     div()
         .flex()
@@ -32,7 +31,11 @@ fn artifact(value: &Value, cx: &mut Context<crate::transcript::TranscriptView>) 
                 "mono-artifact-{}",
                 value["id"].as_str().unwrap_or_default()
             )))
-            .aria_label(format!("Open {label} {title}"))
+            .aria_label(if html {
+                tr!("Open visual {title}", title = title)
+            } else {
+                tr!("Open document {title}", title = title)
+            })
             .debug_selector(|| "mono-artifact-card".into())
             .min_h(px(38.))
             .py_2()
@@ -58,15 +61,15 @@ pub(crate) fn launch(
     view: Option<&crate::transcript::LaunchView>,
     cx: &mut Context<crate::transcript::TranscriptView>,
 ) -> AnyElement {
-    let title = view.map_or("Agent session".to_string(), |v| v.title.clone());
+    let title = view.map_or(t("Agent session").to_string(), |v| v.title.clone());
     let (label, glyph, color) = match view.map(|v| v.state) {
-        Some("working") => ("Working", "loader-03", content(0.55)),
-        Some("input") => ("Needs input", "clock", rgb(0xfbbf24).into()),
-        Some("draft") => ("Draft", "circle-dashed-hi", content(0.45)),
-        Some("failed") => ("Failed", "alert-circle", rgb(0xf87171).into()),
-        Some("stopped") => ("Stopped", "circle-x", content(0.45)),
-        Some("unavailable") => ("Unavailable", "chatting", content(0.45)),
-        Some(_) => ("Done", "check-circle", {
+        Some("working") => (t("Working"), "loader-03", content(0.55)),
+        Some("input") => (t("Needs input"), "clock", rgb(0xfbbf24).into()),
+        Some("draft") => (t("Draft"), "circle-dashed-hi", content(0.45)),
+        Some("failed") => (t("Failed"), "alert-circle", rgb(0xf87171).into()),
+        Some("stopped") => (t("Stopped"), "circle-x", content(0.45)),
+        Some("unavailable") => (t("Unavailable"), "chatting", content(0.45)),
+        Some(_) => (t("Done"), "check-circle", {
             let mut c: gpui::Hsla = rgb(0x34d399).into();
             c.a = 0.9;
             c
@@ -103,9 +106,13 @@ pub(crate) fn launch(
         .child(
             line_card(("mono-launched-session", id as usize))
                 .aria_label(if label.is_empty() {
-                    format!("Open session {title}")
+                    tr!("Open session {title}", title = title)
                 } else {
-                    format!("Open session {title}, {}", label.to_lowercase())
+                    tr!(
+                        "Open session {title}, {state}",
+                        title = title,
+                        state = label.to_lowercase()
+                    )
                 })
                 .debug_selector(move || format!("mono-launch-card-{id}"))
                 .py(px(6.))
@@ -159,7 +166,7 @@ pub(crate) fn render(
             let view = value["state"]
                 .as_str()
                 .map(|state| crate::transcript::LaunchView {
-                    title: value["title"].as_str().unwrap_or("Agent session").into(),
+                    title: value["title"].as_str().unwrap_or(t("Agent session")).into(),
                     state: match state {
                         "working" => "working",
                         "input" => "input",
@@ -179,9 +186,9 @@ pub(crate) fn render(
         .as_str()
         .or_else(|| value["name"].as_str())
         .unwrap_or(match kind {
-            "pr" => "Pull request",
-            "session" => "Session",
-            "habit" => "Suggested habit",
+            "pr" => t("Pull request"),
+            "session" => t("Session"),
+            "habit" => t("Suggested habit"),
             _ => "",
         })
         .to_string();
@@ -230,7 +237,7 @@ pub(crate) fn render(
                 div()
                     .text_size(px(12.))
                     .text_color(content(0.5))
-                    .child(value["state"].as_str().unwrap_or("Saved").to_string()),
+                    .child(value["state"].as_str().unwrap_or(t("Saved")).to_string()),
             )
         })
         .when(kind == "pr", |d| {
@@ -250,7 +257,7 @@ pub(crate) fn render(
             d.child(
                 div().text_size(px(12.)).text_color(content(0.5)).child(
                     serde_json::from_value::<habits::Schedule>(value["schedule"].clone())
-                        .map(|s| s.label())
+                        .map(|s| scheduler::schedule_label(&s))
                         .unwrap_or_default(),
                 ),
             )
@@ -280,9 +287,9 @@ pub(crate) fn render(
                 panels::button(
                     "mono-card-open",
                     if kind == "habit" && value["started"] != true {
-                        "Start habit"
+                        t("Start habit")
                     } else {
-                        "Open"
+                        t("Open")
                     },
                 )
                 .bg(content(0.08))

@@ -47,6 +47,10 @@ use monocode_core::{
     agent::{AccessMode, Approval, Control, Decision, Settings},
     catalog::{self, Model},
 };
+use monocode_core::{
+    i18n::{t, tl},
+    n, tr,
+};
 use monocode_core::{provider::Kind, store::Session};
 use std::{
     path::Path,
@@ -64,26 +68,28 @@ const COMPOSER_COLUMN: f32 = COLUMN;
 const ACCESS_MODES: &[(&str, &str, &str, &str)] = &[
     (
         "supervised",
-        "Supervised",
-        "Ask before commands and file changes.",
+        n!("Supervised"),
+        n!("Ask before commands and file changes."),
         "square-lock",
     ),
     (
         "auto-accept-edits",
-        "Auto-accept edits",
-        "Auto-approve edits, ask before other actions.",
+        n!("Auto-accept edits"),
+        n!("Auto-approve edits, ask before other actions."),
         "pencil-edit",
     ),
     (
         "auto",
-        "Auto",
-        "An AI reviewer can approve or deny actions.",
+        n!("Auto"),
+        n!("An AI reviewer can approve or deny actions."),
         "sparkles",
     ),
     (
         "full-access",
-        "Full access",
-        "Allow commands, edits, and supported MCP confirmations in non-plan turns without prompts.",
+        n!("Full access"),
+        n!(
+            "Allow commands, edits, and supported MCP confirmations in non-plan turns without prompts."
+        ),
         "shield-alert",
     ),
 ];
@@ -412,13 +418,13 @@ impl Conversation {
                                 content(0.45)
                             })
                             .child(if self.needs_approval() {
-                                "Needs approval".to_owned()
+                                t("Needs approval").to_owned()
                             } else if self.busy {
-                                "Working…".to_owned()
+                                t("Working…").to_owned()
                             } else if done {
-                                "Done".to_owned()
+                                t("Done").to_owned()
                             } else if self.loading {
-                                "Loading…".to_owned()
+                                t("Loading…").to_owned()
                             } else {
                                 monocode_core::time::relative(
                                     self.summary.updated_at,
@@ -434,7 +440,7 @@ impl Conversation {
                     .line_height(px(20.))
                     .font_weight(gpui::FontWeight::SEMIBOLD)
                     .text_color(content(1.))
-                    .child(self.display_title()),
+                    .child(title::shown_title(self.display_title())),
             )
             .child(
                 div()
@@ -448,10 +454,14 @@ impl Conversation {
                     .flex_col()
                     .gap_1p5()
                     .when_some(self.branch.clone(), |d, branch| {
-                        d.child(detail("Branch", branch))
+                        d.child(detail(t("Branch"), branch))
                     })
                     .child(detail(
-                        if linked { "Worktree" } else { "Directory" },
+                        if linked {
+                            t("Worktree")
+                        } else {
+                            t("Directory")
+                        },
                         directory,
                     )),
             )
@@ -598,7 +608,7 @@ impl Conversation {
             orchestration_plan: None,
             orchestration_error: None,
             orchestration_progress: None,
-            status: "Loading conversation…".into(),
+            status: n!("Loading conversation…").into(),
             loaded: false,
             history_unloaded: false,
             history_actions: Default::default(),
@@ -882,7 +892,7 @@ impl Conversation {
             return;
         }
         if self.settings.worktree_removed {
-            self.status = "Select a branch or worktree to continue this conversation.".into();
+            self.status = n!("Select a branch or worktree to continue this conversation.").into();
             cx.notify();
             return;
         }
@@ -1029,9 +1039,9 @@ impl Conversation {
         let source_provider = self.summary.provider.clone();
         let source_account = self.settings.account.id.clone();
         self.status = if self.settings.pending_provider_switch.is_some() {
-            "Preparing handoff…"
+            n!("Preparing handoff…")
         } else {
-            "Connecting…"
+            n!("Connecting…")
         }
         .into();
         self.cancel = Arc::new(AtomicBool::new(false));
@@ -1094,7 +1104,7 @@ impl Conversation {
         self.preparing_worktree = settings.new_worktree && settings.worktree_cwd.is_none();
         if self.preparing_worktree {
             settings.worktree_base = settings.worktree_base.or(self.branch.clone());
-            self.status = "Creating worktree…".into();
+            self.status = n!("Creating worktree…").into();
         }
         if settings.mono.is_none()
             && settings
@@ -1322,7 +1332,7 @@ impl Conversation {
                                             .is_err()
                                     }) {
                                         this.status =
-                                            "The provider is no longer waiting for this answer"
+                                            n!("The provider is no longer waiting for this answer")
                                                 .into();
                                         cx.notify();
                                         return;
@@ -1331,11 +1341,11 @@ impl Conversation {
                                         this.question_overlay.release(card, cx);
                                     }
                                     this.status = if !this.approvals.is_empty() {
-                                        "Waiting for approval"
+                                        n!("Waiting for approval")
                                     } else if !this.questions.is_empty() {
-                                        "Waiting for your answer"
+                                        n!("Waiting for your answer")
                                     } else {
-                                        "Working…"
+                                        n!("Working…")
                                     }
                                     .into();
                                     if before != this.needs_approval() {
@@ -1358,12 +1368,12 @@ impl Conversation {
                                 },
                             );
                             this.questions.push_back((card, vec![events, keep_open]));
-                            this.status = "Waiting for your answer".into();
+                            this.status = n!("Waiting for your answer").into();
                         }
                         if !finished && !this.approvals.is_empty() {
-                            this.status = "Waiting for approval".into();
+                            this.status = n!("Waiting for approval").into();
                         } else if !finished && !this.questions.is_empty() {
-                            this.status = "Waiting for your answer".into();
+                            this.status = n!("Waiting for your answer").into();
                         }
                         if finished {
                             if this.is_remote() {
@@ -1400,7 +1410,7 @@ impl Conversation {
                             if let Some(id) = this.follow_ups.sending.clone() {
                                 this.fail_follow_up(
                                     &id,
-                                    "The turn ended before this message was accepted".into(),
+                                    n!("The turn ended before this message was accepted").into(),
                                     cx,
                                 );
                             }
@@ -1654,7 +1664,7 @@ impl Conversation {
         self.summary = summary;
         self.settings = settings;
         self.context = None;
-        self.status = "Worktree deleted".into();
+        self.status = n!("Worktree deleted").into();
         self.refresh_git(cx);
         cx.emit(SessionChanged);
         cx.notify();
@@ -1714,7 +1724,7 @@ impl Conversation {
     }
     fn prepare_worktree(&mut self, cx: &mut Context<Self>) {
         self.preparing_worktree = true;
-        self.status = "Creating worktree…".into();
+        self.status = n!("Creating worktree…").into();
         let cwd = self.summary.cwd.clone();
         let base = self
             .settings
@@ -2053,9 +2063,9 @@ impl Conversation {
     }
     fn effort_setting_label(&self) -> &'static str {
         if Kind::from_id(&self.summary.provider) == Kind::Codex {
-            "Reasoning"
+            t("Reasoning")
         } else {
-            "Effort"
+            t("Effort")
         }
     }
     fn selected_tier(&self) -> Option<&str> {
@@ -2376,7 +2386,7 @@ impl Conversation {
                             .collect()
                     })
                     .unwrap_or_default();
-                ("Switch account", items, 250., MenuStyle::Explorer)
+                (t("Switch account"), items, 250., MenuStyle::Explorer)
             }
             ComposerMenu::Workspace => {
                 let picker = cx.new(|cx| {
@@ -2403,21 +2413,21 @@ impl Conversation {
                 ));
                 let focus = picker.read(cx).focus(cx);
                 (
-                    "Workspace",
+                    t("Workspace"),
                     vec![
-                        MenuItem::Header("Workspace".into()),
-                        MenuAction::new("workspace:current", "Current checkout")
+                        MenuItem::Header(t("Workspace").into()),
+                        MenuAction::new("workspace:current", t("Current checkout"))
                             .icon("folder")
                             .checked(
                                 !self.settings.new_worktree && self.settings.worktree_cwd.is_none(),
                             )
                             .into(),
-                        MenuAction::new("workspace:new", "New worktree")
+                        MenuAction::new("workspace:new", t("New worktree"))
                             .icon("folder-tree")
                             .checked(self.settings.new_worktree)
                             .into(),
                         MenuItem::Separator,
-                        MenuAction::new("workspace:existing", "Existing worktrees")
+                        MenuAction::new("workspace:existing", t("Existing worktrees"))
                             .icon("folder-tree")
                             .flyout(Flyout {
                                 view: picker.into(),
@@ -2436,30 +2446,30 @@ impl Conversation {
             }
             // Composer.tsx's plus menu with native mode and attachment actions.
             ComposerMenu::Add => {
-                let mut items = vec![MenuItem::Header("Add to message".into())];
+                let mut items = vec![MenuItem::Header(t("Add to message").into())];
                 items.extend(
                     [
-                        MenuAction::new("upload", "Upload file")
+                        MenuAction::new("upload", t("Upload file"))
                             .icon("file-add")
-                            .description("Attach files or images"),
-                        MenuAction::new("plan", "Plan mode")
+                            .description(t("Attach files or images")),
+                        MenuAction::new("plan", t("Plan mode"))
                             .icon("ai-idea")
                             .icon_color(tint(YELLOW_300, 0.8))
-                            .description("Review a plan before building"),
-                        MenuAction::new("operator", "Operator")
+                            .description(t("Review a plan before building")),
+                        MenuAction::new("operator", t("Operator"))
                             .disabled(self.is_remote())
                             .icon("cursor-magic")
                             .icon_color(tint(SKY_300, 0.8))
-                            .description("Give this thread access to MonoCode"),
-                        MenuAction::new("orchestrator", "Orchestrator")
+                            .description(t("Give this thread access to MonoCode")),
+                        MenuAction::new("orchestrator", t("Orchestrator"))
                             .disabled(self.is_remote())
                             .icon("share")
                             .icon_color(tint(FUCHSIA_300, 0.65))
                             .badge("v1")
-                            .description("Plan and coordinate agent work"),
-                        MenuAction::new("draft", "Draft")
+                            .description(t("Plan and coordinate agent work")),
+                        MenuAction::new("draft", t("Draft"))
                             .icon("circle-dashed-hi")
-                            .description("Save this message without starting the agent")
+                            .description(t("Save this message without starting the agent"))
                             .disabled(self.busy || self.follow_ups.state.draft.is_some()),
                     ]
                     .into_iter()
@@ -2474,10 +2484,10 @@ impl Conversation {
                         action.checked(checked).into()
                     }),
                 );
-                ("Add to message", items, 250., MenuStyle::Composer)
+                (t("Add to message"), items, 250., MenuStyle::Composer)
             }
             ComposerMenu::GitActions => (
-                "Git actions",
+                t("Git actions"),
                 self.git_action_menu_items(cx),
                 250.,
                 MenuStyle::Composer,
@@ -2518,7 +2528,7 @@ impl Conversation {
                     Vec::new()
                 };
                 items.push(
-                    MenuAction::new("model", "Model")
+                    MenuAction::new("model", t("Model"))
                         .value_image(provider.id())
                         .value(self.model_info().map_or_else(
                             || model_name(provider, self.model.as_deref()),
@@ -2535,17 +2545,17 @@ impl Conversation {
                         })
                         .into(),
                 );
-                ("Model and settings", items, 250., MenuStyle::Settings)
+                (t("Model and settings"), items, 250., MenuStyle::Settings)
             }
             ComposerMenu::Recent => (
-                "Recently used models",
+                t("Recently used models"),
                 self.recent_model_items(cx),
                 250.,
                 MenuStyle::Recent,
             ),
             ComposerMenu::Access => {
                 let items = self.mono_access_options();
-                ("Access", items, 288., MenuStyle::Access)
+                (t("Access"), items, 288., MenuStyle::Access)
             }
             ComposerMenu::Setting(ix) => self.mono_setting_menu(ix),
         }
@@ -2743,7 +2753,7 @@ impl Conversation {
             .child(self.background_shelf(window, cx))
             .child(self.message_queue(window, cx))
             .children(if self.is_remote() { None } else { self.auth_notice(cx) })
-            .when(self.settings.worktree_removed,|d|d.child(div().mb_2().p_3().rounded_lg().border_1().border_color(content(0.1)).flex().items_center().gap_3().text_size(px(12.)).child(div().flex_1().child("Worktree deleted. Select a branch or worktree to continue this conversation.")).child(tool_pill("reattach-worktree","Select worktree").child("Select worktree").on_click(cx.listener(|this,_,window,cx|this.open_git(GitMode::Worktree,window,cx))))))
+            .when(self.settings.worktree_removed,|d|d.child(div().mb_2().p_3().rounded_lg().border_1().border_color(content(0.1)).flex().items_center().gap_3().text_size(px(12.)).child(div().flex_1().child(t("Worktree deleted. Select a branch or worktree to continue this conversation."))).child(tool_pill("reattach-worktree",t("Select worktree")).child(t("Select worktree")).on_click(cx.listener(|this,_,window,cx|this.open_git(GitMode::Worktree,window,cx))))))
             .when_some(self.settings.handoff.clone(), |d, handoff| {
                 d.child(
                     div()
@@ -2758,12 +2768,12 @@ impl Conversation {
                         .text_size(px(12.))
                         .text_color(content(0.7))
                         .child(icon("response-handoff", 14.))
-                        .child(div().min_w_0().flex_1().child(format!(
-                            "Handoff from {} · Add your next instruction below",
-                            Kind::from_id(&handoff.from).label()
+                        .child(div().min_w_0().flex_1().child(tr!(
+                            "Handoff from {agent} · Add your next instruction below",
+                            agent = Kind::from_id(&handoff.from).label()
                         )))
                         .child(
-                            tool_pill("dismiss-handoff", "Dismiss handoff")
+                            tool_pill("dismiss-handoff", t("Dismiss handoff"))
                                 .child(icon("close", 12.))
                                 .on_click(cx.listener(|this, _, _, cx| {
                                     this.settings.handoff = None;
@@ -2840,7 +2850,7 @@ impl Conversation {
                             .px_2()
                             .pb(px(10.))
                             .child(
-                                tool_pill("composer-add", "Add files or choose a mode")
+                                tool_pill("composer-add", t("Add files or choose a mode"))
                                     .aria_expanded(self.menu_is(ComposerMenu::Add))
                                     .when(self.menu_is(ComposerMenu::Add), |d| d.bg(content(0.2)))
                                     .child(self.add_anchor.probe())
@@ -2867,7 +2877,7 @@ impl Conversation {
                                     .items_center()
                                     .gap_1()
                                     .child(
-                                        tool_pill("composer-model", "Model")
+                                        tool_pill("composer-model", t("Model"))
                                             .min_w_0()
                                             .max_w(px(220.))
                                             .flex_shrink(1.)
@@ -2877,7 +2887,7 @@ impl Conversation {
                                                 self.model_label(),
                                                 trigger_effort
                                                     .as_ref()
-                                                    .map(|effort| format!(", effort {effort}"))
+                                                    .map(|effort| tr!(", effort {effort}", effort = effort))
                                                     .unwrap_or_default()
                                             ))
                                             .child(self.model_anchor.probe())
@@ -2908,10 +2918,10 @@ impl Conversation {
                                     )
                                     .children(controls)
                                     .child(
-                                        tool_pill("composer-access", "Access")
-                                            .aria_label(format!(
-                                                "Access, {}",
-                                                self.settings.access.label()
+                                        tool_pill("composer-access", t("Access"))
+                                            .aria_label(tr!(
+                                                "Access, {mode}",
+                                                mode = tl(self.settings.access.label())
                                             ))
                                             .aria_expanded(self.menu_is(ComposerMenu::Access))
                                             .child(self.access_anchor.probe())
@@ -2940,7 +2950,7 @@ impl Conversation {
                                                     },
                                                 ),
                                             )
-                                            .child(pill_label(self.settings.access.label()))
+                                            .child(pill_label(tl(self.settings.access.label())))
                                             .child(icon("chevron-down", 12.)),
                                     ),
                             )
@@ -2961,11 +2971,11 @@ impl Conversation {
             self.git.as_ref().is_some_and(|s| s.linked) || self.settings.worktree_cwd.is_some();
         let new = draft && self.settings.new_worktree;
         let label = if new {
-            "New worktree"
+            t("New worktree")
         } else if linked {
-            "Worktree"
+            t("Worktree")
         } else {
-            "Current checkout"
+            t("Current checkout")
         };
         let enabled = !self.busy && !self.preparing_worktree && self.git.is_some();
         // Still reading git is not unavailable: don't dim, then brighten.
@@ -2980,7 +2990,7 @@ impl Conversation {
                 },
                 label.into(),
             )
-            .aria_label(format!("Workspace {label}"))
+            .aria_label(tr!("Workspace {label}", label = label))
             .aria_expanded(self.menu_is(ComposerMenu::Workspace))
             .child(self.workspace_anchor.probe())
             .when(dimmed, |d| d.opacity(0.4))
@@ -2996,7 +3006,7 @@ impl Conversation {
             div()
                 .id("composer-workspace")
                 .role(Role::Group)
-                .aria_label(format!("Workspace {label}"))
+                .aria_label(tr!("Workspace {label}", label = label))
                 .flex_shrink_0()
                 .h(px(24.))
                 .ml(px(-6.))
@@ -3021,13 +3031,18 @@ impl Conversation {
         let ratio = self.context.and_then(|usage| usage.ratio());
         let show_context = ratio.is_some() || draft;
         let headline = ratio
-            .map(|r| format!("{:.0}% context used", r * 100.))
-            .unwrap_or_else(|| "No context used yet".into());
+            .map(|r| {
+                tr!(
+                    "{percent}% context used",
+                    percent = format!("{:.0}", r * 100.)
+                )
+            })
+            .unwrap_or_else(|| t("No context used yet").into());
         let detail = self.context.map(|usage| {
-            format!(
-                "{} / {} tokens",
-                monocode_core::context::format_tokens(usage.used),
-                monocode_core::context::format_tokens(usage.window.unwrap_or(0))
+            tr!(
+                "{used} / {window} tokens",
+                used = monocode_core::context::format_tokens(usage.used),
+                window = monocode_core::context::format_tokens(usage.window.unwrap_or(0))
             )
         });
         div()
@@ -3041,16 +3056,17 @@ impl Conversation {
             .when_some(branch, |d, branch| {
                 let detached = !new && self.git.as_ref().is_some_and(|s| s.detached);
                 let label = if detached {
-                    format!("detached {branch}")
+                    tr!("detached {branch}", branch = branch)
                 } else {
                     branch
                 };
                 d.child(
                     bar_trigger("composer-branch", "git-branch", label.clone().into())
-                        .aria_label(format!(
-                            "{} {label}",
-                            if new { "Worktree base" } else { "Branch" }
-                        ))
+                        .aria_label(if new {
+                            tr!("Worktree base {label}", label = label)
+                        } else {
+                            tr!("Branch {label}", label = label)
+                        })
                         .aria_description(self.execution_cwd().to_owned())
                         .max_w(px(256.))
                         .child(self.branch_anchor.probe())
@@ -3078,10 +3094,10 @@ impl Conversation {
                             div()
                                 .id("cancel-edit-last-turn")
                                 .role(Role::Button)
-                                .aria_label("Cancel editing")
+                                .aria_label(t("Cancel editing"))
                                 .text_size(px(11.))
                                 .text_color(content(0.6))
-                                .child("Cancel edit")
+                                .child(t("Cancel edit"))
                                 .on_click(cx.listener(|this, _, _, cx| {
                                     this.cancel_edit_last_turn(cx);
                                 })),
@@ -3098,12 +3114,12 @@ impl Conversation {
                                     .id("provider-status")
                                     .debug_selector(|| "provider-status".into())
                                     .role(Role::Status)
-                                    .aria_label(self.status.clone())
+                                    .aria_label(status_text(&self.status))
                                     .max_w(px(220.))
                                     .truncate()
                                     .text_size(px(11.))
                                     .text_color(content(0.45))
-                                    .child(self.status.clone()),
+                                    .child(status_text(&self.status)),
                             )
                         },
                     )
@@ -3170,11 +3186,11 @@ impl Conversation {
         send_button(
             "send-or-stop",
             if busy {
-                "Stop"
+                t("Stop")
             } else if draft {
-                "Save draft"
+                t("Save draft")
             } else {
-                "Send"
+                t("Send")
             },
             busy,
             enabled,
@@ -3258,9 +3274,9 @@ impl Conversation {
                                 .line_height(px(28.))
                                 .text_color(content(1.))
                                 .truncate()
-                                .child(format!(
-                                    "What should we work on in {}?",
-                                    self.project_appearance.label(&self.summary.cwd)
+                                .child(tr!(
+                                    "What should we work on in {project}?",
+                                    project = self.project_appearance.label(&self.summary.cwd)
                                 )),
                         )
                     })
@@ -3298,21 +3314,83 @@ pub(crate) fn preferred_effort(provider: &str, cx: &gpui::App) -> Option<String>
         .and_then(|prefs| prefs.provider_efforts.get(provider).cloned())
 }
 pub(crate) fn effort_name(value: &str) -> String {
-    match value {
-        "default" => "Default",
-        "none" => "None",
-        "minimal" => "Minimal",
-        "low" => "Low",
-        "medium" => "Medium",
-        "high" => "High",
-        "xhigh" => "Extra High",
-        "max" => "Max",
+    tl(match value {
+        "default" => n!("Default"),
+        "none" => n!("None"),
+        "minimal" => n!("Minimal"),
+        "low" => n!("Low"),
+        "medium" => n!("Medium"),
+        "high" => n!("High"),
+        "xhigh" => n!("Extra High"),
+        "max" => n!("Max"),
         "ultra" => "Ultra",
         "ultracode" => "Ultracode",
         "ultrathink" => "Ultrathink",
         other => other,
-    }
+    })
     .into()
+}
+
+/// Statuses written with values, matched back to their English so they show
+/// in the interface language too.
+const STATUS_TEMPLATES: &[&str] = &[
+    n!("Context compaction is not supported by the native {agent} transport."),
+    n!("{agent} CLI not found."),
+    n!("{agent} CLI not found. Install it and sign in, or set MONOCODE_{id}_BINARY."),
+    n!("Could not edit last message: {error}"),
+    n!("Could not verify conversation history: {error}. Your draft is preserved."),
+    n!("{agent} executable was not found; edited prompt preserved"),
+    n!("Could not rewind last turn: {error}. Your edited prompt is preserved."),
+    n!("{error}. Start a new conversation; your edited draft is preserved here."),
+    n!("Could not save messages: {error}"),
+    n!("Wait for the current turn and queued messages before /{command}."),
+    n!("/{command} is not available in this session."),
+    n!("Saving failed: {error}"),
+    n!("Could not restore side questions: {error}"),
+    n!("Could not save side questions: {error}"),
+    n!("{path} is too large to send to a remote machine (20 MB maximum)"),
+    n!("{agent} is not installed on this machine"),
+    n!("Transferring from {agent}…"),
+    n!("Transferring from {agent}"),
+    n!("Transferred from {agent}"),
+    n!("Transfer from {agent} failed"),
+    n!("Transfer from {agent} cancelled"),
+];
+/// A conversation status, or other English written with values, as shown.
+/// Statuses stay English, since code compares them and reports carry them to
+/// other agents.
+pub(crate) fn status_text(status: &str) -> String {
+    STATUS_TEMPLATES
+        .iter()
+        .find_map(|template| refill(template, status))
+        .unwrap_or_else(|| tl(status).to_owned())
+}
+/// `text` read back as `template` with its slots filled, then filled in again
+/// in the interface language.
+fn refill(template: &'static str, text: &str) -> Option<String> {
+    let mut parts = template.split('{');
+    let mut rest = text.strip_prefix(parts.next()?)?;
+    let slots: Vec<(&str, &str)> = parts
+        .map(|part| part.split_once('}'))
+        .collect::<Option<_>>()?;
+    let mut values = Vec::new();
+    for (ix, (name, literal)) in slots.iter().enumerate() {
+        let end = if ix + 1 == slots.len() {
+            rest.strip_suffix(literal)?.len()
+        } else {
+            rest.find(literal).filter(|_| !literal.is_empty())?
+        };
+        values.push((*name, rest[..end].to_owned()));
+        rest = &rest[end + literal.len()..];
+    }
+    if values.is_empty() {
+        return None;
+    }
+    let args: Vec<(&str, &dyn std::fmt::Display)> = values
+        .iter()
+        .map(|(name, value)| (*name, value as &dyn std::fmt::Display))
+        .collect();
+    Some(monocode_core::i18n::tf(template, &args))
 }
 
 fn model_control_toggle(control: &catalog::ModelControl) -> bool {

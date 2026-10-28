@@ -2,6 +2,7 @@
 //! persists the inset-layout and dismissed preferences after receiving events.
 use crate::theme::*;
 use gpui::{Context, EventEmitter, FontWeight, Render, Role, Window, div, prelude::*, px};
+use monocode_core::i18n::t;
 
 pub(crate) enum LayoutNoticeEvent {
     Try,
@@ -41,20 +42,20 @@ impl Render for LayoutNotice {
             return div().into_any_element();
         }
         super::surface::glass_frame()
-            .id("new-layout-notice").role(Role::Status).aria_label("Try the Focused layout")
+            .id("new-layout-notice").role(Role::Status).aria_label(t("Try the Focused layout"))
             .child(div().relative().p(px(12.))
-            .child(div().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).child("Try the Focused layout"))
+            .child(div().text_size(px(13.)).font_weight(FontWeight::SEMIBOLD).child(t("Try the Focused layout")))
             .child(div().mt(px(4.)).text_size(px(12.)).line_height(px(19.5)).text_color(content(0.6))
-                .child("A project switcher, workspace tabs and a right panel. Switch back to Classic anytime in Settings → Appearance → Layout."))
+                .child(t("A project switcher, workspace tabs and a right panel. Switch back to Classic anytime in Settings → Appearance → Layout.")))
             .child(div().mt(px(12.)).flex().justify_end().gap(px(8.))
-                .child(div().id("new-layout-not-now").role(Role::Button).aria_label("Not now").cursor_pointer()
+                .child(div().id("new-layout-not-now").role(Role::Button).aria_label(t("Not now")).cursor_pointer()
                     .rounded(px(6.)).px(px(10.)).py(px(6.)).text_size(px(12.)).text_color(content(0.6))
                     .hover(|s| s.bg(content(0.1)).text_color(content(1.)))
-                    .on_click(cx.listener(|_, _, _, cx| cx.emit(LayoutNoticeEvent::Dismiss))).child("Not now"))
-                .child(div().id("new-layout-try").role(Role::Button).aria_label("Try it").cursor_pointer()
+                    .on_click(cx.listener(|_, _, _, cx| cx.emit(LayoutNoticeEvent::Dismiss))).child(t("Not now")))
+                .child(div().id("new-layout-try").role(Role::Button).aria_label(t("Try it")).cursor_pointer()
                     .rounded(px(6.)).px(px(10.)).py(px(6.)).text_size(px(12.)).font_weight(FontWeight::MEDIUM)
                     .bg(content(0.1)).hover(|s| s.bg(content(0.15)))
-                    .on_click(cx.listener(|_, _, _, cx| cx.emit(LayoutNoticeEvent::Try))).child("Try it")))
+                    .on_click(cx.listener(|_, _, _, cx| cx.emit(LayoutNoticeEvent::Try))).child(t("Try it"))))
             ).into_any_element()
     }
 }

@@ -13,6 +13,10 @@ use gpui::{
     MouseMoveEvent, Pixels, Role, SharedString, StyleRefinement, Task, Window, div, point,
     prelude::*, px, rgb,
 };
+use monocode_core::{
+    i18n::{t, tl},
+    n, tr,
+};
 use std::{
     collections::HashMap,
     time::{Duration, Instant},
@@ -250,7 +254,7 @@ impl Shell {
             .id("panel-terminal")
             .debug_selector(|| "panel-terminal".into())
             .role(Role::Region)
-            .aria_label("Terminal")
+            .aria_label(t("Terminal"))
             .size_full()
             .flex()
             .flex_col()
@@ -311,8 +315,8 @@ impl Shell {
             .get(&self.workspace.project)
             .map_or(0, |d| d.terminals.len());
         vec![
-            MenuAction::new("close", "Close").into(),
-            MenuAction::new("close-others", "Close Others")
+            MenuAction::new("close", t("Close")).into(),
+            MenuAction::new("close-others", t("Close Others"))
                 .disabled(count < 2 || ix >= count)
                 .into(),
         ]
@@ -349,12 +353,15 @@ impl Shell {
             .collect();
         let message = match running.as_slice() {
             [] => None,
-            [(label, process)] => Some(format!(
-                "\"{process}\" is still running in {label}. Close this terminal anyway?"
+            [(label, process)] => Some(tr!(
+                "\"{process}\" is still running in {label}. Close this terminal anyway?",
+                process = process,
+                label = label
             )),
-            many => Some(format!(
-                "These terminals are still running:\n{}\n\nClose them anyway?",
-                many.iter()
+            many => Some(tr!(
+                "These terminals are still running:\n{list}\n\nClose them anyway?",
+                list = many
+                    .iter()
                     .map(|(label, process)| format!("• {label} ({process})"))
                     .collect::<Vec<_>>()
                     .join("\n")
@@ -368,7 +375,7 @@ impl Shell {
             gpui::PromptLevel::Warning,
             &message,
             None,
-            &["Close", "Cancel"],
+            &[n!("Close"), n!("Cancel")],
             cx,
         );
         cx.spawn_in(window, async move |this, cx| {
@@ -612,7 +619,7 @@ impl Shell {
                 div()
                     .id("terminal-tabs")
                     .role(Role::TabList)
-                    .aria_label("Terminals")
+                    .aria_label(t("Terminals"))
                     .track_scroll(&self.dock_tab_scroll)
                     .flex_1()
                     .min_w_0()
@@ -748,8 +755,9 @@ impl Shell {
                                         div()
                                             .id(("terminal-tab-close", ix))
                                             .role(Role::Button)
-                                            .aria_label(SharedString::from(format!(
-                                                "Close {label}"
+                                            .aria_label(SharedString::from(tr!(
+                                                "Close {name}",
+                                                name = label
                                             )))
                                             .group("terminal-tab-close")
                                             .absolute()
@@ -860,13 +868,13 @@ impl Shell {
                     .gap(px(2.))
                     .pr(px(6.))
                     .child(
-                        icon_button("new-terminal", NEW_TERMINAL_LABEL, "plus").on_click(
+                        icon_button("new-terminal", tl(NEW_TERMINAL_LABEL), "plus").on_click(
                             cx.listener(|this, _, window, cx| this.new_terminal(window, cx)),
                         ),
                     )
                     .when(!in_panel, |d| {
                         d.child(
-                            icon_button("move-terminal", "Move Terminal", side)
+                            icon_button("move-terminal", t("Move Terminal"), side)
                                 .child(move_anchor.probe())
                                 .on_click(cx.listener(move |this, _, window, cx| {
                                     // ExplorerMenu hangs from the button's bottom-left corner.
@@ -886,7 +894,7 @@ impl Shell {
                     })
                     .when(!in_panel, |d| {
                         d.child(
-                            icon_button("hide-terminal", HIDE_TERMINAL_LABEL, hide).on_click(
+                            icon_button("hide-terminal", tl(HIDE_TERMINAL_LABEL), hide).on_click(
                                 cx.listener(|this, _, window, cx| this.toggle_terminal(window, cx)),
                             ),
                         )
@@ -926,9 +934,9 @@ impl Shell {
                 .get(&self.workspace.project)
                 .is_some_and(|d| !d.terminals.is_empty());
             let label: SharedString = if has_terminals {
-                "Terminal".into()
+                t("Terminal").into()
             } else {
-                NEW_TERMINAL_LABEL.into()
+                tl(NEW_TERMINAL_LABEL).into()
             };
             return Some(
                 group
@@ -965,7 +973,7 @@ impl Shell {
                                 }
                             })
                             .child(icon("terminal", 14.))
-                            .child("Terminal")
+                            .child(t("Terminal"))
                             .on_click(
                                 cx.listener(|this, _, window, cx| this.toggle_terminal(window, cx)),
                             ),
@@ -979,14 +987,20 @@ impl Shell {
             .clone();
         let many = running.len() > 1;
         let aria = match (running.as_slice(), open) {
-            ([one], true) => format!("Hide {}", one.process),
-            ([one], false) => format!("Show {}", one.process),
-            (_, true) => "Hide running terminals".into(),
-            (all, false) => format!("{} terminals are running processes", all.len()),
+            ([one], true) => tr!("Hide {process}", process = one.process),
+            ([one], false) => tr!("Show {process}", process = one.process),
+            (_, true) => t("Hide running terminals").into(),
+            (all, false) => tr!("{count} terminals are running processes", count = all.len()),
         };
         let description = running
             .iter()
-            .map(|r| format!("\"{}\" in {}", r.process, r.label))
+            .map(|r| {
+                tr!(
+                    "\"{process}\" in {label}",
+                    process = r.process,
+                    label = r.label
+                )
+            })
             .collect::<Vec<_>>()
             .join("\n");
         let first = running[0].ix;
@@ -1057,13 +1071,13 @@ impl Shell {
     ) -> Option<(SharedString, Vec<MenuItem>, f32, MenuStyle)> {
         match target {
             MenuTarget::TerminalTab(ix) => Some((
-                "File tab actions".into(),
+                t("File tab actions").into(),
                 self.terminal_tab_menu(*ix),
                 160.,
                 MenuStyle::Explorer,
             )),
             MenuTarget::RunningTerminals => Some((
-                "Running terminals".into(),
+                t("Running terminals").into(),
                 self.running_terminals_menu(cx),
                 192.,
                 MenuStyle::Explorer,
@@ -1077,14 +1091,14 @@ impl Shell {
 /// Actions, and Terminal or the running-terminals chip.
 pub(super) const FOOTER_GAP: f32 = 4.;
 const NEW_TERMINAL_LABEL: &str = if cfg!(target_os = "macos") {
-    "New Terminal (⌘`)"
+    n!("New Terminal (⌘`)")
 } else {
-    "New Terminal (Ctrl+`)"
+    n!("New Terminal (Ctrl+`)")
 };
 const HIDE_TERMINAL_LABEL: &str = if cfg!(target_os = "macos") {
-    "Hide Terminal (⌘J)"
+    n!("Hide Terminal (⌘J)")
 } else {
-    "Hide Terminal (Ctrl+J)"
+    n!("Hide Terminal (Ctrl+J)")
 };
 
 #[cfg(test)]

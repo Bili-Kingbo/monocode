@@ -51,26 +51,28 @@ impl Target {
     fn items(&self) -> Vec<MenuItem> {
         match self {
             Self::Web(_) => vec![
-                MenuAction::new("open-web", "Open Link").into(),
-                MenuAction::new("copy-link", "Copy Link Address").into(),
+                MenuAction::new("open-web", t("Open Link")).into(),
+                MenuAction::new("copy-link", t("Copy Link Address")).into(),
             ],
             Self::File { base, .. } => {
                 let reveal = if cfg!(target_os = "macos") {
-                    "Reveal in Finder"
+                    t("Reveal in Finder")
                 } else if cfg!(target_os = "windows") {
-                    "Reveal in File Explorer"
+                    t("Reveal in File Explorer")
                 } else {
-                    "Open Containing Folder"
+                    t("Open Containing Folder")
                 };
                 let mut items = vec![
-                    MenuAction::new("open-monocode", "Open in MonoCode").into(),
-                    MenuAction::new("open-default", "Open in Default App").into(),
+                    MenuAction::new("open-monocode", t("Open in MonoCode")).into(),
+                    MenuAction::new("open-default", t("Open in Default App")).into(),
                     MenuAction::new("reveal", reveal).into(),
                     MenuItem::Separator,
-                    MenuAction::new("copy-path", "Copy Path").into(),
+                    MenuAction::new("copy-path", t("Copy Path")).into(),
                 ];
                 if base.is_some() {
-                    items.push(MenuAction::new("copy-relative-path", "Copy Relative Path").into());
+                    items.push(
+                        MenuAction::new("copy-relative-path", t("Copy Relative Path")).into(),
+                    );
                 }
                 items
             }
@@ -96,9 +98,9 @@ impl TranscriptView {
             window.focus(focus, cx);
         }
         let label = if matches!(&target, Target::File { .. }) {
-            "File link actions"
+            t("File link actions")
         } else {
-            "Link actions"
+            t("Link actions")
         };
         let menu = cx.new(|cx| Menu::new(label, target.items(), window, cx));
         let events = cx.subscribe_in(
@@ -158,12 +160,14 @@ impl TranscriptView {
                 cx.spawn(async move |this, cx| {
                     if let Err(error) = work.await {
                         let _ = this.update(cx, |this, cx| {
-                            let action = if external {
-                                "open the file in its default app"
+                            this.links.error = Some(if external {
+                                tr!(
+                                    "Could not open the file in its default app: {error}",
+                                    error = error
+                                )
                             } else {
-                                "complete the file action"
-                            };
-                            this.links.error = Some(format!("Could not {action}: {error}"));
+                                tr!("Could not complete the file action: {error}", error = error)
+                            });
                             cx.notify();
                         });
                     }
@@ -208,10 +212,10 @@ impl TranscriptView {
                             div()
                                 .id("dismiss-link-error")
                                 .role(Role::Button)
-                                .aria_label("Dismiss file action error")
+                                .aria_label(t("Dismiss file action error"))
                                 .flex_shrink_0()
                                 .cursor_pointer()
-                                .child("Dismiss")
+                                .child(t("Dismiss"))
                                 .on_click(cx.listener(|this, _, _, cx| {
                                     this.links.error = None;
                                     cx.notify();

@@ -21,6 +21,7 @@ use gpui::{
     ScrollWheelEvent, ShapedLine, SharedString, Size, StrikethroughStyle, Style, Task, TextAlign,
     TextRun, UnderlineStyle, Window, actions, div, point, prelude::*, px, rgb, size,
 };
+use monocode_core::{i18n::t, tr};
 use std::{borrow::Cow, cell::Cell, collections::HashMap, rc::Rc, sync::Arc, time::Duration};
 
 actions!(
@@ -191,7 +192,10 @@ fn spawn(cwd: &str, size: GridSize, id: u64) -> Spawned {
         Err(error) => {
             write_note(
                 &term,
-                &format!("\x1b[31mCould not start the shell: {error}\x1b[0m"),
+                &format!(
+                    "\x1b[31m{}\x1b[0m",
+                    tr!("Could not start the shell: {error}", error = error)
+                ),
             );
             None
         }
@@ -335,8 +339,11 @@ impl Terminal {
                 self.write(format(&text).into_bytes());
             }
             TermEvent::ChildExit(status) => {
-                let code = status.code().map(|c| format!(" ({c})")).unwrap_or_default();
-                write_note(&self.term, &format!("\r\n[process exited{code}]"));
+                let note = match status.code() {
+                    Some(code) => tr!("[process exited ({code})]", code = code),
+                    None => t("[process exited]").to_owned(),
+                };
+                write_note(&self.term, &format!("\r\n{note}"));
                 self.finish(cx);
             }
             TermEvent::Exit => self.finish(cx),
@@ -1232,7 +1239,7 @@ fn default_title(cwd: &str) -> String {
         .map(|n| n.to_string_lossy().into_owned())
         .unwrap_or_default();
     if name.is_empty() || name == "/" {
-        "Terminal".into()
+        t("Terminal").into()
     } else {
         name
     }

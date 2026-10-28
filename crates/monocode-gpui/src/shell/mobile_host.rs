@@ -162,7 +162,7 @@ impl Shell {
         let (host, events) = match MobileHost::open(path) {
             Ok(opened) => opened,
             Err(error) => {
-                self.error = Some(format!("Mobile access: {error}"));
+                self.error = Some(tr!("Mobile access: {error}", error = error));
                 return;
             }
         };
@@ -232,7 +232,7 @@ impl Shell {
             let result = work.await;
             let _ = this.update(cx, |this, cx| {
                 if let Err(error) = result {
-                    this.error = Some(format!("Mobile access: {error}"));
+                    this.error = Some(tr!("Mobile access: {error}", error = error));
                 }
                 this.publish_mobile_catalog(cx);
                 this.sync_settings(cx);
@@ -252,7 +252,7 @@ impl Shell {
             let _ = this.update(cx, |this, cx| {
                 match result {
                     Ok(invite) => this.mobile.invite = Some(invite),
-                    Err(error) => this.error = Some(format!("Mobile access: {error}")),
+                    Err(error) => this.error = Some(tr!("Mobile access: {error}", error = error)),
                 }
                 this.sync_settings(cx);
                 cx.notify();
@@ -273,7 +273,7 @@ impl Shell {
         if let Some(host) = &self.mobile.host
             && let Err(error) = host.revoke(device_id)
         {
-            self.error = Some(format!("Mobile access: {error}"));
+            self.error = Some(tr!("Mobile access: {error}", error = error));
         }
         self.sync_settings(cx);
     }
@@ -1104,7 +1104,7 @@ impl Shell {
                 if let Some(view) = self.sessions.get(&id) {
                     view.update(cx, |v, cx| v.rename(title.clone(), cx));
                 }
-                self.store_write("rename the session", cx, move |s| s.title(id, &title));
+                self.store_write(n!("rename the session"), cx, move |s| s.title(id, &title));
                 self.invalidate_chrome(cx);
                 cx.notify();
                 Ok(reply)

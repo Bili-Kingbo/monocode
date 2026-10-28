@@ -8,6 +8,7 @@ use gpui::{
 use monocode_core::visual::{
     Camera, Node, SceneObject, Shape, TextSize, ThemeColor, VisualDocument, VisualRuntime,
 };
+use monocode_core::{i18n::t, tr};
 use serde_json::{Value, json};
 use std::{
     cell::{Cell, RefCell},
@@ -900,9 +901,9 @@ impl VisualView {
                     .w_full()
                     .focusable()
                     .tab_stop(true)
-                    .aria_label(
+                    .aria_label(t(
                         "3D scene; arrow keys orbit, plus and minus zoom, zero resets camera",
-                    )
+                    ))
                     .h(px(height))
                     .overflow_hidden()
                     .rounded_lg()
@@ -1021,14 +1022,14 @@ impl VisualView {
                     .child(
                         div()
                             .flex_1()
-                            .child("Drag to orbit · ⌘/Ctrl + scroll to zoom"),
+                            .child(t("Drag to orbit · ⌘/Ctrl + scroll to zoom")),
                     )
                     .child(
                         button(SharedString::from(format!(
                             "visual-camera-reset-{reset_key}"
                         )))
-                        .aria_label("Reset scene camera")
-                        .child("Reset camera")
+                        .aria_label(t("Reset scene camera"))
+                        .child(t("Reset camera"))
                         .on_click(cx.listener(move |this, _, _, cx| {
                             this.orbits.remove(&reset_key);
                             cx.notify();
@@ -1109,7 +1110,7 @@ impl Render for VisualView {
                     .border_color(color(&ThemeColor::Negative))
                     .text_size(px(12.))
                     .text_color(color(&ThemeColor::Negative))
-                    .child(format!("Visual could not update: {error}"))
+                    .child(tr!("Visual could not update: {error}", error = error))
             }))
             .child(
                 div()

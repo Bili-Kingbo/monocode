@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 
+use crate::i18n::{t, tl};
 use chrono::{Datelike, Local, TimeZone, Timelike};
 use std::path::Path;
 
@@ -1019,14 +1020,15 @@ impl Service {
     }
 }
 
+/// Shown through `i18n::tl`.
 pub const WEEKDAYS: [&str; 7] = [
-    "Sunday",
-    "Monday",
-    "Tuesday",
-    "Wednesday",
-    "Thursday",
-    "Friday",
-    "Saturday",
+    crate::n!("Sunday"),
+    crate::n!("Monday"),
+    crate::n!("Tuesday"),
+    crate::n!("Wednesday"),
+    crate::n!("Thursday"),
+    crate::n!("Friday"),
+    crate::n!("Saturday"),
 ];
 
 impl AutomationTrigger {
@@ -1054,14 +1056,19 @@ impl AutomationTrigger {
             return event_label(&self.kind, &self.event);
         }
         match self.schedule_kind.as_str() {
-            "hourly" => format!("Hourly at :{:02}", self.minute),
-            "daily" => format!("Daily at {}", self.time),
-            "weekly" => format!(
-                "{} at {}",
-                WEEKDAYS.get(self.day_of_week as usize).unwrap_or(&"Weekly"),
-                self.time
+            "hourly" => crate::tr!(
+                "Hourly at :{minute}",
+                minute = format!("{:02}", self.minute)
             ),
-            _ => format!("Weekdays at {}", self.time),
+            "daily" => crate::tr!("Daily at {time}", time = self.time),
+            "weekly" => crate::tr!(
+                "{weekday} at {time}",
+                weekday = tl(WEEKDAYS
+                    .get(self.day_of_week as usize)
+                    .unwrap_or(&crate::n!("Weekly"))),
+                time = self.time
+            ),
+            _ => crate::tr!("Weekdays at {time}", time = self.time),
         }
     }
     /// Calendar arithmetic in the user's time zone, including daylight-saving changes.
@@ -1119,18 +1126,18 @@ impl AutomationTrigger {
 
 pub fn event_label(kind: &str, event: &str) -> String {
     match (kind, event) {
-        ("jira", "issue_created") => "Issue appeared",
-        (_, "draft_opened") => "Draft opened",
-        (_, "pull_request_opened") => "Pull request opened",
-        (_, "issue_opened") => "Issue opened",
-        (_, "merge_request_opened") => "Merge request opened",
-        (_, "issue_created") => "Issue created",
-        (_, "pull_request_appeared") => "Pull request appeared",
-        (_, "work_item_appeared") => "Work item appeared",
-        (_, "pull_request_merged") => "Pull request merged",
-        (_, "pull_request_review_requested") => "Review requested",
-        (_, "issue_assigned") => "Issue assigned",
-        (_, "check_failed") => "Check failed",
+        ("jira", "issue_created") => t("Issue appeared"),
+        (_, "draft_opened") => t("Draft opened"),
+        (_, "pull_request_opened") => t("Pull request opened"),
+        (_, "issue_opened") => t("Issue opened"),
+        (_, "merge_request_opened") => t("Merge request opened"),
+        (_, "issue_created") => t("Issue created"),
+        (_, "pull_request_appeared") => t("Pull request appeared"),
+        (_, "work_item_appeared") => t("Work item appeared"),
+        (_, "pull_request_merged") => t("Pull request merged"),
+        (_, "pull_request_review_requested") => t("Review requested"),
+        (_, "issue_assigned") => t("Issue assigned"),
+        (_, "check_failed") => t("Check failed"),
         _ => event,
     }
     .to_owned()
@@ -1154,9 +1161,13 @@ impl Automation {
     pub fn trigger_label(&self) -> String {
         let triggers = self.triggers();
         match triggers.len() {
-            0 => "Manual only".into(),
+            0 => t("Manual only").into(),
             1 => triggers[0].label(),
-            count => format!("{} + {} more", triggers[0].label(), count - 1),
+            count => crate::tr!(
+                "{trigger} + {count} more",
+                trigger = triggers[0].label(),
+                count = count - 1
+            ),
         }
     }
 }

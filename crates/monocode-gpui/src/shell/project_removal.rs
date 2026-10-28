@@ -17,17 +17,19 @@ impl Shell {
         .detach();
     }
     pub(super) fn external_editor_menu(&self, path: &str) -> MenuAction {
-        let item = MenuAction::new("external-editor", "Open in editor").icon("app-window");
+        let item = MenuAction::new("external-editor", t("Open in editor")).icon("app-window");
         let none =
             |label: &str| vec![MenuAction::new("external-editor:none", label).disabled(true)];
         if path.starts_with("remote://") {
             return item
                 .disabled(true)
-                .submenu(none("Remote folders stay on their host"));
+                .submenu(none(t("Remote folders stay on their host")));
         }
         match &self.external_editors {
-            None => item.disabled(true).submenu(none("Looking for editors…")),
-            Some(editors) if editors.is_empty() => item.submenu(none("No supported editors found")),
+            None => item.disabled(true).submenu(none(t("Looking for editors…"))),
+            Some(editors) if editors.is_empty() => {
+                item.submenu(none(t("No supported editors found")))
+            }
             Some(editors) => item.submenu(
                 editors
                     .iter()
@@ -91,14 +93,16 @@ impl Shell {
         let count = self.project_sessions(&path).len();
         let detail = match count {
             0 => String::new(),
-            1 => "Its 1 saved conversation will be deleted. ".into(),
-            n => format!("Its {n} saved conversations will be deleted. "),
-        } + "The folder on disk stays put, and opening it again brings the project back empty.";
+            1 => t("Its 1 saved conversation will be deleted. ").into(),
+            n => tr!("Its {n} saved conversations will be deleted. ", n = n),
+        } + t(
+            "The folder on disk stays put, and opening it again brings the project back empty.",
+        );
         let prompt = window.prompt(
             gpui::PromptLevel::Warning,
-            &format!("Delete “{}”?", self.project_label(&path)),
+            &tr!("Delete “{name}”?", name = self.project_label(&path)),
             Some(&detail),
-            &["Delete", "Cancel"],
+            &[n!("Delete"), n!("Cancel")],
             cx,
         );
         cx.spawn(async move |this, cx| {
@@ -133,12 +137,14 @@ impl Shell {
         window: &mut Window,
         cx: &mut Context<Self>,
     ) {
-        let title = self.session_metadata(id, cx).display_title();
+        let title = self.session_metadata(id, cx).shown_title();
         let prompt = window.prompt(
             gpui::PromptLevel::Warning,
-            &format!("Delete “{title}”?"),
-            Some("This conversation and its saved settings will be removed permanently."),
-            &["Delete", "Cancel"],
+            &tr!("Delete “{name}”?", name = title),
+            Some(n!(
+                "This conversation and its saved settings will be removed permanently."
+            )),
+            &[n!("Delete"), n!("Cancel")],
             cx,
         );
         cx.spawn(async move |this, cx| {

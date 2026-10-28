@@ -8,6 +8,7 @@ use gpui::{
     AnyElement, Context, ListAlignment, ListState, Render, Role, SharedString, Window, div, list,
     prelude::*, px,
 };
+use monocode_core::i18n::t;
 use std::{sync::Arc, time::Instant};
 
 pub(super) struct DocumentData {
@@ -106,7 +107,7 @@ impl SkillDocument {
                                 .id("skill-metadata")
                                 .debug_selector(|| "skill-metadata".into())
                                 .role(Role::Button)
-                                .aria_label("Skill metadata")
+                                .aria_label(t("Skill metadata"))
                                 .flex()
                                 .items_center()
                                 .gap(px(6.))
@@ -124,7 +125,7 @@ impl SkillDocument {
                                     },
                                     14.,
                                 ))
-                                .child("Skill metadata")
+                                .child(t("Skill metadata"))
                                 .on_click(cx.listener(|this, _, _, cx| {
                                     this.metadata_open = !this.metadata_open;
                                     this.list.remeasure_items(0..1);
@@ -198,9 +199,9 @@ impl Render for SkillDocument {
             .debug_selector(|| "skill-document".into())
             .role(Role::Region)
             .aria_label(if self.source {
-                "Skill source"
+                t("Skill source")
             } else {
-                "Skill preview document"
+                t("Skill preview document")
             })
             .size_full()
             .min_h_0()

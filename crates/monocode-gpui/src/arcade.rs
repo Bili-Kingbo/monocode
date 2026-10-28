@@ -4,6 +4,10 @@ use gpui::{
     App, Context, FocusHandle, Focusable, Render, Role, Window, canvas, div, fill, point,
     prelude::*, px, size,
 };
+use monocode_core::{
+    i18n::{t, tl},
+    n, tr,
+};
 use serde::Deserialize;
 use std::time::{Duration, Instant};
 #[derive(Clone, Default, Deserialize)]
@@ -298,30 +302,31 @@ impl Render for Arcade {
             );
         }
         if playing {
-            let difficulties = div()
-                .flex()
-                .gap_1()
-                .children(["low", "mid", "hard"].map(|m| {
-                    div()
-                        .id(m)
-                        .role(Role::Button)
-                        .aria_label(format!("Difficulty {m}"))
-                        .px_2()
-                        .py_1()
-                        .border_1()
-                        .border_color(content(if mode == m { 0.4 } else { 0.1 }))
-                        .child(m)
-                        .on_click(cx.listener(move |this, _, _, cx| {
-                            this.mode = m;
-                            cx.notify();
-                        }))
-                }));
+            let difficulties =
+                div()
+                    .flex()
+                    .gap_1()
+                    .children([n!("low"), n!("mid"), n!("hard")].map(|m| {
+                        div()
+                            .id(m)
+                            .role(Role::Button)
+                            .aria_label(tr!("Difficulty {level}", level = tl(m)))
+                            .px_2()
+                            .py_1()
+                            .border_1()
+                            .border_color(content(if mode == m { 0.4 } else { 0.1 }))
+                            .child(tl(m))
+                            .on_click(cx.listener(move |this, _, _, cx| {
+                                this.mode = m;
+                                cx.notify();
+                            }))
+                    }));
             let release = div()
                 .id("release-arcade")
                 .role(Role::Button)
-                .aria_label("Release game")
+                .aria_label(t("Release game"))
                 .cursor_pointer()
-                .child("esc · release")
+                .child(t("esc · release"))
                 .on_click(cx.listener(|this, _, window, cx| this.release(window, cx)));
             root = root.child(
                 div()
@@ -335,10 +340,10 @@ impl Render for Arcade {
                     .justify_between()
                     .text_size(px(11.))
                     .font_family(crate::fonts::mono())
-                    .child(format!(
-                        "score {} {}",
-                        self.frame.score,
-                        if index == 0 {
+                    .child(tr!(
+                        "score {score} {lives}",
+                        score = self.frame.score,
+                        lives = if index == 0 {
                             "•".repeat(self.frame.lives as usize)
                         } else {
                             String::new()
@@ -352,9 +357,9 @@ impl Render for Arcade {
                 .id("play-arcade")
                 .role(Role::Button)
                 .aria_label(if index == 0 {
-                    "Take control of Pac-man"
+                    t("Take control of Pac-man")
                 } else {
-                    "Take control of Snake"
+                    t("Take control of Snake")
                 })
                 .opacity(0.)
                 .group_hover("empty-session-arcade", |s| s.opacity(1.))
@@ -362,9 +367,9 @@ impl Render for Arcade {
                 .font_family(crate::fonts::mono())
                 .text_size(px(11.))
                 .child(if index == 0 {
-                    "[ take control · pac-man ]"
+                    t("[ take control · pac-man ]")
                 } else {
-                    "[ take control · snake ]"
+                    t("[ take control · snake ]")
                 })
                 .on_click(cx.listener(|this, _, window, cx| {
                     this.previous = window.focused(cx);
@@ -384,7 +389,7 @@ impl Render for Arcade {
                     div()
                         .id(("game", i))
                         .role(Role::Button)
-                        .aria_label(if i == 0 { "pac-man" } else { "snake" })
+                        .aria_label(if i == 0 { t("pac-man") } else { t("snake") })
                         .size_4()
                         .flex()
                         .items_center()

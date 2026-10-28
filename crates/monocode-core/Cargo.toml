@@ -38,6 +38,8 @@ semver = { version = "1", features = ["serde"] }
 minisign-verify = "0.2.5"
 tempfile = "3"
 flate2 = "1"
+# The system language, for the Language preference's System choice.
+sys-locale = "0.3"
 tar = "0.4"
 
 [target.'cfg(target_os = "macos")'.dependencies]

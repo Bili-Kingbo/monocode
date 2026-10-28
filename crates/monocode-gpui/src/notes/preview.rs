@@ -6,6 +6,7 @@ use crate::{
     theme::*,
 };
 use gpui::{AnyElement, Context, ImageSource, Render, Role, Window, div, prelude::*, px};
+use monocode_core::i18n::t;
 use pulldown_cmark::{Event, Options, Parser, Tag, TagEnd};
 use std::{path::Path, time::Instant};
 
@@ -89,7 +90,7 @@ impl Render for Preview {
                     div()
                         .text_size(px(13.))
                         .text_color(content(0.45))
-                        .child("No description"),
+                        .child(t("No description")),
                 )
             })
             .children(self.rows.iter().enumerate().map(|(ix, row)| {

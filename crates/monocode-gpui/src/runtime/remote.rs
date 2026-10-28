@@ -49,7 +49,7 @@ fn command(kind: &str, session_id: Option<&str>) -> Value {
 pub(crate) fn host_model(provider: &str, model: Option<&str>) -> Result<String, String> {
     let model = model
         .filter(|value| !value.trim().is_empty())
-        .ok_or("Choose a model on the remote machine before sending")?;
+        .ok_or(n!("Choose a model on the remote machine before sending"))?;
     Ok(if model.starts_with(&format!("{provider}:")) {
         model.into()
     } else {
@@ -93,7 +93,9 @@ fn configure_command(
 /// background callback cannot overwrite a more recent model/access choice.
 pub(crate) fn configure_saved(store: Database, id: i64) -> Result<(), String> {
     let lock = operation_lock(&store, id);
-    let _guard = lock.lock().map_err(|_| "Remote session is unavailable")?;
+    let _guard = lock
+        .lock()
+        .map_err(|_| n!("Remote session is unavailable"))?;
     let (mut binding, settings) = {
         let store = locked(&store)?;
         let Some(binding) = store.remote_session(id)? else {
@@ -165,7 +167,7 @@ fn dispatch_outbox(
             .iter()
             .any(|upload| Some(upload.command_id.as_str()) == next["commandId"].as_str())
         {
-            return Err("Remote attachments have not finished uploading".into());
+            return Err(n!("Remote attachments have not finished uploading").into());
         }
         let receipt = match client.request(machine, "commands.dispatch", next.clone()) {
             Ok(receipt) => receipt,
@@ -233,7 +235,7 @@ fn prepare_attachments(
     command_id: &str,
 ) -> Result<(Vec<Value>, Vec<RemoteUpload>), String> {
     if files.len() > 20 {
-        return Err("Too many attachments (20 maximum)".into());
+        return Err(n!("Too many attachments (20 maximum)").into());
     }
     let mut references = Vec::new();
     let mut uploads = Vec::new();
@@ -275,7 +277,7 @@ fn prepare_for_session(
     command_id: &str,
 ) -> Result<(Vec<Value>, Vec<RemoteUpload>), String> {
     if files.len() > 20 {
-        return Err("Too many attachments (20 maximum)".into());
+        return Err(n!("Too many attachments (20 maximum)").into());
     }
     let mut references = Vec::new();
     let mut uploads = Vec::new();
@@ -285,7 +287,7 @@ fn prepare_for_session(
             let source = monocode_core::remote::attachments::parse_source(&source)
                 .ok_or("Invalid remote attachment")?;
             if source.environment != environment {
-                return Err("Attachment belongs to another machine".into());
+                return Err(n!("Attachment belongs to another machine").into());
             }
             let snapshot = client.load_session(machine, &source.session, None)?;
             let file = snapshot["session"]["blocks"]
@@ -297,7 +299,7 @@ fn prepare_for_session(
                     file["id"].as_str() == Some(source.id.as_str())
                         && file["size"].as_u64() == Some(source.size as u64)
                 })
-                .ok_or("Original remote attachment is no longer available")?;
+                .ok_or(n!("Original remote attachment is no longer available"))?;
             let mut reference = json!({});
             for key in ["id", "name", "mimeType", "kind", "size"] {
                 reference[key] = file[key].clone();
@@ -326,10 +328,10 @@ fn upload_pending(
             || metadata.len() != upload.size
             || upload.size > MAX_ATTACHMENT_BYTES
         {
-            return Err(
+            return Err(n!(
                 "Attachment changed before upload. Restore the original file before retrying."
-                    .into(),
-            );
+            )
+            .into());
         }
         let mut offset = 0u64;
         loop {
@@ -341,7 +343,7 @@ fn upload_pending(
             }
             let expected = offset + read as u64;
             if expected > upload.size {
-                return Err("Attachment changed during upload".into());
+                return Err(n!("Attachment changed during upload").into());
             }
             let reply = client.request(machine,"attachments.upload",json!({"id":upload.id,"offset":offset,"size":upload.size,"data":STANDARD.encode(&data)}))?;
             if reply["offset"].as_u64() != Some(expected) {
@@ -353,7 +355,7 @@ fn upload_pending(
             }
         }
         if offset != upload.size {
-            return Err("Attachment changed during upload".into());
+            return Err(n!("Attachment changed during upload").into());
         }
         let mut durable = binding.clone();
         durable.uploads.remove(0);
@@ -432,7 +434,7 @@ pub(crate) fn approvals(snapshot: &Value) -> Vec<Approval> {
                 title: block["tool"]["title"]
                     .as_str()
                     .or(block["text"].as_str())
-                    .unwrap_or("Approval required")
+                    .unwrap_or(n!("Approval required"))
                     .into(),
                 detail: block["tool"]["preview"]["title"]
                     .as_str()
@@ -507,10 +509,10 @@ pub(crate) fn run_with_client(
         let operation = operation_lock(&store, summary.id);
         let guard = operation
             .lock()
-            .map_err(|_| "Remote session is unavailable")?;
+            .map_err(|_| n!("Remote session is unavailable"))?;
         let mut binding = locked(&store)?
             .remote_session(summary.id)?
-            .ok_or("Remote session no longer exists")?;
+            .ok_or(n!("Remote session no longer exists"))?;
         let action = settings
             .remote_action
             .take()
@@ -525,17 +527,19 @@ pub(crate) fn run_with_client(
         {
             return Err(recovery["error"]
                 .as_str()
-                .unwrap_or("Older pending requests need recovery in the original desktop app.")
+                .unwrap_or(n!(
+                    "Older pending requests need recovery in the original desktop app."
+                ))
                 .into());
         }
         let machine = binding.machine(&client)?;
         if !attaching && !retrying {
             if !binding.outbox.is_empty() {
-                return Err("A remote command needs confirmation. Choose Retry before sending another message.".into());
+                return Err(n!("A remote command needs confirmation. Choose Retry before sending another message.").into());
             }
             if settings.operator || settings.orchestrator {
                 return Err(
-                    "Operator and orchestration are not available on remote projects".into(),
+                    n!("Operator and orchestration are not available on remote projects").into(),
                 );
             }
             if settings
@@ -573,7 +577,7 @@ pub(crate) fn run_with_client(
                     let remote = monocode_core::remote::parse_remote_path(path)
                         .ok_or("Invalid remote worktree")?;
                     if remote.environment_id != binding.project.environment_id {
-                        return Err("Worktree belongs to another machine".into());
+                        return Err(n!("Worktree belongs to another machine").into());
                     }
                     create["worktreeCwd"] = json!(remote.host_path);
                 }
@@ -642,7 +646,7 @@ pub(crate) fn run_with_client(
         let id = binding
             .session_id
             .clone()
-            .ok_or("No remote session has been started")?;
+            .ok_or(n!("No remote session has been started"))?;
         let mut known = None;
         let mut seen_approvals = HashSet::new();
         let mut seen_questions = HashSet::new();
@@ -660,7 +664,7 @@ pub(crate) fn run_with_client(
             let running = snapshot["status"] == "running";
             let current_approvals = approvals(&snapshot);
             let current_question = question(&snapshot);
-            let mut next = update(if running { "Working…" } else { "Ready" }, !running);
+            let mut next = update(if running { n!("Working…") } else { "Ready" }, !running);
             next.start = latest_rows.len();
             if revision != last_revision {
                 let mut projected = snapshot.clone();
@@ -757,7 +761,7 @@ pub(crate) fn run_with_client(
                     }
                     Decision::KeepOpen => continue,
                     Decision::Steer(_) => {
-                        return Err("Steering is not supported by this remote host".into());
+                        return Err(n!("Steering is not supported by this remote host").into());
                     }
                 }
                 control_commands.push(next);

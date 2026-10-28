@@ -52,16 +52,16 @@ impl Conversation {
                 .child(
                     div()
                         .flex_1()
-                        .child(format!("Sign in to {} to continue", kind.label())),
+                        .child(tr!("Sign in to {agent} to continue", agent = kind.label())),
                 )
                 .child(
                     crate::settings::widgets::secondary_button(
                         "conversation-sign-in",
-                        "Sign in",
+                        t("Sign in"),
                         true,
                         false,
                     )
-                    .child("Sign in")
+                    .child(t("Sign in"))
                     .on_click(cx.listener(move |_, _, _, cx| {
                         if let Some(center) = crate::accounts::get(cx) {
                             center.update(cx, |center, cx| {
@@ -339,7 +339,7 @@ impl Conversation {
         self.catalog_epoch += 1;
         self.catalog.clear();
         self.status =
-            "This provider account is no longer signed in. Choose another account to continue."
+            n!("This provider account is no longer signed in. Choose another account to continue.")
                 .into();
         cx.notify();
     }
@@ -357,7 +357,7 @@ impl Conversation {
         let kind = Kind::from_id(&self.summary.provider);
         let reset = limit.resets_at.map(|at| {
             if at <= now {
-                return "Limit has reset".to_owned();
+                return t("Limit has reset").to_owned();
             }
             let when = chrono::DateTime::from_timestamp_millis(at)
                 .map(|d| {
@@ -365,16 +365,17 @@ impl Conversation {
                     let today = chrono::Local::now().date_naive() == local.date_naive();
                     local
                         .format(if today {
-                            "%-I:%M %p"
+                            t("%-I:%M %p")
                         } else {
-                            "%b %-d, %-I:%M %p"
+                            t("%b %-d, %-I:%M %p")
                         })
                         .to_string()
                 })
                 .unwrap_or_default();
-            format!(
-                "Resets {when} · in {}",
-                usage::Window {
+            tr!(
+                "Resets {when} · in {countdown}",
+                when = when,
+                countdown = usage::Window {
                     used_percent: 100.,
                     minutes: 300,
                     resets_at: Some(at)
@@ -392,7 +393,7 @@ impl Conversation {
                 d.child(
                     usage_button(
                         "usage-model-picker",
-                        "Choose another model",
+                        t("Choose another model"),
                         false,
                         switching,
                     )
@@ -403,7 +404,7 @@ impl Conversation {
                     .text_color(content(1.))
                     .bg(content(0.1))
                     .hover(|s| s.bg(content(0.15)))
-                    .child("Choose another model")
+                    .child(t("Choose another model"))
                     .child(icon("chevron-down", 11.).text_color(content(0.5)))
                     .when(!switching, |d| {
                         d.on_click(cx.listener(|this, _, window, cx| {
@@ -425,7 +426,7 @@ impl Conversation {
             controls = controls.child(
                 usage_button(
                     "usage-account-picker",
-                    "Choose another account",
+                    t("Choose another account"),
                     false,
                     switching,
                 )
@@ -440,11 +441,11 @@ impl Conversation {
                 })
                 .child(self.account_anchor.probe())
                 .child(if switching {
-                    "Switching…"
+                    t("Switching…")
                 } else if mono {
-                    "Choose another account"
+                    t("Choose another account")
                 } else {
-                    "Switch account"
+                    t("Switch account")
                 })
                 .child(icon("chevron-down", 12.).text_color(content(0.5)))
                 .when(!switching, |d| {
@@ -456,19 +457,19 @@ impl Conversation {
         }
         let resume = if waiting {
             if armed {
-                "Resuming at reset"
+                t("Resuming at reset")
             } else {
-                "Resume at reset"
+                t("Resume at reset")
             }
         } else {
-            "Resume"
+            t("Resume")
         };
         controls = controls
             .child(
                 usage_button(
                     "resume-usage-limit",
                     if waiting && armed {
-                        "Cancel the automatic resume"
+                        t("Cancel the automatic resume")
                     } else {
                         resume
                     },
@@ -504,7 +505,7 @@ impl Conversation {
                 controls.child(
                     usage_button(
                         "dismiss-usage-limit",
-                        "Dismiss usage limit notice",
+                        t("Dismiss usage limit notice"),
                         false,
                         false,
                     )
@@ -534,16 +535,16 @@ impl Conversation {
                     .text_size(px(12.))
                     .text_color(content(0.85))
                     .child(if mono {
-                        format!("{} usage limit reached", kind.label())
+                        tr!("{agent} usage limit reached", agent = kind.label())
                     } else {
-                        "Usage limit reached".into()
+                        t("Usage limit reached").into()
                     }),
             );
         let notice = div()
             .id("usage-limit-notice")
             .debug_selector(|| "usage-limit-notice".into())
             .role(Role::Status)
-            .aria_label("Usage limit reached")
+            .aria_label(t("Usage limit reached"))
             .text_size(px(12.))
             .line_height(px(16.))
             .text_color(content(if mono { 0.6 } else { 0.55 }));
@@ -552,7 +553,7 @@ impl Conversation {
                 .px(px(12.)).py(px(10.)).child(heading)
                 .child(div().pl(px(22.))
                     .child(div().mt(px(4.)).text_size(px(12.)).line_height(px(19.5)).text_color(content(0.6))
-                        .child("Your conversation is saved. Choose another model or account to keep going."))
+                        .child(t("Your conversation is saved. Choose another model or account to keep going.")))
                     .children(reset.map(|label| div().mt(px(4.)).text_color(content(0.45)).child(label)))
                     .child(controls.mt(px(8.))))
                 .into_any_element()

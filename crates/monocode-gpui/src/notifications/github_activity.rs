@@ -2,8 +2,10 @@
 //! occur until the shell invokes poll; acknowledgment persistence stays in shell.
 use gpui::{Context, EventEmitter};
 use monocode_core::{
+    i18n::t,
     session_groups::WorkItem,
     store::{Session, Store},
+    tr,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -34,7 +36,7 @@ pub(crate) struct Card {
     pub truncated: bool,
 }
 impl Card {
-    pub(crate) fn summary(&self) -> String {
+    fn counts(&self) -> [(usize, &'static str); 3] {
         let count = |kind: &str| {
             self.entries
                 .iter()
@@ -47,15 +49,20 @@ impl Card {
                 })
                 .count()
         };
-        let parts = [
+        [
             (count("commit"), "commit"),
             (count("review"), "review"),
             (count("comment"), "comment"),
         ]
-        .into_iter()
-        .filter(|(n, _)| *n > 0)
-        .map(|(n, k)| format!("{n} new {k}{}", if n == 1 { "" } else { "s" }))
-        .collect::<Vec<_>>();
+    }
+    /// English, for the agent prompt; the card shows `shown_summary`.
+    pub(crate) fn summary(&self) -> String {
+        let parts = self
+            .counts()
+            .into_iter()
+            .filter(|(n, _)| *n > 0)
+            .map(|(n, k)| format!("{n} new {k}{}", if n == 1 { "" } else { "s" }))
+            .collect::<Vec<_>>();
         if !parts.is_empty() {
             parts.join(" · ")
         } else if self.details_error {
@@ -64,14 +71,36 @@ impl Card {
             "Metadata or status changed".into()
         }
     }
+    pub(crate) fn shown_summary(&self) -> String {
+        let parts = self
+            .counts()
+            .into_iter()
+            .filter(|(n, _)| *n > 0)
+            .map(|(n, kind)| match (kind, n == 1) {
+                ("commit", true) => tr!("{count} new commit", count = n),
+                ("commit", false) => tr!("{count} new commits", count = n),
+                ("review", true) => tr!("{count} new review", count = n),
+                ("review", false) => tr!("{count} new reviews", count = n),
+                (_, true) => tr!("{count} new comment", count = n),
+                (_, false) => tr!("{count} new comments", count = n),
+            })
+            .collect::<Vec<_>>();
+        if !parts.is_empty() {
+            parts.join(" · ")
+        } else if self.details_error {
+            t("Updated on GitHub · details unavailable").into()
+        } else {
+            t("Metadata or status changed").into()
+        }
+    }
     pub(crate) fn terminal_label(&self) -> Option<&'static str> {
         match (
             self.item.kind.as_str(),
             self.state.to_ascii_lowercase().as_str(),
         ) {
-            ("pr", "merged") => Some("Pull request merged"),
-            ("pr", "closed") => Some("Pull request closed"),
-            ("issue", "closed") => Some("Issue closed"),
+            ("pr", "merged") => Some(t("Pull request merged")),
+            ("pr", "closed") => Some(t("Pull request closed")),
+            ("issue", "closed") => Some(t("Issue closed")),
             _ => None,
         }
     }

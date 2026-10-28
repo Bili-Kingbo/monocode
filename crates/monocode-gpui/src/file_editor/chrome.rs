@@ -5,6 +5,10 @@ use crate::{
     theme::*,
 };
 use gpui::{AnyElement, App, Context, Role, div, prelude::*, px};
+use monocode_core::{
+    i18n::{t, tl},
+    n, tr,
+};
 use std::path::{Component, Path};
 
 const HEADER_HEIGHT: f32 = 30.;
@@ -49,7 +53,7 @@ impl FileEditor {
             .id("file-breadcrumbs")
             .debug_selector(|| "file-breadcrumbs".into())
             .role(Role::Navigation)
-            .aria_label("File path")
+            .aria_label(t("File path"))
             .aria_description(self.path.clone())
             .h(px(HEADER_HEIGHT))
             .flex_shrink_0()
@@ -100,8 +104,8 @@ impl FileEditor {
             .id("file-word-wrap")
             .debug_selector(|| "file-word-wrap".into())
             .role(Role::Button)
-            .aria_label("Word wrap")
-            .aria_description("Toggle word wrap (Alt+Z)")
+            .aria_label(t("Word wrap"))
+            .aria_description(t("Toggle word wrap (Alt+Z)"))
             .aria_toggled(if wrap {
                 gpui::Toggled::True
             } else {
@@ -119,7 +123,7 @@ impl FileEditor {
             .text_color(content(if wrap { 1. } else { 0.45 }))
             .when(wrap, |d| d.bg(content(0.15)))
             .hover(|s| s.bg(content(0.1)).text_color(content(1.)))
-            .child("Wrap")
+            .child(t("Wrap"))
             .on_click(cx.listener(|this, _, _, cx| this.toggle_word_wrap(cx)))
             .into_any_element()
     }
@@ -128,7 +132,7 @@ impl FileEditor {
         div()
             .id("file-mode")
             .role(Role::TabList)
-            .aria_label("File view")
+            .aria_label(t("File view"))
             .h(px(CONTROL_HEIGHT))
             .flex_shrink_0()
             .flex()
@@ -137,13 +141,13 @@ impl FileEditor {
             .bg(content(0.1))
             .p(px(2.))
             .children(
-                [("Preview", true), ("Source", false)]
+                [(n!("Preview"), true), (n!("Source"), false)]
                     .into_iter()
                     .map(|(label, preview)| {
                         div()
                             .id(label)
                             .role(Role::Tab)
-                            .aria_label(label)
+                            .aria_label(tl(label))
                             .aria_selected(self.preview == preview)
                             .cursor_pointer()
                             .h_full()
@@ -156,7 +160,7 @@ impl FileEditor {
                             .text_color(content(if self.preview == preview { 1. } else { 0.45 }))
                             .when(self.preview == preview, |d| d.bg(content(0.15)))
                             .hover(|s| s.bg(content(0.1)).text_color(content(1.)))
-                            .child(label)
+                            .child(tl(label))
                             .on_click(cx.listener(move |this, _, window, cx| {
                                 if this.preview != preview {
                                     this.toggle_preview(window, cx);
@@ -182,11 +186,13 @@ impl FileEditor {
         } else {
             "UTF-8"
         };
-        let position = format!("Ln {line}, Col {column}");
-        let details = format!(
-            "{lines} {} · {encoding} · {ending}",
-            if lines == 1 { "line" } else { "lines" }
-        );
+        let position = tr!("Ln {line}, Col {column}", line = line, column = column);
+        let count = if lines == 1 {
+            tr!("{count} line", count = lines)
+        } else {
+            tr!("{count} lines", count = lines)
+        };
+        let details = format!("{count} · {encoding} · {ending}");
         div()
             .id("file-editor-status")
             .debug_selector(|| "file-editor-status".into())

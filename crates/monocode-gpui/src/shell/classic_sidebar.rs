@@ -39,9 +39,9 @@ impl ClassicSidebarTab {
 
     fn label(self) -> &'static str {
         match self {
-            Self::Sessions => "Sessions",
-            Self::Files => "Explorer",
-            Self::Changes => "Changes",
+            Self::Sessions => t("Sessions"),
+            Self::Files => t("Explorer"),
+            Self::Changes => t("Changes"),
         }
     }
 
@@ -116,8 +116,8 @@ impl WorkspaceTabs {
 pub(super) fn session_search(cx: &mut Context<Shell>) -> Entity<input::Input> {
     cx.new(|cx| {
         let mut input = input::Input::field(
-            "Search conversations",
-            "Search conversations...",
+            n!("Search conversations"),
+            n!("Search conversations..."),
             content(0.35),
             cx,
         );
@@ -240,7 +240,7 @@ impl gpui::RenderOnce for ChangeStats {
             .whitespace_nowrap()
             .gap(px(layout.gap))
             .text_size(px(layout.font_size))
-            .font_family(crate::fonts::UI)
+            .font(crate::fonts::ui())
             .font_weight(FontWeight::SEMIBOLD)
             .font_features(crate::right_panel::tabular())
             .when(!self.added.is_empty(), |d| {
@@ -336,9 +336,9 @@ impl Shell {
                                         icon_button(
                                             "classic-new-session",
                                             if cfg!(target_os = "macos") {
-                                                "New session (⌘T)"
+                                                t("New session (⌘T)")
                                             } else {
-                                                "New session (Ctrl+T)"
+                                                t("New session (Ctrl+T)")
                                             },
                                             "plus",
                                         )
@@ -398,13 +398,13 @@ impl Shell {
                 .text_size(px(14.))
                 .font_weight(FontWeight::MEDIUM)
                 .text_color(content(1.))
-                .child("Workspace")
+                .child(t("Workspace"))
                 .into_any();
         }
         let focus = self.worktree_focus.get(&self.workspace.project);
         let title = focus
-            .map(|focus| focus.branch.as_deref().unwrap_or("Detached worktree"))
-            .unwrap_or("Workspace")
+            .map(|focus| focus.branch.as_deref().unwrap_or(t("Detached worktree")))
+            .unwrap_or(t("Workspace"))
             .to_owned();
         div()
             .flex_1()
@@ -416,7 +416,7 @@ impl Shell {
                     .id("classic-workspace-picker")
                     .debug_selector(|| "classic-workspace-picker".into())
                     .role(Role::Button)
-                    .aria_label("Switch working copy")
+                    .aria_label(t("Switch working copy"))
                     .aria_description(self.working_copy().to_owned())
                     .aria_expanded(self.classic_worktree_picker.is_some())
                     .cursor_pointer()
@@ -485,7 +485,7 @@ impl Shell {
             .id("classic-workspace-tabs")
             .debug_selector(|| "classic-workspace-tabs".into())
             .role(Role::TabList)
-            .aria_label("Workspace")
+            .aria_label(t("Workspace"))
             .h(px(36.))
             .flex_shrink_0()
             .flex()
@@ -524,7 +524,11 @@ impl Shell {
                                     })
                                     .role(Role::Tab)
                                     .aria_label(if tab == ClassicSidebarTab::Changes && changes {
-                                        format!("Changes +{additions} -{deletions}")
+                                        tr!(
+                                            "Changes +{additions} -{deletions}",
+                                            additions = additions,
+                                            deletions = deletions
+                                        )
                                     } else {
                                         tab.label().to_owned()
                                     })

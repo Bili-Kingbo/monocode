@@ -107,8 +107,8 @@ impl Input {
     /// The compact composer in BtwSheet; Enter sends and Shift+Enter adds a line.
     pub(crate) fn side_question(cx: &mut Context<Self>) -> Self {
         let mut input = Self::new(cx);
-        input.label = "By-the-way question".into();
-        input.placeholder = "Ask a side question…".into();
+        input.label = n!("By-the-way question").into();
+        input.placeholder = n!("Ask a side question…").into();
         // `rows={1}`: the side composer has no workspace bar under it.
         input.min_height = 22.;
         input.height = 22.;
@@ -154,8 +154,10 @@ impl Input {
             // Preserve byte positions used by the native selection handler.
             return ("*".repeat(self.content.len()).into(), None);
         }
+        let placeholder;
         let text = if self.content.is_empty() {
-            &self.placeholder
+            placeholder = SharedString::from(tl(&self.placeholder).to_owned());
+            &placeholder
         } else {
             &self.content
         };

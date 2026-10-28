@@ -12,6 +12,7 @@ use gpui::{
     AnyElement, App, Bounds, FontWeight, Hsla, IntoElement, Pixels, SharedString, Window, canvas,
     div, point, prelude::*, px,
 };
+use monocode_core::i18n::t;
 use monocode_core::visual::{ChartKind, Series, Slice, ThemeColor};
 
 /// Axis type: the shared mono caption.
@@ -941,7 +942,7 @@ pub(super) fn heatmap(
                 let square = SQUARE as f32 * CELL;
                 readout(
                     &name,
-                    &[(tint, "Value".into(), reading(*v))],
+                    &[(tint, t("Value").into(), reading(*v))],
                     grid.origin
                         + point(
                             px(c as f32 * pitch + square),

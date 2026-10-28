@@ -20,8 +20,8 @@ impl Window {
         match self.minutes {
             300 => "5h".into(),
             1_440 => "1d".into(),
-            10_080 => "wk".into(),
-            43_200 => "mo".into(),
+            10_080 => crate::n!("wk").into(),
+            43_200 => crate::n!("mo").into(),
             n if n % 60 == 0 => format!("{}h", n / 60),
             n => format!("{n}m"),
         }
@@ -33,9 +33,9 @@ impl Window {
     }
     pub fn reset_label(&self, now: i64) -> String {
         match self.resets_at {
-            Some(at) if at <= now => "Resets now".into(),
-            Some(at) => format!("Resets in {}", duration(at - now)),
-            None => format!("{} window", self.label()),
+            Some(at) if at <= now => crate::i18n::t("Resets now").into(),
+            Some(at) => crate::tr!("Resets in {duration}", duration = duration(at - now)),
+            None => crate::tr!("{window} window", window = crate::i18n::tl(&self.label())),
         }
     }
 }

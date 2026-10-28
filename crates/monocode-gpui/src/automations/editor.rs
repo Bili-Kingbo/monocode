@@ -6,9 +6,9 @@ pub(super) fn toggle(id: impl Into<gpui::ElementId>, on: bool) -> gpui::Stateful
         .id(id)
         .role(Role::Switch)
         .aria_label(if on {
-            "Pause automation"
+            t("Pause automation")
         } else {
-            "Enable automation"
+            t("Enable automation")
         })
         .w(px(28.))
         .h(px(16.))
@@ -24,31 +24,31 @@ pub(super) fn toggle(id: impl Into<gpui::ElementId>, on: bool) -> gpui::Stateful
 fn options(values: &[(&str, &str)]) -> Vec<(String, String)> {
     values
         .iter()
-        .map(|(v, l)| (v.to_string(), l.to_string()))
+        .map(|(v, l)| (v.to_string(), tl(l).to_string()))
         .collect()
 }
 pub(super) fn events(kind: &str) -> Vec<(String, String)> {
     options(match kind {
         "time" => &[
-            ("hourly", "Hourly"),
-            ("daily", "Daily"),
-            ("weekdays", "Weekdays"),
-            ("weekly", "Weekly"),
+            ("hourly", n!("Hourly")),
+            ("daily", n!("Daily")),
+            ("weekdays", n!("Weekdays")),
+            ("weekly", n!("Weekly")),
         ],
         "github" => &[
-            ("draft_opened", "Draft opened"),
-            ("pull_request_opened", "Pull request opened"),
-            ("issue_opened", "Issue opened"),
+            ("draft_opened", n!("Draft opened")),
+            ("pull_request_opened", n!("Pull request opened")),
+            ("issue_opened", n!("Issue opened")),
         ],
         "gitlab" => &[
-            ("merge_request_opened", "Merge request opened"),
-            ("issue_opened", "Issue opened"),
+            ("merge_request_opened", n!("Merge request opened")),
+            ("issue_opened", n!("Issue opened")),
         ],
-        "linear" => &[("issue_created", "Issue created")],
-        "jira" => &[("issue_created", "Issue appeared")],
+        "linear" => &[("issue_created", n!("Issue created"))],
+        "jira" => &[("issue_created", n!("Issue appeared"))],
         "azuredevops" => &[
-            ("pull_request_appeared", "Pull request appeared"),
-            ("work_item_appeared", "Work item appeared"),
+            ("pull_request_appeared", n!("Pull request appeared")),
+            ("work_item_appeared", n!("Work item appeared")),
         ],
         _ => &[],
     })
@@ -270,12 +270,12 @@ impl Automations {
                             .gap(px(12.))
                             .text_size(px(12.))
                             .text_color(content(0.7))
-                            .child(control.name.clone())
+                            .child(tl(&control.name).to_owned())
                             .child(self.select_control(
                                 ("automation-model-menu-setting", index),
                                 control_label(control, &editor.draft),
                                 Choice::ModelSetting(control.id.clone()),
-                                control.choices.clone(),
+                                control_choices(control),
                                 cx,
                             ))
                     }),
@@ -305,10 +305,10 @@ impl Automations {
             .text_color(content(0.7));
         if trigger.kind == "time" {
             let prefix = match trigger.schedule_kind.as_str() {
-                "hourly" => "Every hour at",
-                "daily" => "Every day at",
-                "weekly" => "Every week on",
-                _ => "Every weekday at",
+                "hourly" => t("Every hour at"),
+                "daily" => t("Every day at"),
+                "weekly" => t("Every week on"),
+                _ => t("Every weekday at"),
             };
             let frequency_anchor = AnchorSlot::default();
             let captured = frequency_anchor.clone();
@@ -320,7 +320,7 @@ impl Automations {
                     .id(("trigger-frequency", index))
                     .relative()
                     .role(Role::Button)
-                    .aria_label(format!("Schedule: {prefix}"))
+                    .aria_label(tr!("Schedule: {schedule}", schedule = prefix))
                     .rounded(px(3.))
                     .hover(|s| s.bg(content(0.05)))
                     .child(frequency_anchor.probe())
@@ -339,20 +339,20 @@ impl Automations {
                     .child(
                         self.select_control(
                             ("trigger-day", index),
-                            automations::WEEKDAYS
+                            tl(automations::WEEKDAYS
                                 .get(trigger.day_of_week as usize)
-                                .unwrap_or(&"Monday")
-                                .to_string(),
+                                .unwrap_or(&"Monday"))
+                            .to_string(),
                             Choice::Weekday(id.clone()),
                             automations::WEEKDAYS
                                 .iter()
                                 .enumerate()
-                                .map(|(i, s)| (i.to_string(), s.to_string()))
+                                .map(|(i, s)| (i.to_string(), tl(s).to_string()))
                                 .collect(),
                             cx,
                         ),
                     )
-                    .child("at");
+                    .child(t("at"));
             }
             let mut preview_trigger = trigger.clone();
             if let Some(fields) = fields {
@@ -405,12 +405,12 @@ impl Automations {
             sentence = sentence
                 .child(self.select_control(
                     ("trigger-event", index),
-                    automations::event_label(&trigger.kind, &trigger.event),
+                    tl(&automations::event_label(&trigger.kind, &trigger.event)).to_owned(),
                     Choice::TriggerEvent(id.clone()),
                     events(&trigger.kind),
                     cx,
                 ))
-                .child("by");
+                .child(t("by"));
             if let Some(fields) = fields {
                 sentence = sentence.child(
                     div()
@@ -438,7 +438,7 @@ impl Automations {
                 div()
                     .id(SharedString::from(format!("remove-trigger-{id}")))
                     .role(Role::Button)
-                    .aria_label("Remove trigger")
+                    .aria_label(t("Remove trigger"))
                     .size(px(28.))
                     .flex_shrink_0()
                     .rounded(px(6.))
@@ -476,7 +476,7 @@ impl Automations {
                     .gap(px(8.))
                     .text_size(px(11.))
                     .text_color(content(0.4))
-                    .child("Repositories")
+                    .child(t("Repositories"))
                     .child(div().flex_1().max_w(px(340.)).child(fields.repos.clone())),
             );
         }
@@ -494,9 +494,9 @@ impl Automations {
                 button(
                     "automation-reset",
                     if editor.saved && editor.dirty {
-                        "Reset"
+                        t("Reset")
                     } else {
-                        "Cancel"
+                        t("Cancel")
                     },
                 )
                 .on_click(cx.listener(|this, _, _, cx| {
@@ -513,9 +513,9 @@ impl Automations {
                 button(
                     "automation-run",
                     if self.running {
-                        "Starting…"
+                        t("Starting…")
                     } else {
-                        "Run now"
+                        t("Run now")
                     },
                 )
                 .child(icon("queue-play", 13.))
@@ -527,11 +527,11 @@ impl Automations {
             button(
                 "automation-save",
                 if self.saving {
-                    "Saving…"
+                    t("Saving…")
                 } else if editor.saved {
-                    "Save"
+                    t("Save")
                 } else {
-                    "Create"
+                    t("Create")
                 },
             )
             .h(px(26.))
@@ -599,7 +599,11 @@ impl Automations {
                                     cx.notify();
                                 }),
                             ))
-                            .child(if draft.enabled { "Active" } else { "Inactive" })
+                            .child(if draft.enabled {
+                                t("Active")
+                            } else {
+                                t("Inactive")
+                            })
                             .child(div().ml(px(8.)).h(px(12.)).w(px(1.)).bg(content(0.15)))
                             .child(
                                 div()
@@ -607,7 +611,7 @@ impl Automations {
                                     .relative()
                                     .min_w_0()
                                     .role(Role::Button)
-                                    .aria_label("Choose automation project")
+                                    .aria_label(t("Choose automation project"))
                                     .px(px(8.))
                                     .h(px(26.))
                                     .rounded(px(6.))
@@ -622,7 +626,7 @@ impl Automations {
                                     .child(self.project_mark(&draft.cwd, 14.))
                                     .child(div().min_w_0().truncate().child(
                                         if draft.cwd.is_empty() {
-                                            "Choose project".into()
+                                            t("Choose project").into()
                                         } else {
                                             self.project_label(&draft.cwd)
                                         },
@@ -636,7 +640,7 @@ impl Automations {
                                 d.child(
                                     icon_button(
                                         "automation-delete-menu",
-                                        "Delete automation",
+                                        t("Delete automation"),
                                         "trash",
                                     )
                                     .on_click(cx.listener(
@@ -647,37 +651,39 @@ impl Automations {
                     )
                     .child(if editor.saved {
                         div().h(px(36.)).flex().gap(px(16.)).children(
-                            [("Settings", false), ("Run history", true)].map(|(label, history)| {
-                                div()
-                                    .id(if history {
-                                        "automation-history-tab"
-                                    } else {
-                                        "automation-settings-tab"
-                                    })
-                                    .role(Role::Tab)
-                                    .aria_label(label)
-                                    .h_full()
-                                    .flex()
-                                    .items_center()
-                                    .border_b_2()
-                                    .border_color(if self.history == history {
-                                        content(0.8)
-                                    } else {
-                                        content(0.)
-                                    })
-                                    .text_size(px(12.))
-                                    .text_color(content(if self.history == history {
-                                        0.9
-                                    } else {
-                                        0.5
-                                    }))
-                                    .child(label)
-                                    .on_click(cx.listener(move |this, _, _, cx| {
-                                        this.history = history;
-                                        this.choice = None;
-                                        cx.notify();
-                                    }))
-                            }),
+                            [(t("Settings"), false), (t("Run history"), true)].map(
+                                |(label, history)| {
+                                    div()
+                                        .id(if history {
+                                            "automation-history-tab"
+                                        } else {
+                                            "automation-settings-tab"
+                                        })
+                                        .role(Role::Tab)
+                                        .aria_label(label)
+                                        .h_full()
+                                        .flex()
+                                        .items_center()
+                                        .border_b_2()
+                                        .border_color(if self.history == history {
+                                            content(0.8)
+                                        } else {
+                                            content(0.)
+                                        })
+                                        .text_size(px(12.))
+                                        .text_color(content(if self.history == history {
+                                            0.9
+                                        } else {
+                                            0.5
+                                        }))
+                                        .child(label)
+                                        .on_click(cx.listener(move |this, _, _, cx| {
+                                            this.history = history;
+                                            this.choice = None;
+                                            cx.notify();
+                                        }))
+                                },
+                            ),
                         )
                     } else {
                         div().h(px(20.))
@@ -701,7 +707,7 @@ impl Automations {
         let editor = self.editor.as_ref().expect("editor");
         let draft = &editor.draft;
         let triggers = draft.triggers.clone().unwrap_or_default();
-        let triggers_section = div().child(section("Triggers")).child(
+        let triggers_section = div().child(section(t("Triggers"))).child(
             div()
                 .mt(px(12.))
                 .rounded(px(6.))
@@ -723,7 +729,7 @@ impl Automations {
                         .id("automation-add-trigger")
                         .relative()
                         .role(Role::Button)
-                        .aria_label("Add Trigger")
+                        .aria_label(t("Add Trigger"))
                         .h(px(48.))
                         .px(px(12.))
                         .flex()
@@ -734,7 +740,7 @@ impl Automations {
                         .hover(|s| s.bg(content(0.04)).text_color(content(1.)))
                         .child(self.trigger_anchor.probe())
                         .child(icon("plus", 14.))
-                        .child("Add Trigger")
+                        .child(t("Add Trigger"))
                         .when(triggers.len() >= 20, |d| d.opacity(0.4))
                         .on_click(cx.listener(|this, _, window, cx| {
                             this.open_trigger_menu(window, cx);
@@ -744,10 +750,10 @@ impl Automations {
         let kind = Kind::from_id(&draft.harness);
         let model = monocode_core::store::native_model(&draft.model, &draft.harness);
         let access = match draft.runtime_mode.as_str() {
-            "supervised" => "Supervised",
-            "auto-accept-edits" => "Auto-accept edits",
-            "full-access" => "Full access",
-            _ => "Auto",
+            "supervised" => t("Supervised"),
+            "auto-accept-edits" => t("Auto-accept edits"),
+            "full-access" => t("Full access"),
+            _ => t("Auto"),
         };
         let beside = cx
             .try_global::<crate::settings::Preferences>()
@@ -777,7 +783,7 @@ impl Automations {
                     .id("automation-model")
                     .relative()
                     .role(Role::Button)
-                    .aria_label("Choose automation model")
+                    .aria_label(t("Choose automation model"))
                     .px(px(6.))
                     .h(px(26.))
                     .rounded(px(6.))
@@ -803,7 +809,7 @@ impl Automations {
                     ("automation-model-setting", index),
                     control_label(control, draft),
                     Choice::ModelSetting(control.id.clone()),
-                    control.choices.clone(),
+                    control_choices(control),
                     cx,
                 )
                 .h(px(26.))
@@ -818,10 +824,10 @@ impl Automations {
                     access.into(),
                     Choice::Access,
                     options(&[
-                        ("supervised", "Supervised"),
-                        ("auto-accept-edits", "Auto-accept edits"),
-                        ("auto", "Auto"),
-                        ("full-access", "Full access"),
+                        ("supervised", n!("Supervised")),
+                        ("auto-accept-edits", n!("Auto-accept edits")),
+                        ("auto", n!("Auto")),
+                        ("full-access", n!("Full access")),
                     ]),
                     cx,
                 )
@@ -831,7 +837,7 @@ impl Automations {
             );
         }
         let instructions = div()
-            .child(section("Instructions"))
+            .child(section(t("Instructions")))
             .child(
                 div()
                     .relative()
@@ -855,9 +861,11 @@ impl Automations {
                     .px(px(4.))
                     .text_size(px(11.))
                     .text_color(content(0.35))
-                    .child("Skills, @file references, and built-in commands work here."),
+                    .child(t(
+                        "Skills, @file references, and built-in commands work here.",
+                    )),
             );
-        let mut folder_options = vec![(String::new(), "No folder".into())];
+        let mut folder_options = vec![(String::new(), t("No folder").into())];
         folder_options.extend(self.folders.iter().map(|f| (f.id.clone(), f.name.clone())));
         if !draft.session_folder_id.is_empty()
             && !folder_options
@@ -873,40 +881,43 @@ impl Automations {
             .iter()
             .find(|(id, _)| id == &draft.session_folder_id)
             .map(|(_, label)| label.clone())
-            .unwrap_or_else(|| "No folder".into());
+            .unwrap_or_else(|| t("No folder").into());
         let workspace = self.select_control(
             "automation-workspace",
             if draft.workspace_mode == "worktree" {
-                "Fresh worktree"
+                t("Fresh worktree")
             } else if draft.workspace_mode == "existing" {
-                "Existing worktree"
+                t("Existing worktree")
             } else {
-                "Current"
+                t("Current")
             }
             .into(),
             Choice::Workspace,
-            options(&[("current", "Current"), ("worktree", "Fresh worktree")]),
+            options(&[
+                ("current", n!("Current")),
+                ("worktree", n!("Fresh worktree")),
+            ]),
             cx,
         );
         let conversation = self
             .select_control(
                 "automation-conversation",
                 if draft.reuse_session {
-                    "Continue last"
+                    t("Continue last")
                 } else {
-                    "Start fresh"
+                    t("Start fresh")
                 }
                 .into(),
                 Choice::Conversation,
                 if draft.workspace_mode == "worktree" {
-                    vec![("fresh".into(), "Start fresh".into())]
+                    vec![("fresh".into(), t("Start fresh").into())]
                 } else {
-                    options(&[("fresh", "Start fresh"), ("reuse", "Continue last")])
+                    options(&[("fresh", n!("Start fresh")), ("reuse", n!("Continue last"))])
                 },
                 cx,
             )
             .when(draft.workspace_mode == "worktree", |d| d.opacity(0.5));
-        let session = div().child(section("Session")).child(
+        let session = div().child(section(t("Session"))).child(
             div()
                 .mt(px(12.))
                 .rounded(px(6.))
@@ -914,19 +925,19 @@ impl Automations {
                 .border_1()
                 .border_color(content(0.1))
                 .child(settings_row(
-                    "Working copy",
-                    "This repo, or a fresh worktree",
+                    t("Working copy"),
+                    t("This repo, or a fresh worktree"),
                     workspace,
                 ))
                 .child(settings_row(
-                    "Conversation",
-                    "New chat, or continue the last run",
+                    t("Conversation"),
+                    t("New chat, or continue the last run"),
                     conversation,
                 ))
                 .child(
                     settings_row(
-                        "Session folder",
-                        "Where runs appear in the sidebar",
+                        t("Session folder"),
+                        t("Where runs appear in the sidebar"),
                         self.select_control(
                             "automation-folder",
                             folder_label,
@@ -939,17 +950,17 @@ impl Automations {
                 ),
         );
         let grace_options = options(&[
-            ("0", "Do not catch up"),
-            ("30", "30 minutes"),
-            ("120", "2 hours"),
-            ("720", "12 hours"),
-            ("1440", "24 hours"),
+            ("0", n!("Do not catch up")),
+            ("30", n!("30 minutes")),
+            ("120", n!("2 hours")),
+            ("720", n!("12 hours")),
+            ("1440", n!("24 hours")),
         ]);
         let grace = grace_options
             .iter()
             .find(|(id, _)| *id == draft.missed_run_grace_minutes.to_string())
             .map(|(_, label)| label.clone())
-            .unwrap_or_else(|| format!("{} minutes", draft.missed_run_grace_minutes));
+            .unwrap_or_else(|| tr!("{count} minutes", count = draft.missed_run_grace_minutes));
         let advanced = div()
             .rounded(px(6.))
             .border_1()
@@ -958,7 +969,7 @@ impl Automations {
                 div()
                     .id("automation-advanced")
                     .role(Role::Button)
-                    .aria_label("Advanced")
+                    .aria_label(t("Advanced"))
                     .min_h(px(56.))
                     .px(px(16.))
                     .flex()
@@ -974,13 +985,13 @@ impl Automations {
                                 div()
                                     .text_size(px(13.))
                                     .text_color(content(0.75))
-                                    .child("Advanced"),
+                                    .child(t("Advanced")),
                             )
                             .child(
                                 div()
                                     .text_size(px(11.))
                                     .text_color(content(0.4))
-                                    .child("Catch-up window for missed runs"),
+                                    .child(t("Catch-up window for missed runs")),
                             ),
                     )
                     .child(icon(
@@ -998,8 +1009,8 @@ impl Automations {
             )
             .when(self.advanced, |d| {
                 d.child(settings_row(
-                    "Missed-run grace",
-                    "Catch up if a scheduled run was missed",
+                    t("Missed-run grace"),
+                    t("Catch up if a scheduled run was missed"),
                     self.select_control(
                         "automation-grace",
                         grace,
@@ -1047,7 +1058,7 @@ impl Automations {
                     .text_center()
                     .text_size(px(12.))
                     .text_color(content(0.4))
-                    .child("This automation has not run yet."),
+                    .child(t("This automation has not run yet.")),
             );
         } else {
             table = table.child(
@@ -1059,53 +1070,56 @@ impl Automations {
                     .gap(px(16.))
                     .text_size(px(11.))
                     .text_color(content(0.4))
-                    .child(div().flex_1().child("Trigger"))
-                    .child(div().w(px(152.)).child("Triggered"))
-                    .child(div().w(px(108.)).child("Status"))
-                    .child(div().w(px(56.)).text_right().child("Duration")),
+                    .child(div().flex_1().child(t("Trigger")))
+                    .child(div().w(px(152.)).child(t("Triggered")))
+                    .child(div().w(px(108.)).child(t("Status")))
+                    .child(div().w(px(56.)).text_right().child(t("Duration"))),
             );
             for (index, run) in self.runs.iter().take(100).enumerate() {
                 let session = run.session_id.clone();
                 let trigger = if run.trigger == "manual" {
-                    "Test run".into()
+                    t("Test run").into()
                 } else if run.trigger == "event" {
-                    automations::event_label(
+                    tl(&automations::event_label(
                         run.event_kind.as_deref().unwrap_or(""),
                         run.event.as_deref().unwrap_or(""),
-                    )
+                    ))
+                    .to_owned()
                 } else {
                     self.editor
                         .as_ref()
                         .and_then(|e| e.draft.triggers.as_ref())
-                        .and_then(|ts| ts.iter().find(|t| t.kind == "time"))
-                        .map(|t| format!("Scheduled · {}", t.label()))
-                        .unwrap_or_else(|| "Scheduled".into())
+                        .and_then(|ts| ts.iter().find(|trigger| trigger.kind == "time"))
+                        .map(|trigger| {
+                            tr!("Scheduled · {trigger}", trigger = trigger_text(trigger))
+                        })
+                        .unwrap_or_else(|| t("Scheduled").into())
                 };
                 let (label, color, fill): (&str, gpui::Hsla, gpui::Hsla) = match run.status.as_str()
                 {
                     "succeeded" => (
-                        "Succeeded",
+                        t("Succeeded"),
                         rgb(0x34d399).into(),
                         rgb(0x10b981).alpha(0.12).into(),
                     ),
                     "failed" => (
-                        "Failed",
+                        t("Failed"),
                         rgb(0xfb7185).into(),
                         rgb(0xf43f5e).alpha(0.12).into(),
                     ),
                     "skipped" => (
-                        "Skipped",
+                        t("Skipped"),
                         rgb(0xfbbf24).into(),
                         rgb(0xf59e0b).alpha(0.12).into(),
                     ),
-                    "cancelled" => ("Cancelled", content(0.5), content(0.08)),
+                    "cancelled" => (t("Cancelled"), content(0.5), content(0.08)),
                     "running" => (
-                        "Running",
+                        t("Running"),
                         rgb(0x60a5fa).into(),
                         rgb(0x3b82f6).alpha(0.12).into(),
                     ),
                     _ => (
-                        "Pending",
+                        t("Pending"),
                         rgb(0x60a5fa).into(),
                         rgb(0x3b82f6).alpha(0.12).into(),
                     ),
@@ -1114,7 +1128,11 @@ impl Automations {
                     div()
                         .id(("automation-run", index))
                         .role(Role::Button)
-                        .aria_label(format!("{trigger}, {label}"))
+                        .aria_label(tr!(
+                            "{trigger}, {status}",
+                            trigger = trigger,
+                            status = label
+                        ))
                         .h(px(44.))
                         .px(px(16.))
                         .border_t_1()
@@ -1206,7 +1224,7 @@ impl Automations {
                     .px(px(32.))
                     .pt(px(20.))
                     .pb(px(40.))
-                    .child(section("Run history"))
+                    .child(section(t("Run history")))
                     .child(table),
             )
             .into_any_element()
@@ -1224,14 +1242,22 @@ fn control_label(
         .map(|(_, l)| l)
         .unwrap_or(value);
     match label.as_str() {
-        "low" => "Low".into(),
-        "medium" => "Medium".into(),
-        "high" => "High".into(),
-        "xhigh" => "Extra high".into(),
-        "minimal" => "Minimal".into(),
-        "none" => "None".into(),
-        _ => label.clone(),
+        "low" => t("Low").into(),
+        "medium" => t("Medium").into(),
+        "high" => t("High").into(),
+        "xhigh" => t("Extra high").into(),
+        "minimal" => t("Minimal").into(),
+        "none" => t("None").into(),
+        _ => tl(label).into(),
     }
+}
+/// A model setting's choices with their labels as shown.
+fn control_choices(control: &monocode_core::catalog::ModelControl) -> Vec<(String, String)> {
+    control
+        .choices
+        .iter()
+        .map(|(value, label)| (value.clone(), tl(label).to_owned()))
+        .collect()
 }
 fn control_value<'a>(
     control: &'a monocode_core::catalog::ModelControl,
@@ -1280,7 +1306,7 @@ fn next_run_preview(timestamp: i64) -> String {
         .single()
         .filter(|_| timestamp > 0)
     else {
-        return "Next run —".into();
+        return t("Next run —").into();
     };
     let mut zone = gmt_offset();
     #[cfg(unix)]
@@ -1299,7 +1325,11 @@ fn next_run_preview(timestamp: i64) -> String {
             }
         }
     }
-    format!("Next run {} {zone}", date.format("%a %-d %b, %H:%M"))
+    tr!(
+        "Next run {date} {zone}",
+        date = date.format(t("%a %-d %b, %H:%M")),
+        zone = zone
+    )
 }
 fn at(timestamp: i64) -> String {
     if timestamp <= 0 {
@@ -1308,7 +1338,7 @@ fn at(timestamp: i64) -> String {
     Local
         .timestamp_millis_opt(timestamp)
         .single()
-        .map(|d| d.format("%-d %b, %H:%M").to_string())
+        .map(|d| d.format(t("%-d %b, %H:%M")).to_string())
         .unwrap_or_else(|| "—".into())
 }
 fn duration(run: &AutomationRun) -> String {

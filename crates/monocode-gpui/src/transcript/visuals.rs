@@ -137,7 +137,7 @@ impl TranscriptView {
                 .text_color(content(0.5))
                 .child(
                     if caption.is_empty() {
-                        "Visual"
+                        t("Visual")
                     } else {
                         caption
                     }

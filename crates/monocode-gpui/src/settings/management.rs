@@ -1,7 +1,12 @@
 //! React Settings forms and their asynchronous actions.
 use super::widgets::{note, secondary_button};
 use super::*;
-use monocode_core::provider::Kind;
+use monocode_core::{
+    i18n::{t, tl},
+    n,
+    provider::Kind,
+    tr,
+};
 
 #[derive(Clone)]
 pub(super) enum Target {
@@ -40,10 +45,10 @@ impl SettingsView {
         }
         self.management_generation += 1;
         let (label, placeholder) = match target {
-            Target::Cli(_) => ("CLI path", "Auto-detected path"),
-            Target::Mcp => ("Name (optional with mcpServers)", "my-server"),
-            Target::Skill => ("Skill name", "skill-name"),
-            _ => ("New branch name", "feature/my-task"),
+            Target::Cli(_) => (t("CLI path"), t("Auto-detected path")),
+            Target::Mcp => (t("Name (optional with mcpServers)"), "my-server"),
+            Target::Skill => (t("Skill name"), "skill-name"),
+            _ => (t("New branch name"), "feature/my-task"),
         };
         let name = cx.new(|cx| {
             let mut input = Input::field(label, placeholder, content(0.35), cx);
@@ -68,7 +73,7 @@ impl SettingsView {
                 input.set_text(monocode_core::skills::slug_name(&self.skill_query), cx);
             });
         }
-        let body=cx.new(|cx|Input::multiline_field("JSON configuration", "{\"mcpServers\":{\"my-server\":{\"command\":\"npx\",\"args\":[\"-y\",\"example-mcp\"]}}}",cx));
+        let body=cx.new(|cx|Input::multiline_field(t("JSON configuration"), "{\"mcpServers\":{\"my-server\":{\"command\":\"npx\",\"args\":[\"-y\",\"example-mcp\"]}}}",cx));
         let subscriptions = vec![
             cx.subscribe(&name, |_, _, _: &input::Changed, cx| cx.notify()),
             cx.subscribe(&body, |_, _, _: &input::Changed, cx| cx.notify()),
@@ -298,12 +303,14 @@ impl SettingsView {
                     ..Default::default()
                 }
                 .label();
-                rows.push(note(format!("Its soul goes back to the default and its name to {default}. Changes to its soul can't be recovered.")));
+                rows.push(note(tr!("Its soul goes back to the default and its name to {default}. Changes to its soul can't be recovered.", default = default)));
                 rows.push(
                     div()
                         .text_size(px(12.))
                         .text_color(content(0.5))
-                        .child("Its conversation, projects, memory and habits will be kept.")
+                        .child(t(
+                            "Its conversation, projects, memory and habits will be kept.",
+                        ))
                         .into_any_element(),
                 );
             }
@@ -321,28 +328,23 @@ impl SettingsView {
                         .gap_3()
                         .text_size(px(12.))
                         .child(format!("{} CLI", kind.label()))
-                        .child(
-                            div()
-                                .text_size(px(10.))
-                                .text_color(content(0.5))
-                                .child(format!(
-                                    "Global path · {}",
-                                    if error.is_some() {
-                                        "Needs attention"
-                                    } else if pending {
-                                        "Restart required"
-                                    } else if overridden {
-                                        "Configured"
-                                    } else {
-                                        "Auto-detected"
-                                    }
-                                )),
-                        )
+                        .child(div().text_size(px(10.)).text_color(content(0.5)).child(tr!(
+                            "Global path · {status}",
+                            status = if error.is_some() {
+                                t("Needs attention")
+                            } else if pending {
+                                t("Restart required")
+                            } else if overridden {
+                                t("Configured")
+                            } else {
+                                t("Auto-detected")
+                            }
+                        )))
                         .into_any_element(),
                 );
                 if editing {
-                    rows.push(form_field("CLI path", name, 32.));
-                    rows.push(note("Enter the absolute path to the CLI executable. Changes apply after restarting MonoCode."));
+                    rows.push(form_field(n!("CLI path"), name, 32.));
+                    rows.push(note(t("Enter the absolute path to the CLI executable. Changes apply after restarting MonoCode.")));
                 } else {
                     rows.push(
                         div()
@@ -359,9 +361,9 @@ impl SettingsView {
                                         .map(|i| i.path.display().to_string())
                                         .unwrap_or_else(|| {
                                             if busy {
-                                                "Checking the selected CLI…".into()
+                                                t("Checking the selected CLI…").into()
                                             } else {
-                                                "CLI could not be resolved".into()
+                                                t("CLI could not be resolved").into()
                                             }
                                         }),
                                 ),
@@ -369,9 +371,9 @@ impl SettingsView {
                             .child(div().mt_1().text_color(content(0.4)).child(
                                 inspection.map(|i| i.version).unwrap_or_else(|| {
                                     if busy {
-                                        "Checking version…".into()
+                                        t("Checking version…").into()
                                     } else {
-                                        "Retry to check this CLI".into()
+                                        t("Retry to check this CLI").into()
                                     }
                                 }),
                             ))
@@ -387,18 +389,18 @@ impl SettingsView {
                     560.
                 }) - 46.)
                     / 2.;
-                rows.push(note(
+                rows.push(note(t(
                     "Paste a server configuration and choose where to add it.",
-                ));
+                )));
                 rows.push(
                     div()
                         .flex()
                         .gap_3()
                         .child(labeled_control(
-                            "Provider",
+                            t("Provider"),
                             self.select(
                                 "mcp-provider",
-                                "Provider",
+                                t("Provider"),
                                 &provider,
                                 [
                                     ("claude", "Claude Code"),
@@ -427,10 +429,10 @@ impl SettingsView {
                             ),
                         ))
                         .child(labeled_control(
-                            "Scope",
+                            t("Scope"),
                             self.select(
                                 "mcp-scope",
-                                "Scope",
+                                t("Scope"),
                                 &scope,
                                 scopes(&provider)
                                     .iter()
@@ -438,9 +440,9 @@ impl SettingsView {
                                         (
                                             s.to_string(),
                                             SharedString::from(match *s {
-                                                "local" => "Local",
-                                                "project" => "Project",
-                                                _ => "User",
+                                                "local" => t("Local"),
+                                                "project" => t("Project"),
+                                                _ => t("User"),
                                             }),
                                             None,
                                         )
@@ -458,17 +460,17 @@ impl SettingsView {
                         ))
                         .into_any_element(),
                 );
-                rows.push(form_field("Name (optional with mcpServers)", name, 32.));
-                rows.push(form_field("JSON configuration", body, 140.));
-                rows.push(note("Paste one entry from an mcpServers block, or a single server object with a name above."));
+                rows.push(form_field(n!("Name (optional with mcpServers)"), name, 32.));
+                rows.push(form_field(n!("JSON configuration"), body, 140.));
+                rows.push(note(t("Paste one entry from an mcpServers block, or a single server object with a name above.")));
             }
             Target::Skill => {
-                rows.push(form_field("Skill name", name, 32.));
+                rows.push(form_field(n!("Skill name"), name, 32.));
                 rows.push(self.segmented(
                     "skill-scope",
-                    "Skill scope",
+                    t("Skill scope"),
                     &scope,
-                    &[("project", "Project"), ("user", "Personal")],
+                    &[("project", t("Project")), ("user", t("Personal"))],
                     cx,
                     |this, v, cx| {
                         if let Some(e) = &mut this.management {
@@ -477,21 +479,21 @@ impl SettingsView {
                         cx.notify();
                     },
                 ));
-                rows.push(note(
+                rows.push(note(t(
                     "Creates a starter SKILL.md in .agents/skills. Edit it in your file editor.",
-                ));
+                )));
             }
             Target::Worktree => {
-                rows.push(note(format!("An independent working copy of {}. Existing uncommitted changes stay in their current working copy.",self.selected_project)));
+                rows.push(note(tr!("An independent working copy of {project}. Existing uncommitted changes stay in their current working copy.", project = self.selected_project)));
                 rows.push(self.select(
                     "worktree-type",
-                    "Branch type",
+                    t("Branch type"),
                     if existing { "existing" } else { "new" },
                     vec![
-                        ("new".into(), "Create a new branch".into(), None),
+                        ("new".into(), t("Create a new branch").into(), None),
                         (
                             "existing".into(),
-                            "Use an existing local branch".into(),
+                            t("Use an existing local branch").into(),
                             None,
                         ),
                     ],
@@ -510,7 +512,7 @@ impl SettingsView {
                     rows.push(
                         self.select(
                             "worktree-branch",
-                            "Existing branch",
+                            t("Existing branch"),
                             &selected,
                             self.discovery
                                 .worktrees
@@ -530,8 +532,8 @@ impl SettingsView {
                         ),
                     );
                 } else {
-                    rows.push(form_field("New branch name", name, 36.));
-                    let mut options = vec![("HEAD".into(), "Current commit".into(), None)];
+                    rows.push(form_field(n!("New branch name"), name, 36.));
+                    let mut options = vec![("HEAD".into(), t("Current commit").into(), None)];
                     options.extend(self.discovery.worktrees.branches.iter().map(|b| {
                         let label = b
                             .remote
@@ -542,7 +544,7 @@ impl SettingsView {
                     }));
                     rows.push(self.select(
                         "worktree-base",
-                        "Start from",
+                        t("Start from"),
                         &base,
                         options,
                         None,
@@ -555,9 +557,9 @@ impl SettingsView {
                         },
                     ));
                 }
-                rows.push(note(format!(
-                    "Created in {}",
-                    self.discovery.worktrees.default_root.display()
+                rows.push(note(tr!(
+                    "Created in {path}",
+                    path = self.discovery.worktrees.default_root.display()
                 )));
             }
             Target::DeleteTree(tree) => {
@@ -569,9 +571,9 @@ impl SettingsView {
                         monocode_core::files::is_equal_or_inside(p, &tree.tree.path)
                     })
                     .count();
-                rows.push(note(
+                rows.push(note(t(
                     "This permanently deletes the working copy and everything inside it.",
-                ));
+                )));
                 let mut consequences = div()
                     .rounded_lg()
                     .border_1()
@@ -584,30 +586,34 @@ impl SettingsView {
                     .gap_2()
                     .child(tree.tree.path.clone());
                 if count > 0 {
-                    consequences = consequences.child(format!(
-                        "{count} sessions using this worktree are {}",
-                        if deleting {
-                            "permanently deleted."
-                        } else {
-                            "kept. Select a branch or worktree to continue them."
-                        }
-                    ));
+                    consequences = consequences.child(if deleting {
+                        tr!(
+                            "{count} sessions using this worktree are permanently deleted.",
+                            count = count
+                        )
+                    } else {
+                        tr!(
+                            "{count} sessions using this worktree are kept. Select a branch or worktree to continue them.",
+                            count = count
+                        )
+                    });
                 }
                 if tree.dirty != Some(false) {
-                    consequences = consequences.child(
-                        div()
-                            .text_color(gpui::rgb(0xfbbf24))
-                            .child("All uncommitted and untracked changes here are discarded."),
-                    );
+                    consequences = consequences.child(div().text_color(gpui::rgb(0xfbbf24)).child(
+                        t("All uncommitted and untracked changes here are discarded."),
+                    ));
                 }
-                consequences = consequences.child(format!(
-                    "The {} branch and its commits are kept.",
-                    tree.tree.branch.as_deref().unwrap_or("worktree")
-                ));
+                consequences = consequences.child(match tree.tree.branch.as_deref() {
+                    Some(branch) => tr!(
+                        "The {branch} branch and its commits are kept.",
+                        branch = branch
+                    ),
+                    None => t("The worktree branch and its commits are kept.").into(),
+                });
                 if tree.unpushed > 0 {
-                    consequences = consequences.child(format!(
-                        "{} unpublished commits stay on the branch.",
-                        tree.unpushed
+                    consequences = consequences.child(tr!(
+                        "{count} unpublished commits stay on the branch.",
+                        count = tree.unpushed
                     ));
                 }
                 rows.push(consequences.into_any_element());
@@ -623,10 +629,10 @@ impl SettingsView {
                             .border_1()
                             .border_color(content(0.1))
                             .text_size(px(12.5))
-                            .child("Also delete associated sessions")
+                            .child(t("Also delete associated sessions"))
                             .child(self.toggle(
                                 "delete-worktree-sessions",
-                                "Also delete associated sessions",
+                                t("Also delete associated sessions"),
                                 deleting,
                                 busy,
                                 cx,
@@ -659,8 +665,8 @@ impl SettingsView {
                 if self.management.as_ref().is_some_and(|e| e.error.is_some()) {
                     actions =
                         actions.child(
-                            secondary_button("retry-cli", "Retry CLI inspection", false, busy)
-                                .child("Retry")
+                            secondary_button("retry-cli", t("Retry CLI inspection"), false, busy)
+                                .child(t("Retry"))
                                 .on_click(cx.listener(move |this, _, _, cx| {
                                     this.inspect_cli(kind, false, cx)
                                 })),
@@ -673,17 +679,22 @@ impl SettingsView {
                     .map(|i| i.path.clone());
                 actions = actions
                     .child(
-                        secondary_button("reveal-cli", "Open CLI location", false, path.is_none())
-                            .child("Open location")
-                            .on_click(move |_, _, cx| {
-                                if let Some(path) = &path {
-                                    cx.reveal_path(path);
-                                }
-                            }),
+                        secondary_button(
+                            "reveal-cli",
+                            t("Open CLI location"),
+                            false,
+                            path.is_none(),
+                        )
+                        .child(t("Open location"))
+                        .on_click(move |_, _, cx| {
+                            if let Some(path) = &path {
+                                cx.reveal_path(path);
+                            }
+                        }),
                     )
                     .child(
-                        secondary_button("edit-cli", "Edit CLI path", false, busy)
-                            .child("Edit path")
+                        secondary_button("edit-cli", t("Edit CLI path"), false, busy)
+                            .child(t("Edit path"))
                             .on_click(cx.listener(|this, _, window, cx| {
                                 if let Some(e) = &mut this.management {
                                     e.editing = true;
@@ -701,8 +712,8 @@ impl SettingsView {
                     .into_any_element();
             } else if self.prefs.binary_paths.contains_key(kind.id()) {
                 actions = actions.child(
-                    secondary_button("auto-cli", "Use auto-detected path", false, busy)
-                        .child("Use auto-detected path")
+                    secondary_button("auto-cli", t("Use auto-detected path"), false, busy)
+                        .child(t("Use auto-detected path"))
                         .on_click(cx.listener(move |this, _, _, cx| {
                             if let Some(e) = &mut this.management {
                                 e.name.update(cx, |i, cx| i.set_text(String::new(), cx));
@@ -713,41 +724,41 @@ impl SettingsView {
             }
         }
         let label = match target {
-            Target::Cli(_) => "Save path",
+            Target::Cli(_) => t("Save path"),
             Target::Mcp => {
                 if busy {
-                    "Adding…"
+                    t("Adding…")
                 } else {
-                    "Add server"
+                    t("Add server")
                 }
             }
             Target::Skill => {
                 if busy {
-                    "Creating…"
+                    t("Creating…")
                 } else {
-                    "Create skill"
+                    t("Create skill")
                 }
             }
-            Target::Worktree => "Create worktree",
+            Target::Worktree => t("Create worktree"),
             Target::ResetMono(_) => {
                 if busy {
-                    "Resetting…"
+                    t("Resetting…")
                 } else {
-                    "Reset Mono"
+                    t("Reset Mono")
                 }
             }
             Target::DeleteTree(_) => {
                 if deleting {
-                    "Delete worktree and sessions"
+                    t("Delete worktree and sessions")
                 } else {
-                    "Delete worktree"
+                    t("Delete worktree")
                 }
             }
         };
         actions = actions
             .child(
                 crate::modal::disabled(
-                    crate::modal::ghost_button("cancel-management", "Cancel"),
+                    crate::modal::ghost_button("cancel-management", t("Cancel")),
                     busy,
                 )
                 .on_click(cx.listener(|this, _, window, cx| this.close_management(window, cx))),
@@ -781,11 +792,11 @@ impl SettingsView {
             return None;
         }
         let title = match target {
-            Target::Cli(kind) => format!("{} CLI details", kind.label()),
-            Target::Mcp => "Add MCP server".into(),
-            Target::Worktree => "Create worktree".into(),
-            Target::DeleteTree(_) => "Delete worktree?".into(),
-            Target::ResetMono(ref mono) => format!("Reset {} to its defaults?", mono.name),
+            Target::Cli(kind) => tr!("{name} CLI details", name = kind.label()),
+            Target::Mcp => t("Add MCP server").into(),
+            Target::Worktree => t("Create worktree").into(),
+            Target::DeleteTree(_) => t("Delete worktree?").into(),
+            Target::ResetMono(ref mono) => tr!("Reset {name} to its defaults?", name = mono.name),
             _ => String::new(),
         };
         let form = self.management_form(cx);
@@ -852,7 +863,7 @@ impl SettingsView {
                             .child(
                                 secondary_button(
                                     "close-management",
-                                    "Close dialog",
+                                    t("Close dialog"),
                                     false,
                                     self.management.as_ref().is_some_and(|e| e.busy),
                                 )
@@ -885,7 +896,7 @@ fn form_field(label: &str, input: Entity<Input>, height: f32) -> AnyElement {
         .gap(px(6.))
         .text_size(px(12.))
         .text_color(content(0.65))
-        .child(label.to_owned())
+        .child(tl(label).to_owned())
         .child(
             div()
                 .h(px(height))

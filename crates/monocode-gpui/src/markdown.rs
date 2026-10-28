@@ -12,6 +12,7 @@ use gpui::{
     MouseButton, Pixels, Point, Role, SharedString, StrikethroughStyle, StyledText, div,
     prelude::*, px, rgb,
 };
+use monocode_core::i18n::t;
 pub(crate) use search::{mark_row, mark_styles, row_text};
 
 #[derive(Clone, Debug, PartialEq, gpui::Action)]
@@ -777,7 +778,7 @@ pub(crate) fn body_selected(
         Part::Visual { caption, .. } => body
             .text_color(content(0.5))
             .child(if caption.is_empty() {
-                "Visual".to_owned()
+                t("Visual").to_owned()
             } else {
                 caption.clone()
             })

@@ -1,5 +1,6 @@
 use monocode_core::agent::{Approval, Control, Settings};
 use monocode_core::{
+    n,
     provider::{self, Event, Kind, Request},
     store::{Session, Store},
     transcript::{Row, Transcript},
@@ -60,7 +61,7 @@ fn publish(
 ) -> Result<(), String> {
     loop {
         if cancel.load(Ordering::Relaxed) {
-            return Err("Stopped".into());
+            return Err(n!("Stopped").into());
         }
         match tx.try_send(update) {
             Ok(()) => return Ok(()),
@@ -73,7 +74,7 @@ fn publish(
 pub(crate) fn locked(store: &Database) -> Result<std::sync::MutexGuard<'_, Store>, String> {
     store
         .lock()
-        .map_err(|_| "Native session store unavailable".into())
+        .map_err(|_| n!("Native session store unavailable").into())
 }
 
 pub(crate) fn run_turn(
@@ -152,16 +153,17 @@ fn run_turn_using(
             return Err(reason);
         }
         if settings.worktree_removed {
-            return Err("Select a branch or worktree to continue this conversation.".into());
+            return Err(n!("Select a branch or worktree to continue this conversation.").into());
         }
         if settings.account.id != monocode_core::accounts::DEFAULT
             && !locked(&store)?
                 .provider_accounts()?
                 .exists(Kind::from_id(&summary.provider), &settings.account.id)
         {
-            return Err(
-                "This provider account was removed. Choose another account to continue.".into(),
-            );
+            return Err(n!(
+                "This provider account was removed. Choose another account to continue."
+            )
+            .into());
         }
         transcript = locked(&store)?.load(summary.id)?;
         history_loaded = true;
@@ -251,11 +253,11 @@ fn run_turn_using(
                 questions_resolved: Vec::new(),
                 handoff: None,
                 status: if creating_worktree {
-                    "Creating worktree…"
+                    n!("Creating worktree…")
                 } else if settings.pending_provider_switch.is_some() {
-                    "Preparing handoff…"
+                    n!("Preparing handoff…")
                 } else {
-                    "Connecting…"
+                    n!("Connecting…")
                 }
                 .into(),
                 finished: false,
@@ -304,7 +306,7 @@ fn run_turn_using(
                     questions: Vec::new(),
                     questions_resolved: Vec::new(),
                     handoff: None,
-                    status: "Connecting…".into(),
+                    status: n!("Connecting…").into(),
                     finished: false,
                 },
             )?;
@@ -351,7 +353,7 @@ fn run_turn_using(
                     questions: Vec::new(),
                     questions_resolved: Vec::new(),
                     handoff: None,
-                    status: "Preparing handoff…".into(),
+                    status: n!("Preparing handoff…").into(),
                     finished: false,
                 },
             )?;
@@ -410,7 +412,7 @@ fn run_turn_using(
                     questions: Vec::new(),
                     questions_resolved: Vec::new(),
                     handoff: Some(Some(prepared)),
-                    status: "Connecting…".into(),
+                    status: n!("Connecting…").into(),
                     finished: false,
                 },
             )?;
@@ -574,7 +576,7 @@ fn run_turn_using(
                 // Cancellation freezes the transcript, even while the native
                 // provider drains its interrupt acknowledgement.
                 if cancel.load(Ordering::Relaxed) {
-                    return Err("Stopped".into());
+                    return Err(n!("Stopped").into());
                 }
                 let publications = visual_bridge
                     .as_ref()
@@ -584,7 +586,7 @@ fn run_turn_using(
                     return Ok(());
                 }
                 let mut start = transcript.rows.len();
-                let mut status = "Streaming…".to_string();
+                let mut status = n!("Streaming…").to_string();
                 let mut changed_id = None;
                 let mut model = None;
                 let mut config_model = None;
@@ -698,9 +700,9 @@ fn run_turn_using(
                         Event::Tool(tool) => {
                             if tool.is_compaction() {
                                 status = if tool.state == monocode_core::tool::ToolState::Running {
-                                    "Compacting context…"
+                                    n!("Compacting context…")
                                 } else {
-                                    "Working…"
+                                    n!("Working…")
                                 }
                                 .into();
                             }
@@ -799,7 +801,7 @@ fn run_turn_using(
                             pending.context_changed();
                         }
                         Event::Approval(approval) => {
-                            status = "Waiting for approval".into();
+                            status = n!("Waiting for approval").into();
                             approvals.push(approval);
                             boundary = true;
                         }
@@ -808,7 +810,7 @@ fn run_turn_using(
                             boundary = true;
                         }
                         Event::Question(question) => {
-                            status = "Waiting for your answer".into();
+                            status = n!("Waiting for your answer").into();
                             questions.push(question);
                             boundary = true;
                         }
@@ -978,7 +980,7 @@ fn run_turn_using(
             } else {
                 result
                     .err()
-                    .unwrap_or_else(|| "Conversation was not loaded".into())
+                    .unwrap_or_else(|| n!("Conversation was not loaded").into())
             },
         )
     } else if let Err(error) = result

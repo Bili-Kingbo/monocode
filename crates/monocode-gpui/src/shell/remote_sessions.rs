@@ -16,16 +16,18 @@ impl Shell {
                 .remote_projects()?
                 .into_values()
                 .find(|p| p.key == project_key)
-                .ok_or(
+                .ok_or(t(
                     "Remote project identity is missing. Open this folder on its machine again.",
-                )?;
+                ))?;
             let machine = client.machine_for_environment(&project.environment_id)?;
             let response = client.request(
                 &machine.id,
                 "sessions.list",
                 json!({"projectId":project.project_id}),
             )?;
-            let values = response.as_array().ok_or("Invalid remote session list")?;
+            let values = response
+                .as_array()
+                .ok_or(t("Invalid remote session list"))?;
             let store = locked(&store)?;
             let mut summaries = Vec::new();
             let host_ids: HashSet<String> = values
@@ -37,7 +39,7 @@ impl Shell {
                 let summary = store.register_remote_summary(&project, value)?;
                 let state = store
                     .remote_session(summary.id)?
-                    .ok_or("Remote session identity is missing")?;
+                    .ok_or(t("Remote session identity is missing"))?;
                 summaries.push((
                     summary,
                     state.running,
@@ -75,7 +77,7 @@ impl Shell {
                             if let Some(view) = this.sessions.get(&id) {
                                 view.update(cx, |view, cx| {
                                     view.remote_connection_error(
-                                        "This conversation was deleted on the host.",
+                                        t("This conversation was deleted on the host."),
                                         cx,
                                     )
                                 });

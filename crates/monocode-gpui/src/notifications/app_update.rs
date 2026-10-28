@@ -6,7 +6,12 @@ use crate::{
     theme::*,
 };
 use gpui::{Context, EventEmitter, FontWeight, Render, Role, Window, div, img, prelude::*, px};
-use monocode_core::store::Store;
+use monocode_core::{
+    i18n::{t, tl},
+    n,
+    store::Store,
+    tr,
+};
 use std::time::Instant;
 const MARKER: &str = "monocode.installedUpdate";
 
@@ -60,7 +65,7 @@ impl Render for InstalledUpdateNotice {
         let Some(version) = self.version.clone() else {
             return div().into_any_element();
         };
-        let label = format!("Updated to {version}");
+        let label = tr!("Updated to {version}", version = version);
         div()
             .id("installed-update-notice")
             .role(Role::Status)
@@ -114,7 +119,7 @@ impl Render for InstalledUpdateNotice {
                                     .mt(px(2.))
                                     .text_size(px(11.))
                                     .text_color(content(0.5))
-                                    .child("What's new"),
+                                    .child(t("What's new")),
                             ),
                     ),
             )
@@ -122,7 +127,7 @@ impl Render for InstalledUpdateNotice {
                 div()
                     .id("dismiss-installed-update")
                     .role(Role::Button)
-                    .aria_label("Dismiss update notification")
+                    .aria_label(t("Dismiss update notification"))
                     .absolute()
                     .right(px(4.))
                     .top(px(4.))
@@ -187,7 +192,18 @@ fn release_notes(version: &str) -> Option<ReleaseNotes> {
 }
 fn format_date(iso: &str) -> String {
     let months = [
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+        n!("Jan"),
+        n!("Feb"),
+        n!("Mar"),
+        n!("Apr"),
+        n!("May"),
+        n!("Jun"),
+        n!("Jul"),
+        n!("Aug"),
+        n!("Sep"),
+        n!("Oct"),
+        n!("Nov"),
+        n!("Dec"),
     ];
     let month = iso[5..7]
         .parse::<usize>()
@@ -195,10 +211,11 @@ fn format_date(iso: &str) -> String {
         .and_then(|n| n.checked_sub(1))
         .and_then(|n| months.get(n));
     match month {
-        Some(month) => format!(
-            "{} {month} {}",
-            iso[8..10].parse::<u32>().unwrap_or(0),
-            &iso[..4]
+        Some(month) => tr!(
+            "{day} {month} {year}",
+            day = iso[8..10].parse::<u32>().unwrap_or(0),
+            month = tl(month),
+            year = &iso[..4]
         ),
         None => iso.into(),
     }
@@ -261,12 +278,9 @@ impl Render for WhatsNew {
             .px(px(20.))
             .py(px(16.));
         if self.rows.is_empty() {
-            body = body.child(
-                div()
-                    .text_size(px(13.))
-                    .text_color(content(0.6))
-                    .child("Release notes for this version are not available in this build."),
-            );
+            body = body.child(div().text_size(px(13.)).text_color(content(0.6)).child(t(
+                "Release notes for this version are not available in this build.",
+            )));
         }
         for (ix, row) in self.rows.iter().enumerate() {
             body = body.child(div().pt(px(if ix == 0 { 0. } else { row.gap })).child(
@@ -282,7 +296,7 @@ impl Render for WhatsNew {
         div()
             .id("whats-new-dialog")
             .role(Role::Dialog)
-            .aria_label("What's new")
+            .aria_label(t("What's new"))
             .relative()
             .w(px(512.))
             .max_w_full()
@@ -313,7 +327,7 @@ impl Render for WhatsNew {
                                 div()
                                     .text_size(px(16.))
                                     .font_weight(FontWeight::SEMIBOLD)
-                                    .child("What's new"),
+                                    .child(t("What's new")),
                             )
                             .child(
                                 div()
@@ -327,7 +341,7 @@ impl Render for WhatsNew {
                         div()
                             .id("close-whats-new")
                             .role(Role::Button)
-                            .aria_label("Close")
+                            .aria_label(t("Close"))
                             .cursor_pointer()
                             .size(px(24.))
                             .flex()
