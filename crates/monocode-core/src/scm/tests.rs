@@ -176,6 +176,8 @@ fn nested_repos_list_checkouts_one_level_inside_a_plain_folder() {
     );
     // The folder's own stats add up its checkouts.
     assert_eq!(diff_stats(root).unwrap(), repos[1].stats);
+    assert!(holds_checkouts(root));
+    assert!(!holds_checkouts(&root.join("docs/inner")));
 }
 
 #[test]

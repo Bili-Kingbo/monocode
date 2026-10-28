@@ -812,6 +812,10 @@ impl Shell {
     }
 
     fn open_classic_worktree_picker(&mut self, window: &mut Window, cx: &mut Context<Self>) {
+        // A folder of checkouts has no worktrees of its own to pick.
+        if self.is_folder_of_checkouts(&self.workspace.project, cx) {
+            return;
+        }
         self.close_menu(cx);
         self.close_preview(cx);
         let project = self.workspace.project.clone();
@@ -846,14 +850,15 @@ impl Shell {
             })
             .collect();
         let focused = self.worktree_focus.get(&project).cloned();
-        // A folder of checkouts lists its followed checkout's worktrees.
-        let checkout = self
-            .nested
-            .read(cx)
-            .target(&project)
-            .map_or_else(|| project.clone(), str::to_owned);
         let view = cx.new(|cx| {
-            WorktreeSwitcher::new(checkout, focused, sessions, ids, self.store.clone(), cx)
+            WorktreeSwitcher::new(
+                project.clone(),
+                focused,
+                sessions,
+                ids,
+                self.store.clone(),
+                cx,
+            )
         });
         let observed_project = project.clone();
         let events = cx.subscribe_in(&view, window, move |this, _, event: &Event, window, cx| {

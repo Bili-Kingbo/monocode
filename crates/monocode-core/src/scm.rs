@@ -178,6 +178,12 @@ pub(crate) fn nested_repo_paths(root: &Path) -> Vec<std::path::PathBuf> {
     paths
 }
 
+/// Whether `cwd`, already known not to be a checkout, holds checkouts one
+/// level down. Reads the folder only; runs no Git.
+pub fn holds_checkouts(cwd: &Path) -> bool {
+    !remote_workspace::is_remote(cwd) && !nested_repo_paths(&expand_home(cwd)).is_empty()
+}
+
 fn read_nested_repos(root: &Path) -> Vec<NestedRepo> {
     let paths = nested_repo_paths(root);
     // Each checkout costs a few Git processes; read several side by side.

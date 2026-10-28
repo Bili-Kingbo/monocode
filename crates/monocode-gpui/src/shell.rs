@@ -1552,6 +1552,10 @@ impl Shell {
             self.tab_scroll.scroll_to_item(ix);
         }
     }
+    /// A folder that holds checkouts and is not one itself, once read.
+    pub(super) fn is_folder_of_checkouts(&self, folder: &str, cx: &App) -> bool {
+        self.nested.read(cx).target(folder).is_some()
+    }
     /// A folder of checkouts rereads its list; other folders have none.
     fn reload_nested(&mut self, cx: &mut Context<Self>) {
         self.nested.update(cx, |nested, cx| {
@@ -5411,42 +5415,49 @@ impl Shell {
                             &self.workspace.project,
                         ))
                     });
-                let worktree = MenuAction::new("switch-worktree", "Switch worktree")
-                    .icon("folder-tree")
-                    .flyout(self.worktree_flyout(events, window, cx));
-                (
-                    format!("{} menu", self.project_label(&self.workspace.project)).into(),
-                    vec![
+                // A folder of checkouts is the workspace itself: its agents
+                // make the worktrees they need, and Changes lists them.
+                let worktree =
+                    (!self.is_folder_of_checkouts(&self.workspace.project, cx)).then(|| {
+                        let worktree = MenuAction::new("switch-worktree", "Switch worktree")
+                            .icon("folder-tree")
+                            .flyout(self.worktree_flyout(events, window, cx));
                         match branch {
                             Some(branch) => worktree.value(branch),
                             None => worktree,
                         }
-                        .into(),
-                        MenuItem::Separator,
-                        MenuAction::new("switch-project", "Switch project")
-                            .icon("folder")
-                            .flyout(Flyout {
-                                view: picker.into(),
-                                width: 286.,
-                                padding: 0.,
-                                height: None,
-                                max_height: Some(380.),
-                                focus: Some(focus),
-                                surface: None,
-                            })
-                            .into(),
-                        MenuAction::new("project-settings", "Project settings")
-                            .icon("sliders")
-                            .flyout(self.project_settings_flyout(events, window, cx))
-                            .into(),
-                        MenuAction::new("open-remote-project", "Open folder on a machine…")
-                            .icon("globe")
-                            .into(),
-                        MenuAction::new("settings", "Settings")
-                            .icon("settings")
-                            .shortcut(format!("{MOD},"))
-                            .into(),
-                    ],
+                    });
+                (
+                    format!("{} menu", self.project_label(&self.workspace.project)).into(),
+                    worktree
+                        .into_iter()
+                        .flat_map(|worktree| [worktree.into(), MenuItem::Separator])
+                        .chain([
+                            MenuAction::new("switch-project", "Switch project")
+                                .icon("folder")
+                                .flyout(Flyout {
+                                    view: picker.into(),
+                                    width: 286.,
+                                    padding: 0.,
+                                    height: None,
+                                    max_height: Some(380.),
+                                    focus: Some(focus),
+                                    surface: None,
+                                })
+                                .into(),
+                            MenuAction::new("project-settings", "Project settings")
+                                .icon("sliders")
+                                .flyout(self.project_settings_flyout(events, window, cx))
+                                .into(),
+                            MenuAction::new("open-remote-project", "Open folder on a machine…")
+                                .icon("globe")
+                                .into(),
+                            MenuAction::new("settings", "Settings")
+                                .icon("settings")
+                                .shortcut(format!("{MOD},"))
+                                .into(),
+                        ])
+                        .collect(),
                     240.,
                     MenuStyle::Switcher,
                 )
